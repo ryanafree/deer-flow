@@ -199,7 +199,16 @@ def resolve_agent_factory(assistant_id: str | None):
     :func:`build_run_config`.  All ``assistant_id`` values therefore map to the
     same factory; the routing happens inside ``make_lead_agent`` when it reads
     ``cfg["agent_name"]``.
+
+    ``assistant_id == "dr_agent"`` is the one carve-out (D5): it routes to the
+    dr_core gated outer-graph wrap instead, which nests ``make_lead_agent``'s
+    graph as its "research" node.
     """
+    if assistant_id == "dr_agent":
+        from dr_core.graph import make_dr_agent
+
+        return make_dr_agent
+
     from deerflow.agents.lead_agent.agent import make_lead_agent
 
     return make_lead_agent

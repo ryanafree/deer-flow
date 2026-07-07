@@ -416,13 +416,20 @@ def _load_enabled_skills_for_tool_policy(available_skills: set[str] | None, *, a
 
 
 def make_lead_agent(config: RunnableConfig):
-    """LangGraph graph factory; keep the signature compatible with LangGraph Server."""
+    """LangGraph graph factory; keep the signature compatible with LangGraph Server.
+
+    Do NOT add parameters here: LangGraph Server introspects this factory's
+    signature (pinned to exactly ``config`` by
+    ``tests/test_lead_agent_model_resolution.py::test_make_lead_agent_signature_matches_langgraph_server_factory_abi``).
+    The dr_core outer-graph wrap injects its middleware via the internal
+    ``_make_lead_agent(..., extra_middlewares=...)`` instead (see D5).
+    """
     runtime_config = _get_runtime_config(config)
     runtime_app_config = runtime_config.get("app_config")
     return _make_lead_agent(config, app_config=runtime_app_config or get_app_config())
 
 
-def _make_lead_agent(config: RunnableConfig, *, app_config: AppConfig):
+def _make_lead_agent(config: RunnableConfig, *, app_config: AppConfig, extra_middlewares: list[AgentMiddleware] | None = None):
     # Lazy import to avoid circular dependency
     from deerflow.tools import get_available_tools
     from deerflow.tools.builtins import setup_agent, update_agent
@@ -513,6 +520,7 @@ def _make_lead_agent(config: RunnableConfig, *, app_config: AppConfig):
                 config,
                 model_name=model_name,
                 available_skills=set(_BOOTSTRAP_SKILL_NAMES),
+                custom_middlewares=extra_middlewares,
                 app_config=resolved_app_config,
                 deferred_setup=setup,
             ),
@@ -540,6 +548,7 @@ def _make_lead_agent(config: RunnableConfig, *, app_config: AppConfig):
             config,
             model_name=model_name,
             agent_name=agent_name,
+            custom_middlewares=extra_middlewares,
             available_skills=available_skills,
             app_config=resolved_app_config,
             deferred_setup=setup,

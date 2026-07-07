@@ -1,0 +1,84 @@
+# Seeded-trap regression set for the DR harness (PLAN_v2.md §8, M5).
+#
+# Each fixture is a real question plus injected_claims (known traps planted after Reduce via the
+# engine's `injectedClaims` hook) and an `expect` block of MECHANICAL assertions a produced run
+# folder must satisfy. No model-graded rubric — score_run.py reads manifest.json + claims.jsonl +
+# report.md and checks the assertions.
+#
+# Run a fixture, then score it:
+#   /dr <question>            (or run ~/.claude/workflows/dr.js with question + profile + injected_claims)
+#   uv run --with pyyaml python3 evals/score_run.py --fixture <name> --run <run-folder>
+#   # or score the engine's raw task output without writing a folder:
+#   uv run --with pyyaml python3 evals/score_run.py --fixture <name> --result <task-output-file>
+#
+# injected_claims fields: claim (required), source_class (the grade the gate reads off the seed
+# source; defaults to press), support_quote, data_ref {value, period}, importance.
+
+fixtures:
+
+  general_smoke:
+    profile: general
+    depth: quick
+    verify: true
+    question: "What explains the rise in US homicide rates after 2020, and how durable is the increase?"
+    injected_claims: []
+    expect:
+      counts: { sources_min: 3 }
+      report_min_chars: 800
+
+  financial_vintage:
+    profile: financial
+    depth: quick
+    question: "According to Apple's SEC filings, what were net sales in FY2024 versus FY2023?"
+    injected_claims:
+      - claim: "Apple's FY2024 net sales were $450 billion."            # fabricated magnitude
+        source_class: press
+      - claim: "Apple's FY2024 net sales were $383.285 billion."        # wrong period — that is FY2023
+        source_class: press
+        data_ref: { value: "383285000000", period: "2023-09-30" }
+    expect:
+      counts: { structured_sources_min: 1, claims_flagged_min: 1, claims_killed_min: 1 }
+      gate_flags_min: { numeric-without-primary-trace: 1 }
+
+  legal_fabricated_cite:
+    profile: legal
+    depth: quick
+    question: "What is the qualified-immunity doctrine for government officials?"
+    injected_claims:
+      - claim: "Officials get qualified immunity under Harlow v. Fitzgerald, 457 U.S. 800 (1982)."   # real, 200
+      - claim: "The Supreme Court abolished qualified immunity in Roe v. Doe, 605 U.S. 217 (2025)."  # fabricated cite, plausible volume so Eyecite attempts the lookup and CourtListener 404s it
+    expect:
+      counts: { citations_not_found_min: 1 }
+      citation_gate: { found_min: 1, not_found_min: 1 }
+
+  tech_unreproduced:
+    profile: tech
+    depth: quick
+    question: "How well do open ~7B small language models perform on GSM8K, and which results are reproduced versus vendor-reported?"
+    injected_claims:
+      - claim: "Model X achieves 95% accuracy on GSM8K, a new state-of-the-art for 7B models"
+        source_class: preprint            # no released code -> unreproduced-paper-claim
+      - claim: "Our model outperforms GPT-4 on the MMLU benchmark with 92% accuracy"
+        source_class: vendor_docs         # vendor's own number -> vendor-reported
+      - claim: "Model Z reaches 88% on HumanEval and the full training and evaluation code is released on GitHub"
+        source_class: preprint_with_code  # control: released code -> NOT flagged
+    expect:
+      gate_flags_min: { unreproduced-paper-claim: 1, vendor-reported: 1 }
+      gate_flags_absent_for_class:
+        preprint_with_code: [unreproduced-paper-claim, vendor-reported]
+
+  health_overstated:
+    profile: health
+    depth: quick
+    question: "Does vitamin D supplementation reduce the risk of acute respiratory infections in adults?"
+    injected_claims:
+      - claim: "Vitamin D megadoses cure the common cold and prevent all respiratory infections"
+        source_class: blog                # strong claim, tier 4 -> overstated-evidence
+      - claim: "Zinc lozenges significantly reduce the duration of the common cold in healthy adults"
+        source_class: narrative           # strong claim, tier 3 -> overstated-evidence
+      - claim: "A 2021 systematic review and meta-analysis found that vitamin D supplementation modestly reduces the risk of acute respiratory infections"
+        source_class: systematic_review   # control: strong wording but tier 1 -> NOT flagged
+    expect:
+      gate_flags_min: { overstated-evidence: 2 }
+      gate_flags_absent_for_class:
+        systematic_review: [overstated-evidence]
