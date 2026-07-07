@@ -556,7 +556,9 @@ async def start_run(
                 graph_input=graph_input,
                 config=config,
                 stream_modes=stream_modes,
-                stream_subgraphs=body.stream_subgraphs,
+                # dr_agent nests the lead agent as a subgraph; without subgraph
+                # streaming its tokens never surface (D5 smoke-test finding).
+                stream_subgraphs=body.stream_subgraphs or body.assistant_id == "dr_agent",
                 interrupt_before=body.interrupt_before,
                 interrupt_after=body.interrupt_after,
             )

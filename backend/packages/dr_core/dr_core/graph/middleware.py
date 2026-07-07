@@ -6,9 +6,12 @@ them into the nested lead-agent graph's state (see ``DrAgentState``). The
 ``before_model``/``abefore_model`` hooks add the C2 deterministic
 source-extraction seam (D5 ruling C): every ``web_search``/``web_fetch``
 ``ToolMessage`` is turned mechanically into a ``Source`` record, no LLM, no
-network. Claims (C1) ride ``tools = [record_claim]`` (see ``claim_tool.py``):
-a model-facing tool whose handler is likewise deterministic validation, not
-content generation.
+network. Per D7, any scan that processes at least one new source-bearing
+ToolMessage also sets ``dr_run["deliverable"]=True`` -- attempting a search
+counts as research intent for turn-scoped gate routing, even when zero
+sources parse out of it. Claims (C1) ride ``tools = [record_claim]`` (see
+``claim_tool.py``): a model-facing tool whose handler is likewise
+deterministic validation, not content generation.
 """
 
 from __future__ import annotations
@@ -156,7 +159,15 @@ class DrLedgerMiddleware(AgentMiddleware):
         if not newly_processed:
             return None
 
-        update: dict[str, Any] = {"dr_run": {_SOURCED_MSG_IDS_KEY: sorted(processed_ids | set(newly_processed))}}
+        # D7: a scan that processed any source-bearing ToolMessage this turn
+        # is research intent -- mark the turn deliverable even if zero
+        # sources parsed, so route_after_research gates it.
+        update: dict[str, Any] = {
+            "dr_run": {
+                _SOURCED_MSG_IDS_KEY: sorted(processed_ids | set(newly_processed)),
+                "deliverable": True,
+            }
+        }
         if new_sources:
             update["dr_sources"] = new_sources
         return update

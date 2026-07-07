@@ -69,6 +69,32 @@ class TestWebSearchExtraction:
         # The message is still marked processed (watermark advances); no sources emitted.
         assert out is not None
         assert out.get("dr_sources") is None or out["dr_sources"] == {}
+        # D7: attempting a search is research intent, so the turn is marked
+        # deliverable even though zero sources parsed out of it.
+        assert out["dr_run"]["deliverable"] is True
+
+
+class TestDeliverableMarker:
+    """D7: any scan that processes at least one new source-bearing
+    ToolMessage sets dr_run["deliverable"]=True, independent of whether any
+    source actually parsed."""
+
+    def test_scan_with_parsed_sources_sets_deliverable(self):
+        results = [{"title": "A", "url": "https://a.example.com", "snippet": "..."}]
+        messages = [_web_search_call(), ToolMessage(content=json.dumps(results), tool_call_id="call_search", name="web_search")]
+
+        out = DrLedgerMiddleware().before_model({"messages": messages, "dr_run": {}}, None)
+
+        assert out["dr_run"]["deliverable"] is True
+
+    def test_no_newly_processed_messages_yields_no_update_at_all(self):
+        # No source-bearing ToolMessage in the tail -> hook returns None,
+        # so no stray deliverable marker gets written for an inert scan.
+        messages = [HumanMessage(content="hello")]
+
+        out = DrLedgerMiddleware().before_model({"messages": messages, "dr_run": {}}, None)
+
+        assert out is None
 
 
 class TestWebFetchExtraction:

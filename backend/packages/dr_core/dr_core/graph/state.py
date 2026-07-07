@@ -156,7 +156,17 @@ class DrOuterState(AgentState):
     subgraph node ("research") to this outer graph, which is safe because the
     reducers above are keyed/idempotent. ``messages`` is inherited from
     ``AgentState`` so it coexists with the dr_* channels.
+
+    ``title`` mirrors ThreadState's channel so TitleMiddleware's write inside
+    the nested subgraph propagates to the outer checkpoint, where
+    ``runtime/runs/worker.py`` reads it for thread display-name sync (without
+    this the title feature is silently inert for dr_agent runs). ``goal`` is
+    deliberately NOT mirrored: the goal-continuation loop re-enters the graph
+    with hidden turns, which would interact with the gate's corrective loop;
+    add it only after that interaction is designed.
     """
+
+    title: str
 
     dr_sources: Annotated[dict[str, dict], merge_ledger]
     dr_claims: Annotated[dict[str, dict], merge_ledger]

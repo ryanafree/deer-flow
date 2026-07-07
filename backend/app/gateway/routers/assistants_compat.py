@@ -56,9 +56,25 @@ def _get_default_assistant() -> AssistantResponse:
     )
 
 
+def _get_dr_assistant() -> AssistantResponse:
+    """Return the dr_agent assistant (dr_core gated outer graph, see D5)."""
+    now = datetime.now(UTC).isoformat()
+    return AssistantResponse(
+        assistant_id="dr_agent",
+        graph_id="dr_agent",
+        name="dr_agent",
+        config={},
+        metadata={"created_by": "system"},
+        description="Deep-research assurance agent (claim ledger, eligibility gate, deterministic report)",
+        created_at=now,
+        updated_at=now,
+        version=1,
+    )
+
+
 def _list_assistants() -> list[AssistantResponse]:
     """List all available assistants from config."""
-    assistants = [_get_default_assistant()]
+    assistants = [_get_default_assistant(), _get_dr_assistant()]
 
     # Also include custom agents from config.yaml agents directory
     try:

@@ -3,7 +3,13 @@
 Derives publication_status over dr_claims (pure functions, no LLM/network),
 decides publish-readiness, and either freezes the citation-ordinal map for
 render or bounces a corrective research turn. The cap+one-strike breaker
-guarantee the research<->gate cycle terminates (D6 ruling C).
+guarantee the research<->gate cycle terminates (D6 ruling C). On PROCEED the
+gate also resets the turn-scoped loop bookkeeping (``deliverable``,
+``gate_retries``, ``gate_ledger_sig``) per D7, so a later research turn on
+the same thread starts fresh instead of inheriting a spent retry budget or a
+stale breaker signature. The corrective (retry) branch leaves ``deliverable``
+untouched -- that is what keeps the mid-loop re-entry gated even if the model
+records nothing again.
 """
 
 from __future__ import annotations
@@ -13,8 +19,8 @@ import json
 
 from langchain_core.messages import HumanMessage
 
-from dr_core.models import Claim, PublicationStatus, StopReason
-from dr_core.models.derive import derived_materiality, is_grounded, publication_status
+from dr_core.models import Claim, StopReason
+from dr_core.models.eligibility import ineligibility_reason
 
 RETRY_CAP = 2  # D6-C: N=2 retries (3 research passes total).
 
@@ -64,24 +70,14 @@ def eligibility_gate(state) -> dict:
     excluded: list[tuple[str, str]] = []
     for claim_id, payload in dr_claims.items():
         claim = Claim.model_validate(payload)
-        # E2 (D6 ruling E): requirement-coverage is out of scope this
-        # sub-phase, so no mappings/requirements exist yet -- derived_materiality
-        # caps the unmapped claim at MEDIUM, exactly as it does for a real run
-        # before coverage mappings land.
-        materiality = derived_materiality(claim, [], {})
-        grounded = is_grounded(claim, materiality)
-        # TODO(phase2): wire conflicts -- conflict detection is a later piece.
-        status = publication_status(claim, materiality=materiality, grounded=grounded, conflicts=())
-        source_ok = claim.source_id in dr_sources
-        if status != PublicationStatus.EXCLUDED and source_ok:
+        # Derivation lives in dr_core.models.eligibility (shared with the
+        # render node so gate and render can never disagree; D6-B consistency
+        # requirement). E2/conflict caveats are documented there.
+        reason = ineligibility_reason(claim, dr_sources)
+        if reason is None:
             eligible_ids.append(claim_id)
-        elif source_ok:
-            excluded.append((claim_id, status.value))
-        elif status == PublicationStatus.EXCLUDED:
-            # Both reasons apply (m5): don't conflate down to just "missing_source".
-            excluded.append((claim_id, f"{status.value}+missing_source"))
         else:
-            excluded.append((claim_id, "missing_source"))
+            excluded.append((claim_id, reason))
 
     retries = dr_run.get("gate_retries", 0)
     prev_sig = dr_run.get("gate_ledger_sig")
@@ -101,7 +97,11 @@ def eligibility_gate(state) -> dict:
         run_update = {
             "gate_decision": "render",
             "citation_ordinals": citation_ordinals,
-            "gate_ledger_sig": sig,
+            # D7 reset: clears turn-scoped loop bookkeeping on PROCEED so a
+            # later research turn on this thread starts fresh.
+            "deliverable": False,
+            "gate_retries": 0,
+            "gate_ledger_sig": None,
         }
         if not eligible_ids:
             # Forced render with the only E2 gap: zero eligible claims.

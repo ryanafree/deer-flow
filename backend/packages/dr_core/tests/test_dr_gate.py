@@ -45,6 +45,20 @@ class TestEligibleClaimProceeds:
         assert "stop_reason" not in dr_run
         assert route_after_gate({"dr_run": dr_run}) == "render"
 
+    def test_proceed_branch_resets_turn_scoped_loop_bookkeeping(self):
+        """D7: PROCEED clears deliverable/gate_retries/gate_ledger_sig so a
+        later research turn on the same thread starts fresh."""
+        state = {
+            "dr_claims": {"c1": _claim("c1", source_id="s1")},
+            "dr_sources": {"s1": _source("s1")},
+            "dr_run": {"deliverable": True, "gate_retries": 1, "gate_ledger_sig": "stale-sig"},
+        }
+        result = eligibility_gate(state)
+        dr_run = result["dr_run"]
+        assert dr_run["deliverable"] is False
+        assert dr_run["gate_retries"] == 0
+        assert dr_run["gate_ledger_sig"] is None
+
 
 class TestOnlyIneligibleRetries:
     def test_excluded_claim_bounces_a_corrective_retry(self):
@@ -65,6 +79,39 @@ class TestOnlyIneligibleRetries:
         assert corrective.additional_kwargs.get("hide_from_ui") is True
         assert "<dr_corrective>" in corrective.content
         assert route_after_gate({"dr_run": dr_run}) == "research"
+
+    def test_corrective_branch_does_not_clear_deliverable(self):
+        """D7: the retry bounce must leave deliverable untouched (not
+        cleared) so the mid-corrective-loop re-entry stays gated even if the
+        model records nothing again on the retry turn."""
+        excluded_claim = _claim("c1", source_id="s1", citation_status=CitationStatus.NOT_FOUND)
+        state = {
+            "dr_claims": {"c1": excluded_claim},
+            "dr_sources": {"s1": _source("s1")},
+            "dr_run": {"gate_retries": 0, "deliverable": True},
+        }
+        result = eligibility_gate(state)
+        dr_run = result["dr_run"]
+        assert "deliverable" not in dr_run
+
+
+class TestNoClaimsCorrectiveReachable:
+    """B2(a)/D7: a research turn that searches but records zero claims must
+    reach the gate (route_after_research gates on the deliverable marker
+    alone), and the gate's no-claims corrective -- previously unreachable
+    because nothing ever set the marker -- must fire."""
+
+    def test_zero_claims_bounces_the_no_claims_corrective(self):
+        state = {
+            "dr_claims": {},
+            "dr_sources": {},
+            "dr_run": {"gate_retries": 0, "deliverable": True},
+        }
+        result = eligibility_gate(state)
+        dr_run = result["dr_run"]
+        assert dr_run["gate_decision"] == "research"
+        corrective = result["messages"][0]
+        assert "no claims have been recorded yet" in corrective.content
 
 
 class TestCapHitForcesRender:

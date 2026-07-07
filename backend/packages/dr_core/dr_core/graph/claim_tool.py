@@ -18,6 +18,10 @@ Four binding refinements (D6 ruling A):
    model quirk (e.g. importance 3 then 4) never reaches ``merge_ledger`` as a
    same-field divergent write (which raises and kills the run).
 4. rejections are actionable (name the bad source_id / gate_flag).
+
+Per D7, a successful record also sets ``dr_run["deliverable"]=True`` on the
+returned Command -- a recorded claim is definitionally a research
+deliverable, so the turn is routed to ``eligibility_gate``.
 """
 
 from __future__ import annotations
@@ -119,4 +123,6 @@ def record_claim(
         return _reject(tool_call_id, f"a claim from this text and source is already recorded as {claim.claim_id} -- first assertion kept.")
 
     message = ToolMessage(content=f"recorded claim {claim.claim_id}", tool_call_id=tool_call_id)
-    return Command(update={"dr_claims": {claim.claim_id: payload}, "messages": [message]})
+    # D7: a recorded claim is definitionally a deliverable -- mark the turn
+    # so route_after_research gates it.
+    return Command(update={"dr_claims": {claim.claim_id: payload}, "dr_run": {"deliverable": True}, "messages": [message]})

@@ -59,6 +59,13 @@ class TestValidClaim:
         assert payload["citation_status"] == CitationStatus.UNRESOLVED.value
         assert payload["data_provenance"] == DataProvenance.UNAUDITED.value
 
+    def test_success_command_sets_deliverable_marker(self):
+        """D7: a recorded claim is definitionally a deliverable, so the
+        success Command must set dr_run["deliverable"]=True for
+        route_after_research to gate the turn."""
+        out = _record()
+        assert out.update["dr_run"] == {"deliverable": True}
+
 
 class TestUnknownSource:
     def test_rejects_with_no_dr_claims_key(self):

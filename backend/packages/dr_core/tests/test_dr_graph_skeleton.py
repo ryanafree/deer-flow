@@ -33,17 +33,36 @@ class TestMergeById:
 
 
 class TestRouteAfterResearch:
+    """D7: turn-scoped routing. Gates iff dr_run["deliverable"] is true OR
+    dr_run["gate_decision"] == "research" -- never on dr_claims, since claims
+    persist across turns in thread state."""
+
     def test_empty_state_routes_to_end(self):
         assert route_after_research({}) == END
-
-    def test_claims_route_to_gate(self):
-        assert route_after_research({"dr_claims": {"c1": {"id": "c1"}}}) == "gate"
 
     def test_deliverable_marker_routes_to_gate(self):
         assert route_after_research({"dr_run": {"deliverable": True}}) == "gate"
 
     def test_empty_claims_and_no_marker_routes_to_end(self):
         assert route_after_research({"dr_claims": {}, "dr_run": {"deliverable": False}}) == END
+
+    def test_zero_claim_search_turn_with_deliverable_marker_routes_to_gate(self):
+        """B2(a): a research turn that searched but recorded zero claims must
+        still reach the gate so its no-claims corrective is reachable."""
+        assert route_after_research({"dr_claims": {}, "dr_run": {"deliverable": True}}) == "gate"
+
+    def test_stale_claims_without_deliverable_marker_route_to_end(self):
+        """B2(b): dr_claims persisting from a prior research turn must NOT
+        drag a later ordinary chat turn (no deliverable this turn) into the
+        gate -- this is the post-render chat-turn leak D7 closes."""
+        state = {"dr_claims": {"c1": {"id": "c1"}}, "dr_run": {"deliverable": False, "gate_decision": "render"}}
+        assert route_after_research(state) == END
+
+    def test_mid_corrective_loop_routes_to_gate_regardless_of_deliverable(self):
+        """B2/D6: gate_decision == "research" is the corrective re-entry
+        marker and must gate even if deliverable is absent or false."""
+        assert route_after_research({"dr_run": {"gate_decision": "research"}}) == "gate"
+        assert route_after_research({"dr_run": {"gate_decision": "research", "deliverable": False}}) == "gate"
 
 
 class TestDrLedgerMiddleware:
