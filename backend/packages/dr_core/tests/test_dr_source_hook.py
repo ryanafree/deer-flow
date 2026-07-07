@@ -61,6 +61,43 @@ class TestWebSearchExtraction:
 
         assert list(out_1["dr_sources"].keys()) == list(out_2["dr_sources"].keys())
 
+    def test_ddg_object_payload_yields_sources(self):
+        # The LIVE web_search tool (community/ddg_search/tools.py) returns an
+        # object {"query", "total_results", "results": [...]}, not a bare
+        # list. The S6 live E2E run caught the hook extracting zero sources
+        # from a real search; this pins the real payload shape.
+        payload = {
+            "query": "q",
+            "total_results": 2,
+            "results": [
+                {"title": "A", "url": "https://a.example.com", "content": "..."},
+                {"title": "B", "url": "https://b.example.com", "content": "..."},
+            ],
+        }
+        messages = [
+            _web_search_call(),
+            ToolMessage(content=json.dumps(payload, indent=2), tool_call_id="call_search", name="web_search"),
+        ]
+
+        out = DrLedgerMiddleware().before_model({"messages": messages, "dr_run": {}}, None)
+
+        assert out is not None
+        urls = {record["url_or_id"] for record in out["dr_sources"].values()}
+        assert urls == {"https://a.example.com", "https://b.example.com"}
+
+    def test_ddg_error_object_yields_no_sources(self):
+        payload = {"error": "No results found", "query": "q"}
+        messages = [
+            _web_search_call(),
+            ToolMessage(content=json.dumps(payload), tool_call_id="call_search", name="web_search"),
+        ]
+
+        out = DrLedgerMiddleware().before_model({"messages": messages, "dr_run": {}}, None)
+
+        assert out is not None
+        assert out.get("dr_sources") is None or out["dr_sources"] == {}
+        assert out["dr_run"]["deliverable"] is True
+
     def test_malformed_json_is_skipped_without_crash(self):
         messages = [_web_search_call(), ToolMessage(content="not json{{", tool_call_id="call_search", name="web_search")]
 

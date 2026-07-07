@@ -73,6 +73,14 @@ def _sources_from_web_search(content: str, retrieved_at: str) -> dict[str, dict]
         results = json.loads(content)
     except (TypeError, ValueError):
         return {}
+    # The live ddg_search web_search tool returns an OBJECT:
+    # {"query", "total_results", "results": [{"title","url","content"}, ...]}
+    # (community/ddg_search/tools.py:175-182; caught by the S6 live E2E run,
+    # which extracted zero sources from a real search). Tavily-style tools
+    # return a bare list. Accept both; anything else (e.g. the ddg "error"
+    # object) extracts nothing.
+    if isinstance(results, dict):
+        results = results.get("results")
     if not isinstance(results, list):
         return {}
 

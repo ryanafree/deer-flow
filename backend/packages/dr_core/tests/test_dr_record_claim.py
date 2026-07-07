@@ -26,6 +26,38 @@ def _record(**overrides) -> dict:
     return record_claim.func(**args)
 
 
+class TestUrlCitationResolution:
+    """The model only sees urls in search/fetch results (never the sha256
+    ledger ids), so record_claim resolves an exact-url citation to the C2
+    hook's deterministic id. Pinned by the S6 live E2E finding."""
+
+    URL = "https://mw.example.gov/minimum-wage"
+
+    def _url_state(self):
+        import hashlib
+
+        ledger_id = hashlib.sha256(self.URL.encode("utf-8")).hexdigest()[:16]
+        return ledger_id, {"dr_sources": {ledger_id: {"id": ledger_id, "url_or_id": self.URL}}, "dr_claims": {}}
+
+    def test_url_citation_resolves_to_ledger_id(self):
+        ledger_id, state = self._url_state()
+        out = _record(source_id=self.URL, state=state)
+        (_, payload), = out.update["dr_claims"].items()
+        assert payload["source_id"] == ledger_id
+
+    def test_url_and_id_citations_yield_same_claim_id(self):
+        ledger_id, state = self._url_state()
+        by_url = _record(source_id=self.URL, state=state)
+        by_id = _record(source_id=ledger_id, state=state)
+        assert list(by_url.update["dr_claims"]) == list(by_id.update["dr_claims"])
+
+    def test_unknown_url_still_rejected(self):
+        _, state = self._url_state()
+        out = _record(source_id="https://not-retrieved.example.com/", state=state)
+        assert "dr_claims" not in out.update
+        assert "not found" in out.update["messages"][0].content
+
+
 class TestValidClaim:
     def test_records_claim_under_deterministic_id(self):
         out = _record()
