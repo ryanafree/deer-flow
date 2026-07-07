@@ -108,6 +108,8 @@ def fetch_edgar(
         tickers = _get_json("https://www.sec.gov/files/company_tickers.json", hdr)
     except urllib.error.HTTPError as e:
         return _fail(f"company_tickers fetch failed: {e.code}")
+    except (urllib.error.URLError, OSError) as e:
+        return _fail(f"company_tickers fetch failed: {e}")
     cik = None
     name = None
     t = ticker.upper()
@@ -125,6 +127,8 @@ def fetch_edgar(
         facts = _get_json(f"https://data.sec.gov/api/xbrl/companyfacts/CIK{cik10}.json", hdr)
     except urllib.error.HTTPError as e:
         return _fail(f"companyfacts fetch failed: {e.code}", cik=cik10)
+    except (urllib.error.URLError, OSError) as e:
+        return _fail(f"companyfacts fetch failed: {e}", cik=cik10)
 
     gaap = (facts.get("facts") or {}).get("us-gaap") or {}
     kw = (concept_keyword or "").lower()
@@ -148,7 +152,8 @@ def fetch_edgar(
                     continue
                 start, end = e.get("start"), e.get("end")
                 if start and end:
-                    days = _day_ordinal(end) - _day_ordinal(start)
+                    start_ord, end_ord = _day_ordinal(start), _day_ordinal(end)
+                    days = end_ord - start_ord if start_ord is not None and end_ord is not None else None
                     if days is not None and days < 300:  # skip quarterly/partial
                         continue
                 # IMPORTANT: the SEC `fy` field is the FILING's fiscal year, not the data
@@ -207,6 +212,8 @@ def fetch_fred(series: str, year: int | None = None, latest: bool = False) -> di
         data = _get_json(url)
     except urllib.error.HTTPError as e:
         return _fail(f"FRED fetch failed: {e.code}", series=series)
+    except (urllib.error.URLError, OSError) as e:
+        return _fail(f"FRED fetch failed: {e}", series=series)
     obs = [{"date": o["date"], "value": o["value"]} for o in data.get("observations", [])
            if o.get("value") not in (".", None, "")]
     if not obs:
@@ -243,6 +250,8 @@ def fetch_courtlistener(text: str | None = None, textfile: str | None = None) ->
         if e.code == 429:
             return _fail("rate-limited (429): CourtListener daily/throttle cap reached", rate_limited=True)
         return _fail(f"citation-lookup failed: {e.code}")
+    except (urllib.error.URLError, OSError) as e:
+        return _fail(f"citation-lookup failed: {e}")
     # Normalize each returned citation to {citation, status, case_name, url, clusters, indices}.
     cites = []
     for c in (res if isinstance(res, list) else []):

@@ -155,6 +155,118 @@ def test_fetch_edgar_http_error_from_company_tickers(monkeypatch):
 
 
 # ---------------------------------------------------------------------------
+# B6 fault injection — a hung/unreachable source can never stall or crash a run
+# ---------------------------------------------------------------------------
+
+
+def test_fetch_edgar_url_error_from_company_tickers_fails_closed(monkeypatch):
+    monkeypatch.setattr(structured, "env", lambda key: "test-agent")
+
+    def _raise(url, headers=None):
+        raise urllib.error.URLError(TimeoutError("timed out"))
+
+    monkeypatch.setattr(structured, "_get_json", _raise)
+
+    result = structured.fetch_edgar(ticker="AAPL")
+
+    assert result["ok"] is False
+    assert "company_tickers fetch failed" in result["error"]
+
+
+def test_fetch_edgar_socket_timeout_from_companyfacts_fails_closed(monkeypatch):
+    monkeypatch.setattr(structured, "env", lambda key: "test-agent")
+
+    def _flaky(url, headers=None):
+        if "companyfacts" in url:
+            raise TimeoutError("timed out")
+        return _TICKERS_FIXTURE
+
+    monkeypatch.setattr(structured, "_get_json", _flaky)
+
+    result = structured.fetch_edgar(ticker="AAPL")
+
+    assert result["ok"] is False
+    assert "companyfacts fetch failed" in result["error"]
+
+
+def test_fetch_fred_dns_failure_fails_closed(monkeypatch):
+    monkeypatch.setattr(structured, "env", lambda key: "k")
+
+    def _raise(url, headers=None):
+        raise urllib.error.URLError(OSError("nodename nor servname provided"))
+
+    monkeypatch.setattr(structured, "_get_json", _raise)
+
+    result = structured.fetch_fred(series="UNRATE")
+
+    assert result == {"ok": False, "error": "FRED fetch failed: <urlopen error nodename nor servname provided>", "series": "UNRATE"}
+
+
+def test_fetch_courtlistener_url_error_fails_closed(monkeypatch):
+    monkeypatch.setattr(structured, "env", lambda key: "test-token")
+
+    def _raise(url, fields, headers=None):
+        raise urllib.error.URLError(TimeoutError("timed out"))
+
+    monkeypatch.setattr(structured, "_post_form", _raise)
+
+    result = structured.fetch_courtlistener(text="foo")
+
+    assert result["ok"] is False
+    assert "citation-lookup failed" in result["error"]
+
+
+def test_cli_fred_url_error_still_prints_ok_false_and_exits_zero(monkeypatch, capsys):
+    """The always-exits-0 contract must hold for a genuine network exception, not just
+    a handled ok=false return -- this drives the exception through main(), unlike
+    test_cli_prints_error_record_and_still_exits_zero which mocks the fetch fn itself."""
+    monkeypatch.setattr(structured, "env", lambda key: "k")
+
+    def _raise(url, headers=None):
+        raise urllib.error.URLError(TimeoutError("timed out"))
+
+    monkeypatch.setattr(structured, "_get_json", _raise)
+    parser = structured._build_parser()
+    args = parser.parse_args(["fred", "--series", "UNRATE"])
+
+    with pytest.raises(SystemExit) as exc_info:
+        args.func(args)
+
+    assert exc_info.value.code == 0
+    assert '"ok": false' in capsys.readouterr().out
+
+
+# ---------------------------------------------------------------------------
+# m2 — malformed dates in SEC data must not raise before the None-check
+# ---------------------------------------------------------------------------
+
+
+def test_fetch_edgar_malformed_end_date_does_not_raise(monkeypatch):
+    monkeypatch.setattr(structured, "env", lambda key: "test-agent")
+    facts_bad_date = {
+        "facts": {
+            "us-gaap": {
+                "Revenues": {
+                    "label": "Revenues",
+                    "units": {
+                        "USD": [
+                            # end date has an invalid month/day; _day_ordinal returns None for it
+                            {"form": "10-K", "fp": "FY", "start": "2026-01-01", "end": "2026-13-99", "val": 500, "fy": 2026, "accn": "acc-bad", "filed": "2026-06-01"},
+                        ]
+                    },
+                }
+            }
+        }
+    }
+    monkeypatch.setattr(structured, "_get_json", _fake_get_json(facts=facts_bad_date))
+
+    result = structured.fetch_edgar(ticker="AAPL", concept_keyword="revenue")
+
+    assert result["ok"] is True
+    assert result["matches"][0]["accn"] == "acc-bad"
+
+
+# ---------------------------------------------------------------------------
 # FRED — observation parsing + provenance scrubbing
 # ---------------------------------------------------------------------------
 

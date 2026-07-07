@@ -1034,7 +1034,9 @@ version = "0.1.0"
 source = { editable = "packages/dr_core" }
 dependencies = [
     { name = "certifi" },
+    { name = "langchain" },
     { name = "langchain-core" },
+    { name = "langgraph" },
     { name = "markdown" },
     { name = "pydantic" },
     { name = "pyyaml" },
@@ -1049,7 +1051,9 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "certifi", specifier = ">=2024.0" },
+    { name = "langchain", specifier = ">=1.2.15" },
     { name = "langchain-core", specifier = ">=1.3.3" },
+    { name = "langgraph", specifier = ">=1.1.9" },
     { name = "markdown", specifier = ">=3.0" },
     { name = "pydantic", specifier = ">=2.0" },
     { name = "pyyaml", specifier = ">=6.0" },

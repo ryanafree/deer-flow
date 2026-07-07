@@ -18,7 +18,12 @@ from typing import Annotated
 
 from langchain.agents import AgentState
 
-from dr_core.models.derive import assert_verification_transition_allowed
+from dr_core.models.derive import (
+    assert_citation_transition_allowed,
+    assert_provenance_transition_allowed,
+    assert_verification_transition_allowed,
+)
+from dr_core.models.enums import CitationStatus, DataProvenance
 from dr_core.models.ledger import VerificationRecord
 
 _MISSING = object()
@@ -54,15 +59,15 @@ def _merge_record(record_id: str, old: dict, new: dict) -> dict:
       dict from ``new`` wins (last-writer-wins on its non-status sub-fields
       -- votes/complete/mode/selected/risk_reasons -- since one verify pass
       writes them atomically together; only status is a real ladder).
+    - ``citation_status`` and ``data_provenance`` are the other two D2
+      advance-only ladders: ``derive.assert_citation_transition_allowed`` and
+      ``derive.assert_provenance_transition_allowed`` guard them the same way
+      -- unresolved/unaudited may advance to either terminal outcome, and the
+      terminal outcomes may never be left. A legal advance merges (new wins);
+      an illegal one raises.
     - Every other field: an unchanged value passes through; a genuine
       divergence (two different values, neither a no-op) RAISES rather than
       silently picking one (D2: "same-field divergent writes fail loudly").
-      ``citation_status`` and ``data_provenance`` fall into this bucket too --
-      derive.py has no transition-guard sibling for either (only
-      ``assert_verification_transition_allowed`` exists), so treating them as
-      an unlisted advance-only ladder would mean inventing an ordering the
-      models don't define. Divergent-raise is the fail-closed default D2
-      calls for absent an actual guard function to reuse.
     """
     merged = dict(old)
     for key, new_val in new.items():
@@ -75,6 +80,14 @@ def _merge_record(record_id: str, old: dict, new: dict) -> dict:
             new_status = VerificationRecord.model_validate(new_val).status
             if old_status != new_status:
                 assert_verification_transition_allowed(old_status, new_status)
+            merged[key] = new_val
+            continue
+        if key == "citation_status":
+            assert_citation_transition_allowed(CitationStatus(old_val), CitationStatus(new_val))
+            merged[key] = new_val
+            continue
+        if key == "data_provenance":
+            assert_provenance_transition_allowed(DataProvenance(old_val), DataProvenance(new_val))
             merged[key] = new_val
             continue
         raise ValueError(f"divergent write to field {key!r} for id {record_id!r}: {old_val!r} != {new_val!r}")

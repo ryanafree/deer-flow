@@ -14,7 +14,7 @@ import copy
 import pytest
 
 from dr_core.graph.state import merge_ledger
-from dr_core.models import Claim, CitationStatus, VerificationRecord, VerificationStatus
+from dr_core.models import Claim, CitationStatus, DataProvenance, VerificationRecord, VerificationStatus
 
 
 def _claim(claim_id: str = "c1", *, status: VerificationStatus = VerificationStatus.PENDING, **overrides) -> dict:
@@ -77,8 +77,58 @@ class TestMergeLedgerDivergentRaise:
         with pytest.raises(ValueError):
             merge_ledger(existing, new)
 
-    def test_divergent_citation_status_raises(self):
+    def test_legal_citation_advance_merges(self):
+        # unresolved -> not_found is a legal ladder advance (D2), not a divergent
+        # write -- see TestMergeLedgerCitationTransition / TestMergeLedgerProvenanceTransition below.
         existing = {"c1": _claim("c1", citation_status=CitationStatus.UNRESOLVED)}
+        new = {"c1": _claim("c1", citation_status=CitationStatus.NOT_FOUND)}
+        merged = merge_ledger(existing, new)
+        assert merged["c1"]["citation_status"] == CitationStatus.NOT_FOUND.value
+
+    def test_divergent_citation_status_backward_raises(self):
+        existing = {"c1": _claim("c1", citation_status=CitationStatus.NOT_FOUND)}
+        new = {"c1": _claim("c1", citation_status=CitationStatus.UNRESOLVED)}
+        with pytest.raises(ValueError):
+            merge_ledger(existing, new)
+
+
+class TestMergeLedgerCitationTransition:
+    def test_legal_forward_transition_merges(self):
+        existing = {"c1": _claim("c1", citation_status=CitationStatus.UNRESOLVED)}
+        new = {"c1": _claim("c1", citation_status=CitationStatus.RESOLVED)}
+        merged = merge_ledger(existing, new)
+        assert merged["c1"]["citation_status"] == CitationStatus.RESOLVED.value
+
+    def test_illegal_transition_out_of_terminal_raises(self):
+        existing = {"c1": _claim("c1", citation_status=CitationStatus.RESOLVED)}
         new = {"c1": _claim("c1", citation_status=CitationStatus.NOT_FOUND)}
         with pytest.raises(ValueError):
             merge_ledger(existing, new)
+
+    def test_idempotent_reapplication_is_noop(self):
+        record = _claim("c1", citation_status=CitationStatus.NOT_FOUND)
+        existing = {"c1": copy.deepcopy(record)}
+        new = {"c1": copy.deepcopy(record)}
+        merged = merge_ledger(existing, new)
+        assert merged == existing
+
+
+class TestMergeLedgerProvenanceTransition:
+    def test_legal_forward_transition_merges(self):
+        existing = {"c1": _claim("c1", data_provenance=DataProvenance.UNAUDITED)}
+        new = {"c1": _claim("c1", data_provenance=DataProvenance.MATCHED)}
+        merged = merge_ledger(existing, new)
+        assert merged["c1"]["data_provenance"] == DataProvenance.MATCHED.value
+
+    def test_illegal_transition_out_of_terminal_raises(self):
+        existing = {"c1": _claim("c1", data_provenance=DataProvenance.MATCHED)}
+        new = {"c1": _claim("c1", data_provenance=DataProvenance.MISMATCH)}
+        with pytest.raises(ValueError):
+            merge_ledger(existing, new)
+
+    def test_idempotent_reapplication_is_noop(self):
+        record = _claim("c1", data_provenance=DataProvenance.MISMATCH)
+        existing = {"c1": copy.deepcopy(record)}
+        new = {"c1": copy.deepcopy(record)}
+        merged = merge_ledger(existing, new)
+        assert merged == existing

@@ -198,6 +198,13 @@ def _claim_status_counts(claims, conflicts=()):
             counts["killed_on_refute"] += 1
         if claim_caveat(c) is not None:
             counts["caveats"] += 1
+    # Renderer-facing aliases (M1): render_report.py reads claims_verified/claims_killed/
+    # claims_flagged, which is a different shape than this aggregate's publication-status
+    # keys above. claims_flagged mirrors eval/score_run.py's own derivation (claims
+    # carrying at least one gate flag) so the two counts never drift apart.
+    counts["claims_verified"] = counts["supported"]
+    counts["claims_killed"] = counts["killed_on_refute"]
+    counts["claims_flagged"] = sum(1 for c in claims if c.gate_flags)
     return counts
 
 

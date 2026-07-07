@@ -75,8 +75,13 @@ def eligibility_gate(state) -> dict:
         source_ok = claim.source_id in dr_sources
         if status != PublicationStatus.EXCLUDED and source_ok:
             eligible_ids.append(claim_id)
+        elif source_ok:
+            excluded.append((claim_id, status.value))
+        elif status == PublicationStatus.EXCLUDED:
+            # Both reasons apply (m5): don't conflate down to just "missing_source".
+            excluded.append((claim_id, f"{status.value}+missing_source"))
         else:
-            excluded.append((claim_id, status.value if source_ok else "missing_source"))
+            excluded.append((claim_id, "missing_source"))
 
     retries = dr_run.get("gate_retries", 0)
     prev_sig = dr_run.get("gate_ledger_sig")

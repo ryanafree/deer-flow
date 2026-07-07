@@ -446,6 +446,43 @@ def assert_verification_transition_allowed(current: VerificationStatus, new: Ver
 
 
 # ---------------------------------------------------------------------------
+# Citation / data-provenance transitions (D2: advance-only ladders, sibling to
+# assert_verification_transition_allowed above)
+# ---------------------------------------------------------------------------
+
+CITATION_TRANSITIONS: dict[CitationStatus, frozenset[CitationStatus]] = {
+    CitationStatus.UNRESOLVED: frozenset({CitationStatus.UNRESOLVED, CitationStatus.RESOLVED, CitationStatus.NOT_FOUND}),
+    CitationStatus.RESOLVED: frozenset({CitationStatus.RESOLVED}),
+    CitationStatus.NOT_FOUND: frozenset({CitationStatus.NOT_FOUND}),
+}
+
+
+def assert_citation_transition_allowed(current: CitationStatus, new: CitationStatus) -> None:
+    """CitationStatus is an advance-only ladder (D2): unresolved -> resolved and
+    unresolved -> not_found are the only legal advances. resolved and not_found are
+    terminal -- nothing may leave either. A same-state re-application is always a
+    no-op (present in the allowed set for every current value)."""
+    if new not in CITATION_TRANSITIONS[current]:
+        raise ValueError(f"illegal transition: citation_status cannot move from {current} to {new}")
+
+
+PROVENANCE_TRANSITIONS: dict[DataProvenance, frozenset[DataProvenance]] = {
+    DataProvenance.UNAUDITED: frozenset({DataProvenance.UNAUDITED, DataProvenance.MATCHED, DataProvenance.MISMATCH}),
+    DataProvenance.MATCHED: frozenset({DataProvenance.MATCHED}),
+    DataProvenance.MISMATCH: frozenset({DataProvenance.MISMATCH}),
+}
+
+
+def assert_provenance_transition_allowed(current: DataProvenance, new: DataProvenance) -> None:
+    """DataProvenance is an advance-only ladder (D2): unaudited -> matched and
+    unaudited -> mismatch are the only legal advances. matched and mismatch are
+    terminal audit outcomes -- nothing may leave either. A same-state re-application
+    is always a no-op (present in the allowed set for every current value)."""
+    if new not in PROVENANCE_TRANSITIONS[current]:
+        raise ValueError(f"illegal transition: data_provenance cannot move from {current} to {new}")
+
+
+# ---------------------------------------------------------------------------
 # PublicationStatus derivation (fixed precedence) + the claimCaveat table
 # ---------------------------------------------------------------------------
 

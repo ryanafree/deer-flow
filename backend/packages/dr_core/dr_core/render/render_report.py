@@ -62,7 +62,10 @@ from dr_core.models import (
 )
 from dr_core.models.derive import effective_relation, is_grounded, materiality_of, publication_status
 
-APPENDIX_MARKER = "## Appendix — Methodology, Sources & Validation"
+# Tolerant match (same pattern as dr_core.lint.report_lint.APPENDIX_RE) rather than an
+# exact-string marker: write_run.py's own appendix heading text has drifted from this
+# renderer's before (B3) and a literal-string match silently stops catching it again.
+APPENDIX_RE = re.compile(r"^##+\s*Appendix", re.M)
 # Ported from the harness verbatim in spirit; the harness's own copy of this set (hyphenated
 # strings, no source of truth) has been dropped rather than kept out of sync — the blocking-flag
 # set now lives once, in dr_core.models.derive, and is applied via is_grounded/publication_status
@@ -96,8 +99,8 @@ def split_body(report_md):
     """The body is everything write_run.py put before the deterministic appendix it appends. That
     appendix stays in report.md verbatim (the portable/plain-text copy); this renderer rebuilds its
     own HTML version from the JSON records instead of re-parsing that markdown."""
-    idx = report_md.find(APPENDIX_MARKER)
-    body = report_md[:idx] if idx >= 0 else report_md
+    m = APPENDIX_RE.search(report_md)
+    body = report_md[: m.start()] if m else report_md
     return body.strip()
 
 
@@ -299,8 +302,6 @@ def render_references(ordered_sources):
         return ""
     items = []
     for i, s in enumerate(ordered_sources, start=1):
-        if not s:
-            continue
         title = s.title or s.url_or_id or s.source_system or "—"
         url = s.url_or_id or ""
         tier = s.authority_tier

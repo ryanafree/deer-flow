@@ -20,6 +20,7 @@ import asyncio
 import json
 import os
 import signal
+import tempfile
 import threading
 from typing import Any
 
@@ -180,6 +181,7 @@ class ChatClaudeCLI(BaseChatModel):
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
             start_new_session=True,  # setsid, so killpg() below can reach the whole group
+            cwd=tempfile.gettempdir(),  # never the project tree (M8a): avoids reloading its CLAUDE.md/hooks per call
         )
         self._last_proc = proc
 
@@ -197,7 +199,11 @@ class ChatClaudeCLI(BaseChatModel):
         if proc.returncode != 0:
             raise RuntimeError(f"claude -p exited {proc.returncode}: {stderr.decode(errors='replace')[:2000]}")
 
-        payload = json.loads(stdout.decode())
+        decoded = stdout.decode(errors="replace")
+        try:
+            payload = json.loads(decoded)
+        except json.JSONDecodeError as e:
+            raise RuntimeError(f"claude -p returned non-JSON stdout: {decoded[:2000]!r}") from e
         return self._parse_result(payload)
 
     def _parse_result(self, payload: dict[str, Any]) -> ChatResult:

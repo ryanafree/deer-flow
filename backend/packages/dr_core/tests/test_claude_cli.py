@@ -12,10 +12,29 @@ Run: cd deer-flow/backend && uv run pytest packages/dr_core/ -v
 from __future__ import annotations
 
 import asyncio
+import json
+import tempfile
 import time
 
 import pytest
 from dr_core.models.claude_cli import ChatClaudeCLI
+
+
+class _FakeProc:
+    """Stand-in for asyncio.subprocess.Process, for tests that must not spawn a real
+    `claude -p` process (M8a/M8b are argv/parsing-level fixes, not subprocess behavior)."""
+
+    def __init__(self, stdout: bytes, stderr: bytes = b"", returncode: int = 0) -> None:
+        self._stdout = stdout
+        self._stderr = stderr
+        self.returncode = returncode
+        self.pid = 999999
+
+    async def communicate(self):
+        return self._stdout, self._stderr
+
+    async def wait(self):
+        return self.returncode
 
 # asyncio_mode = "auto" is set in packages/dr_core/pyproject.toml, so async
 # test functions below need no explicit @pytest.mark.asyncio.
@@ -90,6 +109,58 @@ async def test_t3_concurrency() -> None:
         assert r.content
 
     assert concurrent_elapsed < n * single_elapsed, f"concurrent calls did not overlap: concurrent={concurrent_elapsed:.2f}s vs {n}x single={n * single_elapsed:.2f}s"
+
+
+async def test_t5_agenerate_passes_a_neutral_cwd(monkeypatch) -> None:
+    """M8a: claude -p must never run in the project tree (reloads CLAUDE.md/hooks per
+    call). Asserts the cwd kwarg reaches create_subprocess_exec, without spawning a
+    real process."""
+    captured: dict = {}
+
+    async def _fake_create_subprocess_exec(*args, **kwargs):
+        captured.update(kwargs)
+        payload = json.dumps({"result": "OK", "usage": {}, "total_cost_usd": 0.0, "is_error": False, "subtype": "success", "session_id": "s1"}).encode()
+        return _FakeProc(stdout=payload)
+
+    monkeypatch.setattr(asyncio, "create_subprocess_exec", _fake_create_subprocess_exec)
+
+    model = ChatClaudeCLI(model="haiku")
+    result = await model.ainvoke("hi")
+
+    assert result.content == "OK"
+    assert captured.get("cwd") == tempfile.gettempdir()
+
+
+async def test_t6_malformed_stdout_raises_descriptive_runtime_error(monkeypatch) -> None:
+    """M8b: non-JSON stdout must raise a descriptive RuntimeError carrying a truncated
+    excerpt, never a raw json.JSONDecodeError."""
+
+    async def _fake_create_subprocess_exec(*args, **kwargs):
+        return _FakeProc(stdout=b"not json at all")
+
+    monkeypatch.setattr(asyncio, "create_subprocess_exec", _fake_create_subprocess_exec)
+
+    model = ChatClaudeCLI(model="haiku")
+    with pytest.raises(RuntimeError) as exc_info:
+        await model.ainvoke("hi")
+
+    assert not isinstance(exc_info.value, json.JSONDecodeError)
+    assert "non-JSON" in str(exc_info.value)
+    assert "not json at all" in str(exc_info.value)
+
+
+async def test_t6b_undecodable_stdout_bytes_do_not_raise_a_unicode_error(monkeypatch) -> None:
+    """M8b: undecodable bytes must decode with errors='replace' rather than raising
+    UnicodeDecodeError, and still surface as the same descriptive RuntimeError."""
+
+    async def _fake_create_subprocess_exec(*args, **kwargs):
+        return _FakeProc(stdout=b"\xff\xfe not valid utf-8 {")
+
+    monkeypatch.setattr(asyncio, "create_subprocess_exec", _fake_create_subprocess_exec)
+
+    model = ChatClaudeCLI(model="haiku")
+    with pytest.raises(RuntimeError):
+        await model.ainvoke("hi")
 
 
 def test_t4_stateless_argv_never_resumes() -> None:

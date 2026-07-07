@@ -131,6 +131,21 @@ class TestMissingSourceBackstop:
         assert dr_run["gate_retries"] == 1
 
 
+class TestExclusionReasonNotConflated:
+    def test_excluded_and_missing_source_reports_both_reasons(self):
+        """m5: a claim that is both EXCLUDED (citation not found) and missing its
+        source must not collapse to just 'missing_source' in the corrective message."""
+        claim = _claim("c1", source_id="s-missing", citation_status=CitationStatus.NOT_FOUND)
+        state = {
+            "dr_claims": {"c1": claim},
+            "dr_sources": {},
+            "dr_run": {"gate_retries": 0},
+        }
+        result = eligibility_gate(state)
+        corrective = result["messages"][0]
+        assert "c1 (excluded+missing_source)" in corrective.content
+
+
 class TestMakeDrAgentGateWiring:
     def test_gate_conditional_edge_routes_to_research_and_render(self, monkeypatch):
         class _Stub(AgentState):
