@@ -1,12 +1,17 @@
-"""make_dr_agent — the D5 gated outer-graph wrap, now with the D6 corrective loop.
+"""make_dr_agent — the D5 gated outer-graph wrap, now with the D6 corrective loop
+and the D8 verification layer.
 
 A thin ``StateGraph(DrOuterState)``: node "research" (the DeerFlow lead-agent
-subgraph, carrying ``DrLedgerMiddleware``) -> conditional edge -> node
+subgraph, carrying ``DrLedgerMiddleware``) -> conditional edge -> node "verify"
+(the D8 citation gate / provenance audit / adaptive vote pass) -> node
 "eligibility_gate" -> conditional edge -> node "research" (corrective retry)
 or node "render" (stub) -> END. See D5 in DECISIONS.md for the
 research-routing design caveat, D6 for the gate/loop policy this graph
-implements, and D7 for the turn-scoped ``deliverable`` marker that decides
-``route_after_research``.
+implements, D7 for the turn-scoped ``deliverable`` marker that decides
+``route_after_research``, and D8 for the verify node's topology (the
+corrective loop re-enters through "verify" too -- safe because verify skips
+claims whose ``verification.complete`` is true or whose ladders are terminal,
+so re-entry and resume re-execution are cheap no-ops).
 """
 
 from __future__ import annotations
@@ -15,11 +20,11 @@ from langgraph.graph import END, StateGraph
 
 from deerflow.agents.lead_agent.agent import _make_lead_agent
 from deerflow.config.app_config import get_app_config
-
 from dr_core.graph.gate import eligibility_gate
 from dr_core.graph.middleware import DrLedgerMiddleware
 from dr_core.graph.render import render_node
 from dr_core.graph.state import DrOuterState
+from dr_core.graph.verify import verify_node
 
 
 def route_after_research(state) -> str:
@@ -69,11 +74,15 @@ def make_dr_agent(config, app_config=None):
 
     graph = StateGraph(DrOuterState)
     graph.add_node("research", research_agent)
+    graph.add_node("verify", verify_node)
     graph.add_node("eligibility_gate", eligibility_gate)
     graph.add_node("render", render_node)
 
     graph.set_entry_point("research")
-    graph.add_conditional_edges("research", route_after_research, {"gate": "eligibility_gate", END: END})
+    # route_after_research's returned keys are unchanged ("gate" | END); only the
+    # wiring target for "gate" moves from eligibility_gate to verify (D8).
+    graph.add_conditional_edges("research", route_after_research, {"gate": "verify", END: END})
+    graph.add_edge("verify", "eligibility_gate")
     graph.add_conditional_edges("eligibility_gate", route_after_gate, {"research": "research", "render": "render"})
     graph.add_edge("render", END)
 
