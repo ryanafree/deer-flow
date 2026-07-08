@@ -91,10 +91,12 @@ def _lookup_citations_sync(text: str, token: str | None, timeout: float) -> list
 
 async def lookup_citations(text: str, *, token: str | None = None, timeout: float = _DEFAULT_TIMEOUT) -> list[dict] | None:
     """Async, non-blocking CourtListener citation-lookup. ``token`` defaults to
-    ``COURTLISTENER_API_TOKEN``; any failure (missing token, network error,
-    timeout, malformed response) degrades to ``None`` rather than raising, per D8
+    ``COURTLISTENER_TOKEN`` (the name connectors.yaml's auth field and Ryan's
+    credential store actually use; ``COURTLISTENER_API_TOKEN`` accepted as a
+    fallback spelling); any failure (missing token, network error, timeout,
+    malformed response) degrades to ``None`` rather than raising, per D8
     decision 6 (a hung source never stalls a run)."""
-    resolved_token = token if token is not None else os.environ.get("COURTLISTENER_API_TOKEN")
+    resolved_token = token if token is not None else os.environ.get("COURTLISTENER_TOKEN") or os.environ.get("COURTLISTENER_API_TOKEN")
     try:
         return await asyncio.to_thread(_lookup_citations_sync, text, resolved_token, timeout)
     except Exception:
