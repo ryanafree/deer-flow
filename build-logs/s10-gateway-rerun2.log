@@ -1,0 +1,249 @@
+PYTHONPATH=.:packages/harness:packages/dr_core PYTHONIOENCODING=utf-8 PYTHONUTF8=1 uv run uvicorn app.gateway.app:app --host 0.0.0.0 --port 8001
+/Users/ryanfree/Documents/Projects/deerflow-dr/deer-flow/backend/.venv/lib/python3.12/site-packages/langgraph/checkpoint/serde/encrypted.py:5: LangChainPendingDeprecationWarning: The default value of `allowed_objects` will change in a future version. Pass an explicit value (e.g., allowed_objects='messages' or allowed_objects='core') to suppress this warning.
+  from langgraph.checkpoint.serde.jsonplus import JsonPlusSerializer
+INFO:     Started server process [84993]
+INFO:     Waiting for application startup.
+2026-07-08 02:08:09 - app.gateway.app - INFO - Configuration loaded successfully
+2026-07-08 02:08:09 - app.gateway.auth_disabled - WARNING - DEER_FLOW_AUTH_DISABLED=1 is active: authentication is bypassed and anonymous requests run as synthetic admin user 'default'. Do not enable this in shared or production deployments.
+2026-07-08 02:08:09 - app.gateway.app - INFO - Starting API Gateway on 0.0.0.0:8001
+2026-07-08 02:08:09 - app.gateway.app - INFO - tiktoken encoding cache warmed successfully
+2026-07-08 02:08:09 - deerflow.runtime.stream_bridge.async_provider - INFO - Stream bridge initialised: memory (queue_maxsize=256)
+2026-07-08 02:08:09 - alembic.runtime.plugins - INFO - setup plugin alembic.autogenerate.schemas
+2026-07-08 02:08:09 - alembic.runtime.plugins - INFO - setup plugin alembic.autogenerate.tables
+2026-07-08 02:08:09 - alembic.runtime.plugins - INFO - setup plugin alembic.autogenerate.types
+2026-07-08 02:08:09 - alembic.runtime.plugins - INFO - setup plugin alembic.autogenerate.constraints
+2026-07-08 02:08:09 - alembic.runtime.plugins - INFO - setup plugin alembic.autogenerate.defaults
+2026-07-08 02:08:09 - alembic.runtime.plugins - INFO - setup plugin alembic.autogenerate.comments
+2026-07-08 02:08:09 - deerflow.persistence.bootstrap - INFO - bootstrap: acquired sqlite in-process lock
+2026-07-08 02:08:09 - deerflow.persistence.bootstrap - INFO - bootstrap: branch=versioned -> upgrade head (0002_runs_token_usage)
+2026-07-08 02:08:09 - alembic.runtime.migration - INFO - Context impl SQLiteImpl.
+2026-07-08 02:08:09 - alembic.runtime.migration - INFO - Will assume non-transactional DDL.
+2026-07-08 02:08:09 - deerflow.persistence.bootstrap - INFO - bootstrap: complete (backend=sqlite)
+2026-07-08 02:08:09 - deerflow.persistence.engine - INFO - Persistence engine initialized: backend=sqlite
+2026-07-08 02:08:09 - deerflow.runtime.store.async_provider - INFO - Store: using AsyncSqliteStore (/Users/ryanfree/Documents/Projects/deerflow-dr/deer-flow/backend/.deer-flow/data/checkpoints.db)
+2026-07-08 02:08:09 - app.gateway.app - INFO - LangGraph runtime initialised
+2026-07-08 02:08:09 - app.gateway.app - INFO - ============================================================
+2026-07-08 02:08:09 - app.gateway.app - INFO -   First boot detected — no admin account exists.
+2026-07-08 02:08:09 - app.gateway.app - INFO -   Visit /setup to complete admin account creation.
+2026-07-08 02:08:09 - app.gateway.app - INFO - ============================================================
+2026-07-08 02:08:09 - app.channels.manager - INFO - ChannelManager started (max_concurrency=5)
+2026-07-08 02:08:09 - app.channels.service - INFO - ChannelService started with 0/0 ready channels
+2026-07-08 02:08:09 - app.gateway.app - INFO - Channel service started: {'service_running': True, 'channels': {'dingtalk': {'enabled': False, 'running': False}, 'discord': {'enabled': False, 'running': False}, 'feishu': {'enabled': False, 'running': False}, 'slack': {'enabled': False, 'running': False}, 'telegram': {'enabled': False, 'running': False}, 'wechat': {'enabled': False, 'running': False}, 'wecom': {'enabled': False, 'running': False}}}
+2026-07-08 02:08:09 - app.channels.manager - INFO - [Manager] dispatch loop started, waiting for inbound messages
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:8001 (Press CTRL+C to quit)
+INFO:     127.0.0.1:55229 - "GET /health HTTP/1.1" 200 OK
+2026-07-08 02:08:23 - app.gateway.routers.threads - INFO - Thread created: 95cf3b5f-adae-44e4-ae58-cc51dc7bf4f8
+INFO:     127.0.0.1:55235 - "POST /api/threads HTTP/1.1" 200 OK
+2026-07-08 02:08:32 - deerflow.runtime.runs.manager - INFO - Run created: run_id=d010aab2-0ba3-455f-a326-920205978a20 thread_id=95cf3b5f-adae-44e4-ae58-cc51dc7bf4f8
+INFO:     127.0.0.1:55237 - "POST /api/threads/95cf3b5f-adae-44e4-ae58-cc51dc7bf4f8/runs/stream HTTP/1.1" 200 OK
+2026-07-08 02:08:32 - deerflow.runtime.runs.manager - INFO - Run d010aab2-0ba3-455f-a326-920205978a20 -> running
+2026-07-08 02:08:32 - deerflow.agents.lead_agent.agent - WARNING - Thinking mode is enabled but model 'or-mid' does not support it; fallback to non-thinking mode.
+2026-07-08 02:08:32 - deerflow.agents.lead_agent.agent - INFO - Create Agent(default) -> thinking_enabled: False, reasoning_effort: None, model_name: or-mid, is_plan_mode: False, subagent_enabled: False, max_concurrent_subagents: 3
+2026-07-08 02:08:32 - deerflow.tools.tools - INFO - Total tools loaded: 8, built-in tools: 2, MCP tools: 0, ACP tools: 0
+2026-07-08 02:08:33 - deerflow.runtime.runs.worker - INFO - Run d010aab2-0ba3-455f-a326-920205978a20: streaming with modes ['values'] (requested: {'values'})
+2026-07-08 02:08:33 - deerflow.agents.middlewares.dynamic_context_middleware - INFO - DynamicContextMiddleware: injecting full reminder (has_memory=True) into first HumanMessage id='09199caa-f85a-4667-8aec-0e7e013543f4'
+2026-07-08 02:08:34 - httpx - INFO - HTTP Request: POST https://openrouter.ai/api/v1/chat/completions "HTTP/1.1 200 OK"
+2026-07-08 02:08:34 - deerflow.agents.middlewares.token_usage_middleware - INFO - LLM token usage: input=8107 output=23 total=8130 input_token_details={'audio': 0, 'cache_read': 8064} output_token_details={'audio': 0, 'reasoning': 0}
+2026-07-08 02:08:35 - primp - INFO - response: https://en.wikipedia.org/w/api.php?action=opensearch&profile=fuzzy&limit=1&search=current%20US%20federal%20minimum%20wage 200
+2026-07-08 02:08:46 - primp - INFO - response: https://grokipedia.com/api/typeahead?query=current+US+federal+minimum+wage&limit=1 200
+2026-07-08 02:08:47 - primp - INFO - response: https://search.yahoo.com/search;_ylt=niyLX5Nr8FPDzgqtg2vW3aP4;_ylu=QoZl4xhMiVPulMCIFk_0re6dznV5I4kRZtclIw7mKVSBB6I?p=current+US+federal+minimum+wage 200
+2026-07-08 02:08:51 - httpx - INFO - HTTP Request: POST https://openrouter.ai/api/v1/chat/completions "HTTP/1.1 200 OK"
+2026-07-08 02:08:52 - deerflow.agents.middlewares.token_usage_middleware - INFO - LLM token usage: input=8676 output=178 total=8854 input_token_details={'audio': 0, 'cache_read': 8064} output_token_details={'audio': 0, 'reasoning': 0}
+2026-07-08 02:08:52 - httpx - INFO - HTTP Request: POST https://openrouter.ai/api/v1/chat/completions "HTTP/1.1 200 OK"
+2026-07-08 02:08:54 - deerflow.agents.middlewares.token_usage_middleware - INFO - LLM token usage: input=8891 output=108 total=8999 input_token_details={'audio': 0, 'cache_read': 8832} output_token_details={'audio': 0, 'reasoning': 0}
+2026-07-08 02:08:54 - deerflow.agents.memory.queue - INFO - Memory update queued for thread 95cf3b5f-adae-44e4-ae58-cc51dc7bf4f8, queue size: 1
+2026-07-08 02:08:54 - httpx - INFO - HTTP Request: POST https://openrouter.ai/api/v1/chat/completions "HTTP/1.1 200 OK"
+2026-07-08 02:08:59 - httpx - INFO - HTTP Request: POST https://openrouter.ai/api/v1/chat/completions "HTTP/1.1 200 OK"
+2026-07-08 02:09:24 - deerflow.agents.memory.queue - INFO - Processing 1 queued memory updates
+2026-07-08 02:09:24 - deerflow.agents.memory.queue - INFO - Updating memory for thread 95cf3b5f-adae-44e4-ae58-cc51dc7bf4f8
+2026-07-08 02:09:35 - httpx - INFO - HTTP Request: POST https://openrouter.ai/api/v1/chat/completions "HTTP/1.1 200 OK"
+2026-07-08 02:09:37 - httpx - INFO - HTTP Request: POST https://openrouter.ai/api/v1/chat/completions "HTTP/1.1 200 OK"
+2026-07-08 02:09:37 - httpx - INFO - HTTP Request: POST https://openrouter.ai/api/v1/chat/completions "HTTP/1.1 200 OK"
+2026-07-08 02:09:39 - httpx - INFO - HTTP Request: POST https://openrouter.ai/api/v1/chat/completions "HTTP/1.1 200 OK"
+2026-07-08 02:09:39 - httpx - INFO - HTTP Request: POST https://openrouter.ai/api/v1/chat/completions "HTTP/1.1 200 OK"
+2026-07-08 02:09:40 - httpx - INFO - HTTP Request: POST https://openrouter.ai/api/v1/chat/completions "HTTP/1.1 200 OK"
+2026-07-08 02:09:42 - httpx - INFO - HTTP Request: POST https://openrouter.ai/api/v1/chat/completions "HTTP/1.1 200 OK"
+2026-07-08 02:09:42 - deerflow.agents.middlewares.token_usage_middleware - INFO - LLM token usage: input=9068 output=26 total=9094 input_token_details={'audio': 0, 'cache_read': 8960} output_token_details={'audio': 0, 'reasoning': 0}
+2026-07-08 02:09:42 - primp - INFO - response: https://en.wikipedia.org/w/api.php?action=opensearch&profile=fuzzy&limit=1&search=current%20federal%20minimum%20wage%20July%202026 200
+2026-07-08 02:10:07 - primp - INFO - response: https://grokipedia.com/api/typeahead?query=current+federal+minimum+wage+July+2026&limit=1 200
+2026-07-08 02:10:08 - primp - INFO - response: https://html.duckduckgo.com/html/ 202
+2026-07-08 02:10:08 - primp - INFO - response: https://search.brave.com/search?q=current+federal+minimum+wage+July+2026&source=web 429
+2026-07-08 02:10:09 - primp - INFO - response: https://search.yahoo.com/search;_ylt=0hsYbqPO1zBJNIffCysmfMVg;_ylu=iRlXaQRWuflyWCwPbfmsigStcud8G7ENROfmhKl3Xq4MKQQ?p=current+federal+minimum+wage+July+2026 200
+2026-07-08 02:10:13 - httpx - INFO - HTTP Request: POST https://openrouter.ai/api/v1/chat/completions "HTTP/1.1 200 OK"
+2026-07-08 02:10:13 - deerflow.agents.middlewares.token_usage_middleware - INFO - LLM token usage: input=9655 output=202 total=9857 input_token_details={'audio': 0, 'cache_read': 8960} output_token_details={'audio': 0, 'reasoning': 0}
+2026-07-08 02:10:14 - httpx - INFO - HTTP Request: POST https://openrouter.ai/api/v1/chat/completions "HTTP/1.1 200 OK"
+2026-07-08 02:10:15 - deerflow.agents.middlewares.token_usage_middleware - INFO - LLM token usage: input=9899 output=81 total=9980 input_token_details={'audio': 0, 'cache_read': 9728} output_token_details={'audio': 0, 'reasoning': 0}
+2026-07-08 02:10:15 - deerflow.agents.memory.queue - INFO - Memory update queued for thread 95cf3b5f-adae-44e4-ae58-cc51dc7bf4f8, queue size: 1
+2026-07-08 02:10:16 - httpx - INFO - HTTP Request: POST https://openrouter.ai/api/v1/chat/completions "HTTP/1.1 200 OK"
+2026-07-08 02:10:32 - sqlalchemy.pool.impl.AsyncAdaptedQueuePool - ERROR - Exception terminating connection <AdaptedConnection <aiosqlite.core.Connection object at 0x10c5d8290>>
+Traceback (most recent call last):
+  File "/Users/ryanfree/Documents/Projects/deerflow-dr/deer-flow/backend/.venv/lib/python3.12/site-packages/sqlalchemy/pool/base.py", line 373, in _close_connection
+    self._dialect.do_terminate(connection)
+  File "/Users/ryanfree/Documents/Projects/deerflow-dr/deer-flow/backend/.venv/lib/python3.12/site-packages/sqlalchemy/dialects/sqlite/aiosqlite.py", line 479, in do_terminate
+    dbapi_connection.terminate()
+  File "/Users/ryanfree/Documents/Projects/deerflow-dr/deer-flow/backend/.venv/lib/python3.12/site-packages/sqlalchemy/connectors/asyncio.py", line 402, in terminate
+    self.await_(asyncio.shield(self._terminate_graceful_close()))  # type: ignore[attr-defined] # noqa: E501
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/ryanfree/Documents/Projects/deerflow-dr/deer-flow/backend/.venv/lib/python3.12/site-packages/sqlalchemy/util/_concurrency_py3k.py", line 132, in await_only
+    return current.parent.switch(awaitable)  # type: ignore[no-any-return,attr-defined] # noqa: E501
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/ryanfree/Documents/Projects/deerflow-dr/deer-flow/backend/.venv/lib/python3.12/site-packages/sqlalchemy/util/_concurrency_py3k.py", line 196, in greenlet_spawn
+    value = await result
+            ^^^^^^^^^^^^
+asyncio.exceptions.CancelledError: Cancelled via cancel scope 10d6dd310 by <Task pending name='starlette.middleware.base.BaseHTTPMiddleware.__call__.<locals>.call_next.<locals>.coro' coro=<BaseHTTPMiddleware.__call__.<locals>.call_next.<locals>.coro() running at /Users/ryanfree/Documents/Projects/deerflow-dr/deer-flow/backend/.venv/lib/python3.12/site-packages/starlette/middleware/base.py:144> cb=[TaskGroup._spawn.<locals>.task_done() at /Users/ryanfree/Documents/Projects/deerflow-dr/deer-flow/backend/.venv/lib/python3.12/site-packages/anyio/_backends/_asyncio.py:821]>
+2026-07-08 02:10:34 - asyncio - ERROR - Task exception was never retrieved
+future: <Task finished name='Task-824' coro=<AsyncSession.close() done, defined at /Users/ryanfree/Documents/Projects/deerflow-dr/deer-flow/backend/.venv/lib/python3.12/site-packages/sqlalchemy/ext/asyncio/session.py:1002> exception=OperationalError('(sqlite3.OperationalError) no active connection')>
+Traceback (most recent call last):
+  File "/Users/ryanfree/Documents/Projects/deerflow-dr/deer-flow/backend/.venv/lib/python3.12/site-packages/sqlalchemy/dialects/sqlite/aiosqlite.py", line 307, in rollback
+    self.await_(self._connection.rollback())
+  File "/Users/ryanfree/Documents/Projects/deerflow-dr/deer-flow/backend/.venv/lib/python3.12/site-packages/sqlalchemy/util/_concurrency_py3k.py", line 132, in await_only
+    return current.parent.switch(awaitable)  # type: ignore[no-any-return,attr-defined] # noqa: E501
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/ryanfree/Documents/Projects/deerflow-dr/deer-flow/backend/.venv/lib/python3.12/site-packages/sqlalchemy/util/_concurrency_py3k.py", line 196, in greenlet_spawn
+    value = await result
+            ^^^^^^^^^^^^
+  File "/Users/ryanfree/Documents/Projects/deerflow-dr/deer-flow/backend/.venv/lib/python3.12/site-packages/aiosqlite/core.py", line 197, in rollback
+    await self._execute(self._conn.rollback)
+                        ^^^^^^^^^^
+  File "/Users/ryanfree/Documents/Projects/deerflow-dr/deer-flow/backend/.venv/lib/python3.12/site-packages/aiosqlite/core.py", line 137, in _conn
+    raise ValueError("no active connection")
+ValueError: no active connection
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/Users/ryanfree/Documents/Projects/deerflow-dr/deer-flow/backend/.venv/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1128, in _rollback_impl
+    self.engine.dialect.do_rollback(self.connection)
+  File "/Users/ryanfree/Documents/Projects/deerflow-dr/deer-flow/backend/.venv/lib/python3.12/site-packages/sqlalchemy/engine/default.py", line 712, in do_rollback
+    dbapi_connection.rollback()
+  File "/Users/ryanfree/Documents/Projects/deerflow-dr/deer-flow/backend/.venv/lib/python3.12/site-packages/sqlalchemy/dialects/sqlite/aiosqlite.py", line 309, in rollback
+    self._handle_exception(error)
+  File "/Users/ryanfree/Documents/Projects/deerflow-dr/deer-flow/backend/.venv/lib/python3.12/site-packages/sqlalchemy/dialects/sqlite/aiosqlite.py", line 338, in _handle_exception
+    raise self.dbapi.sqlite.OperationalError(
+sqlite3.OperationalError: no active connection
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/Users/ryanfree/Documents/Projects/deerflow-dr/deer-flow/backend/.venv/lib/python3.12/site-packages/sqlalchemy/ext/asyncio/session.py", line 1016, in close
+    await greenlet_spawn(self.sync_session.close)
+  File "/Users/ryanfree/Documents/Projects/deerflow-dr/deer-flow/backend/.venv/lib/python3.12/site-packages/sqlalchemy/util/_concurrency_py3k.py", line 203, in greenlet_spawn
+    result = context.switch(value)
+             ^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/ryanfree/Documents/Projects/deerflow-dr/deer-flow/backend/.venv/lib/python3.12/site-packages/sqlalchemy/orm/session.py", line 2507, in close
+    self._close_impl(invalidate=False)
+  File "/Users/ryanfree/Documents/Projects/deerflow-dr/deer-flow/backend/.venv/lib/python3.12/site-packages/sqlalchemy/orm/session.py", line 2576, in _close_impl
+    transaction.close(invalidate)
+  File "<string>", line 2, in close
+  File "/Users/ryanfree/Documents/Projects/deerflow-dr/deer-flow/backend/.venv/lib/python3.12/site-packages/sqlalchemy/orm/state_changes.py", line 137, in _go
+    ret_value = fn(self, *arg, **kw)
+                ^^^^^^^^^^^^^^^^^^^^
+  File "/Users/ryanfree/Documents/Projects/deerflow-dr/deer-flow/backend/.venv/lib/python3.12/site-packages/sqlalchemy/orm/session.py", line 1417, in close
+    transaction.close()
+  File "/Users/ryanfree/Documents/Projects/deerflow-dr/deer-flow/backend/.venv/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 2597, in close
+    self._do_close()
+  File "/Users/ryanfree/Documents/Projects/deerflow-dr/deer-flow/backend/.venv/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 2735, in _do_close
+    self._close_impl()
+  File "/Users/ryanfree/Documents/Projects/deerflow-dr/deer-flow/backend/.venv/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 2721, in _close_impl
+    self._connection_rollback_impl()
+  File "/Users/ryanfree/Documents/Projects/deerflow-dr/deer-flow/backend/.venv/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 2713, in _connection_rollback_impl
+    self.connection._rollback_impl()
+  File "/Users/ryanfree/Documents/Projects/deerflow-dr/deer-flow/backend/.venv/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1130, in _rollback_impl
+    self._handle_dbapi_exception(e, None, None, None, None)
+  File "/Users/ryanfree/Documents/Projects/deerflow-dr/deer-flow/backend/.venv/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 2363, in _handle_dbapi_exception
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+  File "/Users/ryanfree/Documents/Projects/deerflow-dr/deer-flow/backend/.venv/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1128, in _rollback_impl
+    self.engine.dialect.do_rollback(self.connection)
+  File "/Users/ryanfree/Documents/Projects/deerflow-dr/deer-flow/backend/.venv/lib/python3.12/site-packages/sqlalchemy/engine/default.py", line 712, in do_rollback
+    dbapi_connection.rollback()
+  File "/Users/ryanfree/Documents/Projects/deerflow-dr/deer-flow/backend/.venv/lib/python3.12/site-packages/sqlalchemy/dialects/sqlite/aiosqlite.py", line 309, in rollback
+    self._handle_exception(error)
+  File "/Users/ryanfree/Documents/Projects/deerflow-dr/deer-flow/backend/.venv/lib/python3.12/site-packages/sqlalchemy/dialects/sqlite/aiosqlite.py", line 338, in _handle_exception
+    raise self.dbapi.sqlite.OperationalError(
+sqlalchemy.exc.OperationalError: (sqlite3.OperationalError) no active connection
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+2026-07-08 02:10:40 - deerflow.runtime.runs.manager - INFO - Run d010aab2-0ba3-455f-a326-920205978a20 -> interrupted
+2026-07-08 02:10:40 - deerflow.runtime.runs.worker - INFO - Run d010aab2-0ba3-455f-a326-920205978a20 was cancelled
+2026-07-08 02:10:42 - deerflow.runtime.runs.manager - INFO - Run created: run_id=15813818-728b-456d-9f5a-320e983a6567 thread_id=95cf3b5f-adae-44e4-ae58-cc51dc7bf4f8
+INFO:     127.0.0.1:55310 - "POST /api/threads/95cf3b5f-adae-44e4-ae58-cc51dc7bf4f8/runs/stream HTTP/1.1" 200 OK
+2026-07-08 02:10:42 - deerflow.runtime.runs.manager - INFO - Run 15813818-728b-456d-9f5a-320e983a6567 -> running
+2026-07-08 02:10:42 - deerflow.agents.lead_agent.agent - WARNING - Thinking mode is enabled but model 'or-mid' does not support it; fallback to non-thinking mode.
+2026-07-08 02:10:42 - deerflow.agents.lead_agent.agent - INFO - Create Agent(default) -> thinking_enabled: False, reasoning_effort: None, model_name: or-mid, is_plan_mode: False, subagent_enabled: False, max_concurrent_subagents: 3
+2026-07-08 02:10:42 - deerflow.tools.tools - INFO - Total tools loaded: 8, built-in tools: 2, MCP tools: 0, ACP tools: 0
+2026-07-08 02:10:42 - deerflow.runtime.runs.worker - INFO - Run 15813818-728b-456d-9f5a-320e983a6567: streaming with modes ['values'] (requested: {'values'})
+2026-07-08 02:10:43 - httpx - INFO - HTTP Request: POST https://openrouter.ai/api/v1/chat/completions "HTTP/1.1 200 OK"
+2026-07-08 02:10:43 - deerflow.agents.middlewares.token_usage_middleware - INFO - LLM token usage: input=10005 output=26 total=10031 input_token_details={'audio': 0, 'cache_read': 7936} output_token_details={'audio': 0, 'reasoning': 0}
+2026-07-08 02:10:44 - primp - INFO - response: https://en.wikipedia.org/w/api.php?action=opensearch&profile=fuzzy&limit=1&search=current%20US%20federal%20minimum%20wage%202026 200
+2026-07-08 02:10:55 - primp - INFO - response: https://grokipedia.com/api/typeahead?query=current+US+federal+minimum+wage+2026&limit=1 200
+2026-07-08 02:10:56 - primp - INFO - response: https://search.brave.com/search?q=current+US+federal+minimum+wage+2026&source=web 429
+2026-07-08 02:10:56 - primp - INFO - response: https://html.duckduckgo.com/html/ 202
+2026-07-08 02:10:57 - primp - INFO - response: https://yandex.com/search/site/?text=current+US+federal+minimum+wage+2026&web=1&searchid=8798932 200
+2026-07-08 02:10:57 - primp - INFO - response: https://search.yahoo.com/search;_ylt=CF55ikcqG9FM-HjL9o-FL9wk;_ylu=3uF13Ms_6Dg804kLs2ySQ8c8iilfhDxpdGqvTS5GQRHGizc?p=current+US+federal+minimum+wage+2026 200
+2026-07-08 02:11:02 - httpx - INFO - HTTP Request: POST https://openrouter.ai/api/v1/chat/completions "HTTP/1.1 200 OK"
+2026-07-08 02:11:03 - deerflow.agents.middlewares.token_usage_middleware - INFO - LLM token usage: input=10554 output=224 total=10778 input_token_details={'audio': 0, 'cache_read': 9984} output_token_details={'audio': 0, 'reasoning': 0}
+2026-07-08 02:11:03 - httpx - INFO - HTTP Request: POST https://openrouter.ai/api/v1/chat/completions "HTTP/1.1 200 OK"
+2026-07-08 02:11:05 - deerflow.agents.middlewares.token_usage_middleware - INFO - LLM token usage: input=10817 output=102 total=10919 input_token_details={'audio': 0, 'cache_read': 10752} output_token_details={'audio': 0, 'reasoning': 0}
+2026-07-08 02:11:05 - deerflow.agents.memory.queue - INFO - Memory update queued for thread 95cf3b5f-adae-44e4-ae58-cc51dc7bf4f8, queue size: 1
+2026-07-08 02:11:05 - httpx - INFO - HTTP Request: POST https://openrouter.ai/api/v1/chat/completions "HTTP/1.1 200 OK"
+2026-07-08 02:11:40 - httpx - INFO - HTTP Request: POST https://openrouter.ai/api/v1/chat/completions "HTTP/1.1 200 OK"
+2026-07-08 02:11:41 - httpx - INFO - HTTP Request: POST https://openrouter.ai/api/v1/chat/completions "HTTP/1.1 200 OK"
+2026-07-08 02:11:41 - httpx - INFO - HTTP Request: POST https://openrouter.ai/api/v1/chat/completions "HTTP/1.1 200 OK"
+2026-07-08 02:11:42 - httpx - INFO - HTTP Request: POST https://openrouter.ai/api/v1/chat/completions "HTTP/1.1 200 OK"
+2026-07-08 02:11:42 - httpx - INFO - HTTP Request: POST https://openrouter.ai/api/v1/chat/completions "HTTP/1.1 200 OK"
+2026-07-08 02:11:43 - httpx - INFO - HTTP Request: POST https://openrouter.ai/api/v1/chat/completions "HTTP/1.1 200 OK"
+2026-07-08 02:11:43 - httpx - INFO - HTTP Request: POST https://openrouter.ai/api/v1/chat/completions "HTTP/1.1 200 OK"
+2026-07-08 02:11:43 - httpx - INFO - HTTP Request: POST https://openrouter.ai/api/v1/chat/completions "HTTP/1.1 200 OK"
+2026-07-08 02:11:44 - httpx - INFO - HTTP Request: POST https://openrouter.ai/api/v1/chat/completions "HTTP/1.1 200 OK"
+2026-07-08 02:11:45 - httpx - INFO - HTTP Request: POST https://openrouter.ai/api/v1/chat/completions "HTTP/1.1 200 OK"
+2026-07-08 02:11:45 - httpx - INFO - HTTP Request: POST https://openrouter.ai/api/v1/chat/completions "HTTP/1.1 200 OK"
+2026-07-08 02:11:47 - httpx - INFO - HTTP Request: POST https://openrouter.ai/api/v1/chat/completions "HTTP/1.1 200 OK"
+2026-07-08 02:11:49 - httpx - INFO - HTTP Request: POST https://openrouter.ai/api/v1/chat/completions "HTTP/1.1 200 OK"
+2026-07-08 02:11:50 - deerflow.agents.middlewares.token_usage_middleware - INFO - LLM token usage: input=10988 output=26 total=11014 input_token_details={'audio': 0, 'cache_read': 10880} output_token_details={'audio': 0, 'reasoning': 0}
+2026-07-08 02:11:50 - primp - INFO - response: https://en.wikipedia.org/w/api.php?action=opensearch&profile=fuzzy&limit=1&search=current%20federal%20minimum%20wage%20July%202026 200
+2026-07-08 02:11:54 - httpx - INFO - HTTP Request: POST https://openrouter.ai/api/v1/chat/completions "HTTP/1.1 200 OK"
+2026-07-08 02:12:01 - deerflow.agents.memory.storage - INFO - Memory saved to /Users/ryanfree/Documents/Projects/deerflow-dr/deer-flow/backend/.deer-flow/users/default/memory.json
+2026-07-08 02:12:01 - deerflow.agents.memory.queue - INFO - Memory updated successfully for thread 95cf3b5f-adae-44e4-ae58-cc51dc7bf4f8
+2026-07-08 02:12:01 - deerflow.agents.memory.queue - INFO - Processing 1 queued memory updates
+2026-07-08 02:12:01 - deerflow.agents.memory.queue - INFO - Updating memory for thread 95cf3b5f-adae-44e4-ae58-cc51dc7bf4f8
+2026-07-08 02:12:11 - httpx - INFO - HTTP Request: POST https://openrouter.ai/api/v1/chat/completions "HTTP/1.1 200 OK"
+2026-07-08 02:12:11 - primp - INFO - response: https://grokipedia.com/api/typeahead?query=current+federal+minimum+wage+July+2026&limit=1 200
+2026-07-08 02:12:12 - primp - INFO - response: https://yandex.com/search/site/?text=current+federal+minimum+wage+July+2026&web=1&searchid=9009619 200
+2026-07-08 02:12:12 - primp - INFO - response: https://search.yahoo.com/search;_ylt=oH8vFXCP3I43LCaH5uQ14KpQ;_ylu=bJY3KLaVh3PJYrcw86IgfBM9QtbxbUO-Y_rUJ8EiNvXid30?p=current+federal+minimum+wage+July+2026 200
+2026-07-08 02:12:17 - httpx - INFO - HTTP Request: POST https://openrouter.ai/api/v1/chat/completions "HTTP/1.1 200 OK"
+2026-07-08 02:12:17 - deerflow.agents.middlewares.token_usage_middleware - INFO - LLM token usage: input=11575 output=211 total=11786 input_token_details={'audio': 0, 'cache_read': 10880} output_token_details={'audio': 0, 'reasoning': 0}
+2026-07-08 02:12:18 - httpx - INFO - HTTP Request: POST https://openrouter.ai/api/v1/chat/completions "HTTP/1.1 200 OK"
+2026-07-08 02:12:19 - deerflow.agents.middlewares.token_usage_middleware - INFO - LLM token usage: input=11829 output=97 total=11926 input_token_details={'audio': 0, 'cache_read': 11648} output_token_details={'audio': 0, 'reasoning': 0}
+2026-07-08 02:12:19 - deerflow.agents.memory.queue - INFO - Memory update queued for thread 95cf3b5f-adae-44e4-ae58-cc51dc7bf4f8, queue size: 1
+2026-07-08 02:12:20 - httpx - INFO - HTTP Request: POST https://openrouter.ai/api/v1/chat/completions "HTTP/1.1 200 OK"
+2026-07-08 02:12:36 - deerflow.agents.memory.storage - INFO - Memory saved to /Users/ryanfree/Documents/Projects/deerflow-dr/deer-flow/backend/.deer-flow/users/default/memory.json
+2026-07-08 02:12:36 - deerflow.agents.memory.queue - INFO - Memory updated successfully for thread 95cf3b5f-adae-44e4-ae58-cc51dc7bf4f8
+2026-07-08 02:12:49 - deerflow.agents.memory.queue - INFO - Processing 1 queued memory updates
+2026-07-08 02:12:49 - deerflow.agents.memory.queue - INFO - Updating memory for thread 95cf3b5f-adae-44e4-ae58-cc51dc7bf4f8
+2026-07-08 02:12:55 - httpx - INFO - HTTP Request: POST https://openrouter.ai/api/v1/chat/completions "HTTP/1.1 200 OK"
+2026-07-08 02:12:56 - httpx - INFO - HTTP Request: POST https://openrouter.ai/api/v1/chat/completions "HTTP/1.1 200 OK"
+2026-07-08 02:12:57 - httpx - INFO - HTTP Request: POST https://openrouter.ai/api/v1/chat/completions "HTTP/1.1 200 OK"
+2026-07-08 02:12:58 - httpx - INFO - HTTP Request: POST https://openrouter.ai/api/v1/chat/completions "HTTP/1.1 200 OK"
+2026-07-08 02:12:58 - httpx - INFO - HTTP Request: POST https://openrouter.ai/api/v1/chat/completions "HTTP/1.1 200 OK"
+2026-07-08 02:13:00 - httpx - INFO - HTTP Request: POST https://openrouter.ai/api/v1/chat/completions "HTTP/1.1 200 OK"
+2026-07-08 02:13:01 - deerflow.runtime.runs.manager - INFO - Run 15813818-728b-456d-9f5a-320e983a6567 -> success
+2026-07-08 02:13:31 - deerflow.runtime.runs.manager - INFO - Run created: run_id=08dd46b6-f770-45a7-9ce8-02c14da70750 thread_id=95cf3b5f-adae-44e4-ae58-cc51dc7bf4f8
+INFO:     127.0.0.1:55408 - "POST /api/threads/95cf3b5f-adae-44e4-ae58-cc51dc7bf4f8/runs/stream HTTP/1.1" 200 OK
+2026-07-08 02:13:31 - deerflow.runtime.runs.manager - INFO - Run 08dd46b6-f770-45a7-9ce8-02c14da70750 -> running
+2026-07-08 02:13:31 - deerflow.agents.lead_agent.agent - WARNING - Thinking mode is enabled but model 'or-mid' does not support it; fallback to non-thinking mode.
+2026-07-08 02:13:31 - deerflow.agents.lead_agent.agent - INFO - Create Agent(default) -> thinking_enabled: False, reasoning_effort: None, model_name: or-mid, is_plan_mode: False, subagent_enabled: False, max_concurrent_subagents: 3
+2026-07-08 02:13:31 - deerflow.tools.tools - INFO - Total tools loaded: 8, built-in tools: 2, MCP tools: 0, ACP tools: 0
+2026-07-08 02:13:31 - deerflow.runtime.runs.worker - INFO - Run 08dd46b6-f770-45a7-9ce8-02c14da70750: streaming with modes ['values', 'messages'] (requested: {'values', 'messages-tuple'})
+2026-07-08 02:13:32 - httpx - INFO - HTTP Request: POST https://openrouter.ai/api/v1/chat/completions "HTTP/1.1 200 OK"
+2026-07-08 02:13:32 - deerflow.agents.middlewares.token_usage_middleware - INFO - LLM token usage: input=11937 output=21 total=11958 input_token_details={'audio': 0, 'cache_read': 9088} output_token_details={'audio': 0, 'reasoning': 0}
+2026-07-08 02:13:32 - deerflow.agents.memory.queue - INFO - Memory update queued for thread 95cf3b5f-adae-44e4-ae58-cc51dc7bf4f8, queue size: 1
+2026-07-08 02:13:32 - deerflow.runtime.runs.manager - INFO - Run 08dd46b6-f770-45a7-9ce8-02c14da70750 -> success
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+2026-07-08 02:13:40 - app.channels.manager - INFO - ChannelManager stopped
+2026-07-08 02:13:40 - app.channels.service - INFO - ChannelService stopped
+2026-07-08 02:13:40 - deerflow.persistence.engine - INFO - Persistence engine closed
+2026-07-08 02:13:40 - app.gateway.app - INFO - Shutting down API Gateway
+INFO:     Application shutdown complete.
+INFO:     Finished server process [84993]
+make: *** [gateway] Error 143

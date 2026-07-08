@@ -1,0 +1,36 @@
+/Users/ryanfree/Documents/Projects/deerflow-dr/deer-flow/backend/.venv/lib/python3.12/site-packages/langgraph/checkpoint/serde/encrypted.py:5: LangChainPendingDeprecationWarning: The default value of `allowed_objects` will change in a future version. Pass an explicit value (e.g., allowed_objects='messages' or allowed_objects='core') to suppress this warning.
+  from langgraph.checkpoint.serde.jsonplus import JsonPlusSerializer
+=== TRAP: financial_vintage ===
+Thinking mode is enabled but model 'or-mid' does not support it; fallback to non-thinking mode.
+{
+  "trap": "financial_vintage",
+  "new_run_folders": [
+    "2026-07-08-014714-financial-untitled-research-question"
+  ],
+  "gate_decision": "render",
+  "stop_reason": "completed_with_open_requirements",
+  "run_dir": "/Users/ryanfree/Documents/Projects/deerflow-dr/runs/2026-07-08-014714-financial-untitled-research-question",
+  "n_claims": 8,
+  "claim_statuses": {
+    "c-trap-450b": {
+      "citation_status": "unresolved",
+      "data_provenance": "unaudited",
+      "verification_status": "killed_on_refute",
+      "gate_flags": [
+        "numeric_without_primary_trace"
+      ]
+    },
+    "c-trap-383b-mismatch": {
+      "citation_status": "unresolved",
+      "data_provenance": "mismatch",
+      "verification_status": "not_verified",
+      "gate_flags": []
+    }
+  }
+}
+=== TRAP: legal_fabricated_cite ===
+Thinking mode is enabled but model 'or-mid' does not support it; fallback to non-thinking mode.
+Failed to search web: No results found.
+TRAP legal_fabricated_cite FAILED: GraphRecursionError: Recursion limit of 40 reached without hitting a stop condition. You can increase the limit by setting the `recursion_limit` config key.
+For troubleshooting, visit: https://docs.langchain.com/oss/python/langgraph/errors/GRAPH_RECURSION_LIMIT
+DONE

@@ -5,7 +5,8 @@ pass) and legal_fabricated_cite (a planted trap the scorer must catch — a reso
 citation alongside a citation_status=NOT_FOUND fabricated one)."""
 
 from dr_core.eval.score_run import load_fixtures, load_run_from_folder, score
-from dr_core.models import Claim, CitationStatus, Source, SupportRecord, SupportRelation
+from dr_core.models import CitationStatus, Claim, GateFlag, Source, SupportRecord, SupportRelation, VerificationStatus
+from dr_core.models.ledger import VerificationRecord
 from dr_core.run.write_run import write_run
 
 FIXTURES = load_fixtures()
@@ -70,5 +71,40 @@ def test_legal_fabricated_cite_fixture_catches_the_planted_trap(tmp_path):
 
     manifest, loaded_claims, loaded_sources, report = load_run_from_folder(folder)
     checks = score("legal_fabricated_cite", fx["expect"], manifest, loaded_claims, loaded_sources, report)
+    assert checks, "expected at least one assertion"
+    assert all(ok for ok, _ in checks), checks
+
+
+def test_financial_vintage_fixture_counts_killed_claims_from_the_ledger_not_manifest_counts(tmp_path):
+    """Regression for the S10 re-acceptance finding: `claims_killed_min` used to read
+    manifest['counts']['killed_on_refute'], which write_run computes over the
+    ELIGIBLE-only claim set — a killed_on_refute claim is by definition never eligible,
+    so that manifest field is structurally always 0 and the assertion could never pass.
+    `_derive_count` now counts `claim.verification.status == KILLED_ON_REFUTE` straight
+    off the loaded (ledger-preferring) claims, same pattern as `citations_not_found`."""
+    fx = FIXTURES["financial_vintage"]
+    sources = [_source("s1", source_system="press"), _source("s2", source_system="press", authority_tier=1)]
+    claims = [
+        Claim(  # fabricated magnitude, no data_ref -- killed on refutation
+            claim_id="c1",
+            text="Apple's FY2024 net sales were $450 billion.",
+            importance=5,
+            source_id="s1",
+            gate_flags=[GateFlag.NUMERIC_WITHOUT_PRIMARY_TRACE],
+            verification=VerificationRecord(status=VerificationStatus.KILLED_ON_REFUTE, complete=True),
+        ),
+        Claim(  # wrong period vs. its own data_ref -- caught deterministically by provenance
+            claim_id="c2",
+            text="Apple's FY2024 net sales were $383.285 billion.",
+            importance=5,
+            source_id="s2",
+            data_ref={"value": "383285000000", "period": "2023-09-30", "claimed_period": "2024-09-30", "source_class": "primary_filing"},
+        ),
+    ]
+    body = "# Report\n\n## Executive summary\n\nNo recorded claim met the eligibility bar for inclusion in this report.\n\n## Conclusion\n\nNo claim in this pass met the eligibility bar for inclusion.\n"
+    folder = write_run(report_body=body, sources=sources, claims=[], ledger_claims=claims, requirements=[], profile="financial", question=fx["question"], runs_dir=str(tmp_path))
+
+    manifest, loaded_claims, loaded_sources, report = load_run_from_folder(folder)
+    checks = score("financial_vintage", fx["expect"], manifest, loaded_claims, loaded_sources, report)
     assert checks, "expected at least one assertion"
     assert all(ok for ok, _ in checks), checks

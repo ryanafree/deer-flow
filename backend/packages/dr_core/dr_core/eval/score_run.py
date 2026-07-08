@@ -30,8 +30,13 @@ Rewires (build-logs/task-port-evalfixtures.md "Rewires" + PHASE1-SHARED-CONTRACT
     not dr_core manifest fields (write_run's own `counts` aggregate is publication-status
     shaped: supported/not_verified/contested/excluded/killed_on_refute/caveats — see
     dr_core.run.write_run._claim_status_counts) — they are computed here directly off
-    claims/sources, with `claims_killed` reading manifest counts' `killed_on_refute` and
-    `structured_sources` REINTERPRETED as structured CLAIMS (`claim.data_ref is not
+    claims/sources, with `claims_killed` counting `claim.verification.status ==
+    KILLED_ON_REFUTE` directly off the loaded (ledger-preferring) claims — NOT off
+    manifest counts' `killed_on_refute`, which is write_run's aggregate over the
+    eligible-only claim set and is therefore structurally always 0 (a killed claim is
+    never eligible; found live during S10 re-acceptance after the D10 ledger.jsonl fix
+    let claims_flagged/structured_sources start passing but left this one still FAIL) —
+    and `structured_sources` REINTERPRETED as structured CLAIMS (`claim.data_ref is not
     None`): dr_core's structured/quote grounding split lives on Claim
     (derive.structured_grounded), and dr_core's Source model has no structured/press
     distinction at all.
@@ -59,7 +64,7 @@ import json
 import os
 import sys
 
-from dr_core.models import CitationStatus, Claim, Source
+from dr_core.models import CitationStatus, Claim, Source, VerificationStatus
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 FIXTURES = os.path.join(HERE, "profile_questions.yaml")
@@ -115,7 +120,12 @@ def _derive_count(key, manifest_counts, claims, sources):
     if key == "claims_flagged":
         return sum(1 for c in claims if c.gate_flags)
     if key == "claims_killed":
-        return manifest_counts.get("killed_on_refute", 0) or 0
+        # D10 addendum: manifest["counts"] is write_run's aggregate over the
+        # ELIGIBLE-only claim set (claims.jsonl) -- a killed_on_refute claim is
+        # by definition never eligible, so that manifest field is structurally
+        # always 0. Derive straight from the loaded (ledger-preferring) claims
+        # list instead, same pattern as citations_not_found below.
+        return sum(1 for c in claims if c.verification.status == VerificationStatus.KILLED_ON_REFUTE)
     if key == "citations_not_found":
         return sum(1 for c in claims if c.citation_status == CitationStatus.NOT_FOUND)
     return manifest_counts.get(key, 0) or 0
