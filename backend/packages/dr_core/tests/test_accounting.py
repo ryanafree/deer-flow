@@ -1,8 +1,7 @@
 """Tests for dr_core.accounting (S9)."""
 
-from langchain_core.messages import AIMessage, HumanMessage
-
 from dr_core.accounting import build_accounting, price_phase, sum_usage
+from langchain_core.messages import AIMessage, HumanMessage
 
 
 def _ai_message(input_tokens, output_tokens, cache_read=0, cache_creation=0):
@@ -75,12 +74,17 @@ class TestBuildAccounting:
         messages = [_ai_message(10, 5)]
         result = build_accounting(messages, {})
         assert set(result.keys()) == {"phases", "totals", "dollar_cost"}
-        assert set(result["phases"].keys()) == {"research", "verify"}
+        assert set(result["phases"].keys()) == {"research", "verify", "plan"}
 
     def test_verify_usage_absent_defaults_to_zero(self):
         messages = [_ai_message(10, 5)]
         result = build_accounting(messages, {})
         assert result["phases"]["verify"] == {"input_tokens": 0, "output_tokens": 0, "cache_read_tokens": 0, "cache_write_tokens": 0}
+
+    def test_plan_usage_absent_defaults_to_zero(self):
+        messages = [_ai_message(10, 5)]
+        result = build_accounting(messages, {})
+        assert result["phases"]["plan"] == {"input_tokens": 0, "output_tokens": 0, "cache_read_tokens": 0, "cache_write_tokens": 0}
 
     def test_verify_usage_present_folds_in(self):
         messages = [_ai_message(10, 5)]
@@ -90,12 +94,20 @@ class TestBuildAccounting:
         assert result["phases"]["verify"]["output_tokens"] == 20
         assert result["totals"]["input_tokens"] == 110
 
-    def test_totals_sum_both_phases(self):
+    def test_plan_usage_present_folds_in(self):
         messages = [_ai_message(10, 5)]
-        dr_run = {"verify_usage": {"input_tokens": 1, "output_tokens": 1}}
+        dr_run = {"plan_usage": {"input_tokens": 50, "output_tokens": 15}}
         result = build_accounting(messages, dr_run)
-        assert result["totals"]["input_tokens"] == 11
-        assert result["totals"]["output_tokens"] == 6
+        assert result["phases"]["plan"]["input_tokens"] == 50
+        assert result["phases"]["plan"]["output_tokens"] == 15
+        assert result["totals"]["input_tokens"] == 60
+
+    def test_totals_sum_all_phases(self):
+        messages = [_ai_message(10, 5)]
+        dr_run = {"verify_usage": {"input_tokens": 1, "output_tokens": 1}, "plan_usage": {"input_tokens": 2, "output_tokens": 2}}
+        result = build_accounting(messages, dr_run)
+        assert result["totals"]["input_tokens"] == 13
+        assert result["totals"]["output_tokens"] == 8
 
     def test_dollar_cost_none_when_no_profile_tiers_given(self):
         messages = [_ai_message(1_000_000, 0)]
@@ -106,6 +118,13 @@ class TestBuildAccounting:
         messages = [_ai_message(1_000_000, 0)]
         profile_tiers = {"gruntwork": "or-cheap", "verify": "or-mid", "top": "claude-top"}
         result = build_accounting(messages, {}, profile_tiers=profile_tiers)
+        assert result["dollar_cost"] == 0.03
+
+    def test_plan_phase_prices_against_the_gruntwork_tier(self):
+        messages = []
+        dr_run = {"plan_usage": {"input_tokens": 1_000_000, "output_tokens": 0}}
+        profile_tiers = {"gruntwork": "or-cheap", "verify": "or-mid", "top": "claude-top"}
+        result = build_accounting(messages, dr_run, profile_tiers=profile_tiers)
         assert result["dollar_cost"] == 0.03
 
     def test_unknown_tier_name_in_profile_degrades_to_none_without_crashing(self):

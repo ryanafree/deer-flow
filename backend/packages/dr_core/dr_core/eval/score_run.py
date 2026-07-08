@@ -44,6 +44,13 @@ Rewires (build-logs/task-port-evalfixtures.md "Rewires" + PHASE1-SHARED-CONTRACT
     only input. `--runs-dir` no longer defaults into the old DeepResearch runs tree; it
     defaults from `DR_CORE_RUNS_DIR` (mirroring dr_core.run.write_run's own default), and
     must otherwise be supplied explicitly.
+  - D10 (S10 scorer/ledger defect): claims now load from `ledger.jsonl` (the FULL claim
+    ledger write_run now writes — every claim, any eligibility state) when present, so
+    gate_flags/citation_status/counts checks can see excluded/killed claims too, not just
+    the eligible-only `claims.jsonl` the scorer used to be limited to. Run folders written
+    before this change have no `ledger.jsonl`; `load_run_from_folder` falls back to
+    `claims.jsonl` for those (printing a note) — scorability for older folders is reduced
+    to what `claims.jsonl` alone can show, same as before this change.
 """
 
 import argparse
@@ -52,7 +59,7 @@ import json
 import os
 import sys
 
-from dr_core.models import Claim, CitationStatus, Source
+from dr_core.models import CitationStatus, Claim, Source
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 FIXTURES = os.path.join(HERE, "profile_questions.yaml")
@@ -68,7 +75,16 @@ def load_fixtures():
 def load_run_from_folder(folder):
     with open(os.path.join(folder, "manifest.json")) as f:
         manifest = json.load(f)
-    claims = [Claim.model_validate(json.loads(line)) for line in open(os.path.join(folder, "claims.jsonl")) if line.strip()]
+    ledger_path = os.path.join(folder, "ledger.jsonl")
+    if os.path.isfile(ledger_path):
+        claims_path = ledger_path
+    else:
+        # Pre-D10 run folder (written before ledger.jsonl existed): fall back to the
+        # eligible-only claims.jsonl -- excluded/killed claims are invisible to the
+        # scorer for these older folders.
+        print(f"# note: {os.path.basename(folder)} has no ledger.jsonl; scoring against claims.jsonl (eligible-only)")
+        claims_path = os.path.join(folder, "claims.jsonl")
+    claims = [Claim.model_validate(json.loads(line)) for line in open(claims_path) if line.strip()]
     sources_path = os.path.join(folder, "sources.jsonl")
     sources = [Source.model_validate(json.loads(line)) for line in open(sources_path) if line.strip()] if os.path.isfile(sources_path) else []
     report = ""

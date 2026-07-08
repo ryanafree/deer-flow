@@ -64,10 +64,16 @@ class TestRiskReasons:
         assert "gate:vendor_reported" in reasons
 
     def test_worse_authority_tier_flags_risk(self):
-        assert "tier-3-or-worse" in risk_reasons(_claim(), _source(authority_tier=3))
+        assert "tier-4-or-worse" in risk_reasons(_claim(), _source(authority_tier=4))
+
+    def test_default_web_tier_does_not_flag_risk(self):
+        """D10: the C2 hook mints every web source at authority_tier=3 by default;
+        the recalibrated >=4 threshold must not fire on that default (the old >=3
+        threshold fired on every single claim, per the S10 acceptance defect)."""
+        assert "tier-4-or-worse" not in risk_reasons(_claim(), _source(authority_tier=3))
 
     def test_missing_source_flags_risk(self):
-        assert "tier-3-or-worse" in risk_reasons(_claim(), None)
+        assert "tier-4-or-worse" in risk_reasons(_claim(), None)
 
     def test_unmatched_structured_claim_flags_risk(self):
         from dr_core.models.enums import DataProvenance
@@ -203,6 +209,59 @@ class TestVerifyClaimIncompleteOnBudget:
         assert record.complete is False
         assert len(record.votes) == 1
         assert usage["calls"] == 1
+
+
+class _CapturingModel:
+    """Fake model that records the messages it was invoked with, so a test can
+    inspect the system prompt actually sent for a given evidence regime."""
+
+    def __init__(self, response):
+        self._response = response
+        self.calls: list[list] = []
+
+    async def ainvoke(self, messages):
+        self.calls.append(messages)
+        return self._response
+
+
+class TestVoterEpistemicRegimes:
+    """D10: the vote prompt must branch on evidence availability -- the refute-on-
+    weak-support bias survives only when a fetched excerpt is present; when it is
+    absent, the voter must be told explicitly that unavailability is not falsity."""
+
+    def test_system_instructions_require_affirmative_grounds_for_refutation(self):
+        from dr_core.verify.votes import _vote_system_instructions
+
+        for evidence_available in (True, False):
+            text = _vote_system_instructions(evidence_available)
+            assert "AFFIRMATIVE grounds" in text
+
+    def test_evidence_absent_prompt_states_unavailability_is_not_falsity(self):
+        from dr_core.verify.votes import _vote_system_instructions
+
+        text = _vote_system_instructions(evidence_available=False)
+        assert "do not treat unavailability as falsity" in text
+
+    def test_evidence_present_prompt_keeps_the_adversarial_weak_support_bias(self):
+        from dr_core.verify.votes import _vote_system_instructions
+
+        text = _vote_system_instructions(evidence_available=True)
+        assert "default toward refuted=true" in text.lower()
+
+    async def test_cast_vote_sends_the_evidence_absent_regime_when_excerpt_is_none(self, monkeypatch):
+        model = _CapturingModel(_vote_response(False, True, "low"))
+        monkeypatch.setattr(votes_mod, "_get_vote_model", lambda: model)
+        await cast_vote(_claim(), _source(), None, 1, [])
+        system_content = model.calls[0][0].content
+        assert "do not treat unavailability as falsity" in system_content
+
+    async def test_cast_vote_sends_the_evidence_present_regime_when_excerpt_exists(self, monkeypatch):
+        model = _CapturingModel(_vote_response(False, False, "high"))
+        monkeypatch.setattr(votes_mod, "_get_vote_model", lambda: model)
+        await cast_vote(_claim(), _source(), "an excerpt", 1, [])
+        system_content = model.calls[0][0].content
+        assert "do not treat unavailability as falsity" not in system_content
+        assert "default toward refuted=true" in system_content.lower()
 
 
 class TestSourceUnreachableRiskReason:

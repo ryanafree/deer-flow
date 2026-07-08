@@ -13,6 +13,14 @@ The voter model has NO tool access and is intentionally adversarial (D8: "defaul
 toward refuted=true when the support is weak") -- it is a text-in/JSON-out check,
 not a research agent. ``_get_vote_model`` is a module-level factory so tests can
 monkeypatch it to a stub without touching ``deerflow.models``.
+
+D10 recalibration: the S10 live acceptance found the ported dr.js bias assumed a
+voter with TOOLS that could independently check a source; a text-only voter was
+instead scoring "I could not fetch this" as "this is false", producing a 100%
+kill rate. The system prompt now branches on evidence availability -- the
+adversarial refute-on-weak-support bias survives ONLY when a fetched excerpt is
+present; when it is absent, the voter is told explicitly that unavailability is
+not falsity and judges claim-vs-quote consistency only (see DECISIONS.md D10).
 """
 
 from __future__ import annotations
@@ -27,12 +35,37 @@ from dr_core.models.derive import aggregate_verification_status, is_single_clear
 from dr_core.models.enums import DataProvenance, VerificationStatus
 from dr_core.models.ledger import Claim, VerificationRecord, Vote
 
-_ADVERSARIAL_INSTRUCTIONS = (
+_BASE_INSTRUCTIONS = (
     "You are an adversarial fact-checking voter for a research-assurance pipeline. Your job is to "
-    "find reasons a claim's support does NOT hold up, not to confirm it. Default toward refuted=true "
-    "when the support is weak, indirect, or the source is not authoritative -- do not give the claim "
-    "the benefit of the doubt. Respond with strict JSON only, no prose, no markdown fences."
+    "find reasons a claim's support does NOT hold up, not to confirm it. refuted=true requires "
+    "AFFIRMATIVE grounds: the evidence in front of you contradicts the claim, the quote plainly fails "
+    "to support the claim as stated (a plain overstatement), or there are internal fabrication signals. "
+    "Never mark refuted=true merely because the support is thin, indirect, or unconfirmed -- that is "
+    "abstain territory, not refutation. Respond with strict JSON only, no prose, no markdown fences."
 )
+
+# D10: the refute-on-weak-support bias applies only when there is real evidence to weigh.
+_EVIDENCE_PRESENT_INSTRUCTIONS = (
+    "A fetched source excerpt is provided below. Weigh it adversarially: default toward refuted=true "
+    "when the support is weak, indirect, contradicted, or the source is not authoritative -- do not "
+    "give the claim the benefit of the doubt when real evidence is in front of you."
+)
+
+# D10: an unreachable source is NOT evidence of falsity. The voter judges only whether the
+# claim text is consistent with the quote it was given for the claim's own support.
+_EVIDENCE_ABSENT_INSTRUCTIONS = (
+    "The source could not be retrieved; do not treat unavailability as falsity. Judge ONLY whether the "
+    "claim's own supporting quote is consistent with the claim text: if the quote plainly does NOT "
+    "support the claim (an overstatement or non sequitur), refute it. If the quote supports the claim "
+    "but you have no way to independently verify the underlying source, abstain -- never refute solely "
+    "because the source was unreachable."
+)
+
+
+def _vote_system_instructions(evidence_available: bool) -> str:
+    regime = _EVIDENCE_PRESENT_INSTRUCTIONS if evidence_available else _EVIDENCE_ABSENT_INSTRUCTIONS
+    return f"{_BASE_INSTRUCTIONS} {regime}"
+
 
 _VOTE_JSON_SHAPE = '{"refuted": <bool>, "abstain": <bool>, "confidence": "<low|medium|high>", "reasoning": "<short string>"}'
 
@@ -56,7 +89,7 @@ def _accumulate_usage(usage: dict[str, int], response) -> None:
 def risk_reasons(claim: Claim, source: dict | None, *, sole_must_cover_supporter: bool = False) -> list[str]:
     """Deterministic per-claim risk signals (ports dr.js:2536-2544
     ``verificationRiskReasons``): seeded/injected source, any gate flag,
-    authority_tier>=3 (or unranked), a structured claim whose provenance is
+    authority_tier>=4 (or unranked), a structured claim whose provenance is
     not yet MATCHED, and (D9, activating the S8 requirement/coverage
     channels) whether this claim is the SOLE direct supporter of an active
     must-cover requirement -- losing it on refutation would uncover a
@@ -64,7 +97,14 @@ def risk_reasons(claim: Claim, source: dict | None, *, sole_must_cover_supporter
     single-vote fast path. ``sole_must_cover_supporter`` is a plain bool the
     caller derives from state (``dr_core.graph.verify``, via
     ``dr_core.models.derive.reopens_requirement``) -- this function stays
-    pure."""
+    pure.
+
+    D10: the trigger was originally >=3 ("tier-3-or-worse"), but the fork's
+    only source right now is the C2 web-fetch hook, which mints every source
+    at the default authority_tier=3 -- the old threshold fired on every
+    single claim, making the single-clear fast path unreachable. Recalibrated
+    to >=4 ("tier-4-or-worse") until S9's connector registry maps real domains
+    to a real tier taxonomy."""
     reasons: list[str] = []
     if source and source.get("source_system") == "seeded-trap":
         reasons.append("injected")
@@ -72,8 +112,8 @@ def risk_reasons(claim: Claim, source: dict | None, *, sole_must_cover_supporter
         value = flag.value if hasattr(flag, "value") else str(flag)
         reasons.append(f"gate:{value}")
     tier = (source or {}).get("authority_tier")
-    if not isinstance(tier, int) or tier >= 3:
-        reasons.append("tier-3-or-worse")
+    if not isinstance(tier, int) or tier >= 4:
+        reasons.append("tier-4-or-worse")
     if claim.data_ref and claim.data_provenance != DataProvenance.MATCHED:
         reasons.append("structured-unmatched")
     if sole_must_cover_supporter:
@@ -140,7 +180,7 @@ async def cast_vote(claim: Claim, source: dict | None, evidence_excerpt: str | N
         model = _get_vote_model()
         response = await model.ainvoke(
             [
-                SystemMessage(content=_ADVERSARIAL_INSTRUCTIONS),
+                SystemMessage(content=_vote_system_instructions(evidence_excerpt is not None)),
                 HumanMessage(content=_build_vote_prompt(claim, source, evidence_excerpt, risk)),
             ]
         )

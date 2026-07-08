@@ -1,0 +1,6 @@
+/Users/ryanfree/Documents/Projects/deerflow-dr/deer-flow/backend/.venv/lib/python3.12/site-packages/langgraph/checkpoint/serde/encrypted.py:5: LangChainPendingDeprecationWarning: The default value of `allowed_objects` will change in a future version. Pass an explicit value (e.g., allowed_objects='messages' or allowed_objects='core') to suppress this warning.
+  from langgraph.checkpoint.serde.jsonplus import JsonPlusSerializer
+Thinking mode is enabled but model 'or-mid' does not support it; fallback to non-thinking mode.
+STEP: sources=0 claims=0 ids=[]
+STEP: sources=5 claims=2 ids=['35c9467fc34f089b', '79c8ddcc838900d6', '930de5a953c431d7', 'a8ff4a20e3d93161', 'f61eb442a2f131ed']
+SOURCES_SEEN n=5 ids=['35c9467fc34f089b', '79c8ddcc838900d6', '930de5a953c431d7', 'a8ff4a20e3d93161', 'f61eb442a2f131ed']

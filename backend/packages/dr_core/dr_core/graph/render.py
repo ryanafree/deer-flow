@@ -61,8 +61,10 @@ def render_node(state) -> dict:
 
     claims_by_ordinal: dict[int, Claim] = {}
     ineligible: list[tuple[str, Claim, str]] = []
+    all_claims: list[Claim] = []
     for claim_id, payload in dr_claims.items():
         claim = Claim.model_validate(payload)
+        all_claims.append(claim)
         ordinal = citation_ordinals.get(claim_id)
         if ordinal is not None:
             claims_by_ordinal[ordinal] = claim
@@ -123,6 +125,9 @@ def render_node(state) -> dict:
         claims=eligible_claims,
         requirements=list(requirements_by_id.values()),
         coverage=coverage_mappings,
+        # D10: the full ledger (every claim, any eligibility state) for ledger.jsonl --
+        # claims= above stays eligible-only/ordinal-ordered (Part III invariant, unchanged).
+        ledger_claims=all_claims,
         profile=profile,
         question=question,
         runs_dir=runs_dir,

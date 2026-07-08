@@ -1,0 +1,51 @@
+/Users/ryanfree/Documents/Projects/deerflow-dr/deer-flow/backend/.venv/lib/python3.12/site-packages/langgraph/checkpoint/serde/encrypted.py:5: LangChainPendingDeprecationWarning: The default value of `allowed_objects` will change in a future version. Pass an explicit value (e.g., allowed_objects='messages' or allowed_objects='core') to suppress this warning.
+  from langgraph.checkpoint.serde.jsonplus import JsonPlusSerializer
+Thinking mode is enabled but model 'or-mid' does not support it; fallback to non-thinking mode.
+child pid=77733, polling for SOURCES_SEEN...
+child killed at t+11.6s after SOURCES_SEEN
+pre-kill source ids: ['35c9467fc34f089b', '79c8ddcc838900d6', '930de5a953c431d7', 'a8ff4a20e3d93161', 'f61eb442a2f131ed']
+{
+  "resumed_ok": true,
+  "final_source_ids": [
+    "35c9467fc34f089b",
+    "410d4d039292aece",
+    "70601618d6514a68",
+    "71a85678210e8224",
+    "79c8ddcc838900d6",
+    "8c2e057feeee4c05",
+    "930de5a953c431d7",
+    "a8ff4a20e3d93161",
+    "f61eb442a2f131ed",
+    "fdeac6e2c632f19f"
+  ],
+  "n_sources_final": 10,
+  "run_dir": "/Users/ryanfree/Documents/Projects/deerflow-dr/runs/2026-07-08-003613-financial-untitled-research-question",
+  "gate_decision": "render",
+  "stop_reason": "completed_with_open_requirements"
+}
+VERDICT: {
+  "pre_kill_source_ids": [
+    "35c9467fc34f089b",
+    "79c8ddcc838900d6",
+    "930de5a953c431d7",
+    "a8ff4a20e3d93161",
+    "f61eb442a2f131ed"
+  ],
+  "final_source_ids": [
+    "35c9467fc34f089b",
+    "410d4d039292aece",
+    "70601618d6514a68",
+    "71a85678210e8224",
+    "79c8ddcc838900d6",
+    "8c2e057feeee4c05",
+    "930de5a953c431d7",
+    "a8ff4a20e3d93161",
+    "f61eb442a2f131ed",
+    "fdeac6e2c632f19f"
+  ],
+  "sources_retained": true,
+  "no_duplicate_ids": true,
+  "report_rendered": true,
+  "resume_input": "None (agent.ainvoke(None, config=thread) against the same thread_id/checkpointer)",
+  "pass": true
+}

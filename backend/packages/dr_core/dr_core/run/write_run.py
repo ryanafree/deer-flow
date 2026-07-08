@@ -20,6 +20,15 @@ linkage. Both are now optional kwargs (`conflicts=`, `coverage=`), serialized th
 way as the other artifacts — one `Conflict`/`CoverageMapping.model_dump(mode="json")`
 per line, caller-given order, omitted when absent — per PHASE1-SHARED-CONTRACT.md.
 
+D10 (S10 acceptance defect, scorer/ledger contract): `claims` stays the eligible-only,
+citation-ordinal-ordered set that `claims.jsonl` has always been (the Part III
+invariant — never resorted, never widened). A new `ledger_claims=` kwarg (defaulting to
+`claims` for backward compatibility) carries the FULL claim ledger — every claim
+regardless of eligibility, including excluded/killed ones — written to `ledger.jsonl` in
+stable claim_id order. `ledger.jsonl` is intentionally NOT ordinal-synced with
+`claims.jsonl`; it exists so tooling (score_run.py) can see claims that never made it
+into the eligible set.
+
 Rewired for this fork (see build-logs/task-port-writerun.md):
   - No dr.js: the `--deployed-engine` / engine-hash / engine-version-mismatch logic and
     the sibling BUILD.json lookup are gone. Engine identity is now this package's
@@ -276,6 +285,7 @@ def write_run(
     requirements,
     conflicts=None,
     coverage=None,
+    ledger_claims=None,
     profile,
     question,
     model="claude-sonnet-5",
@@ -288,7 +298,10 @@ def write_run(
 ):
     """Write the dated run folder and return its path. `claims` order is FROZEN as the
     citation ordinal (line 1 -> ordinal 1); never resort it. `conflicts`/`coverage` are
-    optional (model instances or dicts, caller-given order) — see module docstring."""
+    optional (model instances or dicts, caller-given order) — see module docstring.
+    `ledger_claims` (D10) is the full claim ledger (all claims, any eligibility state);
+    defaults to `claims` when omitted. Written to `ledger.jsonl` in stable claim_id
+    order — NOT the citation ordinal, see module docstring."""
     runs_dir = runs_dir or _default_runs_dir()
     manifest_in = dict(manifest_in or {})
 
@@ -303,6 +316,8 @@ def write_run(
     prepared_requirements = [_coerce(Requirement, r) for r in requirements]
     prepared_conflicts = [_coerce(Conflict, c) for c in (conflicts or [])]
     prepared_coverage = [_coerce(CoverageMapping, c) for c in (coverage or [])]
+    ledger_source = claims if ledger_claims is None else ledger_claims
+    prepared_ledger_claims = sorted((_coerce(Claim, c) for c in ledger_source), key=lambda c: c.claim_id)
 
     # --- report.md (body) + deterministic back-matter appendix ---------------
     parts = [(report_body or "(no report)").rstrip()]
@@ -327,6 +342,11 @@ def write_run(
     # coverage.jsonl -------------------------------------------------------------
     write_jsonl(os.path.join(folder, "sources.jsonl"), Source, prepared_sources)
     write_jsonl(os.path.join(folder, "claims.jsonl"), Claim, prepared_claims)
+    # ledger.jsonl (D10): the FULL claim ledger, one claim per line, in stable claim_id
+    # order -- deliberately NOT the citation-ordinal order claims.jsonl carries, and
+    # deliberately not omitted-when-empty like conflicts/coverage below, so tooling can
+    # always distinguish "no claims at all" from "file absent".
+    write_jsonl(os.path.join(folder, "ledger.jsonl"), Claim, prepared_ledger_claims)
     if prepared_requirements:
         write_jsonl(os.path.join(folder, "requirements.jsonl"), Requirement, prepared_requirements)
     if prepared_conflicts:

@@ -8,6 +8,10 @@ as all-zero), and prices each phase against a static $/1M-token table keyed by
 model id (D1: OpenRouter drives the cheap/mid gruntwork and verify tiers;
 ``claude-top`` runs on the Claude subscription CLI, so its marginal API cost is
 $0 -- see DECISIONS.md D1).
+
+D10 companion ruling: a third "plan" phase bucket is folded in the same
+defensive way as "verify", off ``dr_run["plan_usage"]`` (the D9 plan_coverage
+node's usage; absent today on runs predating it, treated as all-zero).
 """
 
 from __future__ import annotations
@@ -95,12 +99,16 @@ def build_accounting(messages, dr_run: dict | None = None, *, profile_tiers: dic
     """Build the manifest['accounting'] block.
 
     `messages` is the research phase's message list (typically `state["messages"]`).
-    `dr_run` is the dr_run channel dict; `dr_run["verify_usage"]`, if present, is an
-    optional {"input_tokens":..., "output_tokens":..., ...} dict the verify node
-    writes (S7 -- absent today, folded in as all-zero when missing).
+    `dr_run` is the dr_run channel dict; `dr_run["verify_usage"]` and
+    `dr_run["plan_usage"]`, if present, are optional {"input_tokens":...,
+    "output_tokens":..., ...} dicts the verify node (S7) and plan_coverage node (D9)
+    write respectively -- absent today on older runs, folded in as all-zero when
+    missing.
     `profile_tiers` is a profile's `model_tiers` dict ({"gruntwork":..., "verify":...,
     "top":...}); when given, prices the research phase against `gruntwork` and the
-    verify phase against `verify`. Omitted -> both phases price as unknown (None).
+    verify phase against `verify`. The plan phase has no dedicated tier key yet, so it
+    prices against `gruntwork` too (plan_coverage is a structured gruntwork-tier call,
+    same model class as research). Omitted -> phases price as unknown (None).
     """
     dr_run = dr_run or {}
     profile_tiers = profile_tiers or {}
@@ -108,8 +116,10 @@ def build_accounting(messages, dr_run: dict | None = None, *, profile_tiers: dic
     research_usage = sum_usage(messages)
     verify_usage_raw = dr_run.get("verify_usage") or {}
     verify_usage = {key: verify_usage_raw.get(key, 0) for key in METRICS}
+    plan_usage_raw = dr_run.get("plan_usage") or {}
+    plan_usage = {key: plan_usage_raw.get(key, 0) for key in METRICS}
 
-    phases = {"research": research_usage, "verify": verify_usage}
+    phases = {"research": research_usage, "verify": verify_usage, "plan": plan_usage}
 
     totals = _empty_usage()
     for usage in phases.values():
@@ -117,8 +127,9 @@ def build_accounting(messages, dr_run: dict | None = None, *, profile_tiers: dic
 
     research_cost = price_phase(research_usage, profile_tiers.get("gruntwork"))
     verify_cost = price_phase(verify_usage, profile_tiers.get("verify"))
+    plan_cost = price_phase(plan_usage, profile_tiers.get("gruntwork"))
 
-    known_costs = [c for c in (research_cost, verify_cost) if c is not None]
+    known_costs = [c for c in (research_cost, verify_cost, plan_cost) if c is not None]
     dollar_cost = round(sum(known_costs), 6) if known_costs else None
 
     return {

@@ -13,7 +13,6 @@ import os
 import subprocess
 import sys
 
-import pytest
 from dr_core.models import Claim, Requirement, Source
 from dr_core.models.enums import RequirementKind
 from dr_core.run.write_run import write_run
@@ -105,6 +104,51 @@ def test_sources_and_requirements_jsonl_round_trip(tmp_path):
     assert Source(**json.loads(src_lines[0])).id == "s1"
     req_lines = open(os.path.join(folder, "requirements.jsonl")).read().splitlines()
     assert Requirement(**json.loads(req_lines[0])).id == "r1"
+
+
+def test_ledger_jsonl_carries_all_claims_while_claims_jsonl_stays_eligible_only(tmp_path):
+    """D10 scorer/ledger contract: claims= stays the eligible-only, ordinal-ordered set
+    (Part III invariant, unchanged); ledger_claims= (defaulting to the full dr_claims in
+    the real caller, dr_core.graph.render) carries every claim regardless of eligibility,
+    written to ledger.jsonl in stable claim_id order -- NOT ordinal-synced."""
+    eligible = [make_claim(claim_id="c1", text="eligible one")]
+    full_ledger = [
+        make_claim(claim_id="c2", text="excluded claim"),
+        make_claim(claim_id="c1", text="eligible one"),
+        make_claim(claim_id="c3", text="killed claim"),
+    ]
+    folder = write_run(
+        report_body="# Report\n\nBody [1].",
+        sources=[make_source()],
+        claims=eligible,
+        requirements=[],
+        ledger_claims=full_ledger,
+        profile="general",
+        question="Ledger contract?",
+        runs_dir=str(tmp_path),
+    )
+
+    claims_lines = open(os.path.join(folder, "claims.jsonl")).read().splitlines()
+    assert [Claim(**json.loads(line)).claim_id for line in claims_lines] == ["c1"]
+
+    ledger_lines = open(os.path.join(folder, "ledger.jsonl")).read().splitlines()
+    ledger_claims = [Claim(**json.loads(line)) for line in ledger_lines]
+    # stable claim_id order, not the caller's given order
+    assert [c.claim_id for c in ledger_claims] == ["c1", "c2", "c3"]
+
+
+def test_ledger_jsonl_defaults_to_claims_when_ledger_claims_omitted(tmp_path):
+    folder = write_run(
+        report_body="report",
+        sources=[make_source()],
+        claims=[make_claim(claim_id="c1")],
+        requirements=[],
+        profile="general",
+        question="Ledger default?",
+        runs_dir=str(tmp_path),
+    )
+    ledger_lines = open(os.path.join(folder, "ledger.jsonl")).read().splitlines()
+    assert [Claim(**json.loads(line)).claim_id for line in ledger_lines] == ["c1"]
 
 
 def test_requirements_jsonl_omitted_when_no_requirements(tmp_path):

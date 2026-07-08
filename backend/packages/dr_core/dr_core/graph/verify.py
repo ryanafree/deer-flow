@@ -17,7 +17,6 @@ the advance-only ladders; this node's writes are advance-only by construction.
 from __future__ import annotations
 
 import asyncio
-import os
 import urllib.error
 import urllib.request
 
@@ -108,11 +107,14 @@ async def verify_node(state) -> dict:
         touched[claim.claim_id] = claim.model_dump(mode="json")
 
     # 1. Citation gate: deterministic, every active claim, no vote budget consumed.
-    courtlistener_token = os.environ.get("COURTLISTENER_API_TOKEN")
+    # D10: token resolution is lookup_citations' own job (COURTLISTENER_TOKEN, with
+    # COURTLISTENER_API_TOKEN as a fallback spelling) -- this node no longer reads the
+    # env var itself, which used to only check the fallback spelling and never the
+    # primary one.
     for claim in active.values():
         if claim.citation_status != CitationStatus.UNRESOLVED or not CITE_RE.search(claim.text or ""):
             continue
-        cites = await lookup_citations(claim.text, token=courtlistener_token)
+        cites = await lookup_citations(claim.text)
         decision = decide_citation_status(cites)
         if decision is not None:
             claim.citation_status = decision

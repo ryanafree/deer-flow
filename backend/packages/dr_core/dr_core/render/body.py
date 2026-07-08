@@ -9,6 +9,11 @@ generator's own output (the elegant self-consistency spec the ledger already nam
 Caller contract: `claims_by_ordinal` MUST already be restricted to the eligible set,
 keyed by the frozen `dr_run["citation_ordinals"]` value -- this module never re-derives
 eligibility itself (see `dr_core.models.eligibility`); it only renders what it is given.
+
+D10 body hygiene: model-authored claim text is sanitized of em/en dashes at RENDER time
+only (this module's output), never on the ledger itself -- claims.jsonl/ledger.jsonl
+keep the claim's verbatim text. This exists so a model's own wording can never trip
+report_lint's em-dash ban.
 """
 
 from __future__ import annotations
@@ -22,10 +27,17 @@ from dr_core.models.enums import PublicationStatus, RequirementState
 from dr_core.models.ledger import Claim, CoverageMapping, Requirement, Source
 
 _URL_HOST_RE = re.compile(r"^https?://([^/]+)")
+_DASH_RE = re.compile(r"[–—]")  # en dash, em dash
+
+
+def _sanitize_dashes(text: str) -> str:
+    """D10 body hygiene: replace em/en dashes with a plain hyphen at render time only
+    (the ledger keeps the claim's verbatim text -- see module docstring)."""
+    return _DASH_RE.sub("-", text)
 
 
 def _clean(text: str | None) -> str:
-    return " ".join((text or "").split())
+    return _sanitize_dashes(" ".join((text or "").split()))
 
 
 def _domain(url: str) -> str:

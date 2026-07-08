@@ -334,7 +334,10 @@ def build_run_config(
 
     # Inject custom agent name when the caller specified a non-default assistant.
     # Honour an explicit agent_name in either runtime options container.
-    if assistant_id and assistant_id != _DEFAULT_ASSISTANT_ID:
+    # "dr_agent" is the same carve-out resolve_agent_factory() has (D5): it is a
+    # first-class graph factory, not a custom agent, so it must never be
+    # rewritten into an agents/<name>/ directory lookup.
+    if assistant_id and assistant_id not in (_DEFAULT_ASSISTANT_ID, "dr_agent"):
         normalized = assistant_id.strip().lower().replace("_", "-")
         if not normalized or not re.fullmatch(r"[a-z0-9-]+", normalized):
             raise ValueError(f"Invalid assistant_id {assistant_id!r}: must contain only letters, digits, and hyphens after normalization.")

@@ -118,6 +118,40 @@ class TestHappyPath:
         assert code == 0, out
 
 
+class TestBodyHygiene:
+    """D10 companion mechanical ruling: model-authored claim text carrying an em/en dash
+    must not leak into the rendered body -- report_lint's em-dash ban is a house-style
+    rule, not something a model's own wording should be able to trip."""
+
+    def test_claim_text_with_em_dash_renders_clean_and_lints_zero(self, tmp_path, capsys):
+        state = _happy_path_state(str(tmp_path))
+        state["dr_claims"]["c1"] = _supported_claim(
+            "c1",
+            "The observatory recorded a jump — a twelve percent increase — in nightly visitors during 2025.",
+            "s1",
+        )
+        result = render_node(state)
+        run_dir = Path(result["dr_run"]["run_dir"])
+        report_md = (run_dir / "report.md").read_text()
+        # report_lint's own em-dash check only scans the narrative body, not the
+        # writer's fixed-copy appendix heading ("Appendix — Methodology...") -- so
+        # scope this assertion the same way via report_lint.body_of.
+        assert "—" not in report_lint.body_of(report_md)
+
+        code = _run_lint(str(run_dir))
+        out = capsys.readouterr().out
+        assert code == 0, out
+
+    def test_ledger_text_stays_verbatim_while_body_is_sanitized(self, tmp_path):
+        state = _happy_path_state(str(tmp_path))
+        state["dr_claims"]["c1"] = _supported_claim("c1", "A jump — twelve percent — was recorded.", "s1")
+        result = render_node(state)
+        run_dir = Path(result["dr_run"]["run_dir"])
+        claims_lines = (run_dir / "claims.jsonl").read_text().splitlines()
+        c1 = next(json.loads(line) for line in claims_lines if json.loads(line)["claim_id"] == "c1")
+        assert "—" in c1["text"]
+
+
 class TestCapHitPath:
     def _state(self, runs_dir):
         return {
@@ -215,7 +249,7 @@ class TestManifestAccounting:
 
         assert "accounting" in manifest
         assert set(manifest["accounting"].keys()) == {"phases", "totals", "dollar_cost"}
-        assert set(manifest["accounting"]["phases"].keys()) == {"research", "verify"}
+        assert set(manifest["accounting"]["phases"].keys()) == {"research", "verify", "plan"}
         assert manifest["depth"] == "quick"
         assert manifest["profile"] == "general"
         assert manifest["verify_mode"] == "off"
