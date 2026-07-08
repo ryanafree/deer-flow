@@ -17,7 +17,7 @@ DEFAULT_CONNECTORS_YAML = _HERE / "connectors.yaml"
 
 VALID_TYPE = {"unstructured", "structured", "graph"}
 VALID_TIER = {0, 1, 2}
-VALID_ACCESS = {"mcp", "rest", "mcp+rest"}
+VALID_ACCESS = {"mcp", "rest", "mcp+rest", "sql"}
 VALID_DURABILITY = {"substrate", "stable-api", "fragile-wrapper"}
 VALID_LAUNCHER = {"uvx", "npx", "http", "none"}
 

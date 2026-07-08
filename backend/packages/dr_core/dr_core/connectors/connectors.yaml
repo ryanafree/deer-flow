@@ -23,7 +23,9 @@
 #                    graph        = discovery / citation graphs (metadata + edges)
 #   tier           0 always wired | 1 per-profile anchor (MCP only when active) | 2 runtime REST, no MCP
 #   profiles       which profiles use it; `all` for Tier 0
-#   access         mcp | rest | mcp+rest
+#   access         mcp | rest | mcp+rest | sql
+#                    sql = direct database connection (e.g. WRDS); no MCP/REST fragment,
+#                    probed via a bare TCP connect, tooling is a separate initiative
 #   endpoint       MCP endpoint or primary REST base
 #   rest_endpoint  the substrate REST base when access is mcp (REST is substrate, MCP is ergonomics)
 #   auth           env var holding the credential, or `none`
@@ -563,3 +565,20 @@ connectors:
     rate_limit: "free, unauthenticated market-data reads. Host changed May 2026"
     last_verified: 2026-06-23
     fallback: polymarket
+
+  - name: wrds
+    type: structured
+    tier: 1
+    profiles: [financial]
+    access: sql
+    endpoint: wrds-pgdata.wharton.upenn.edu:9737/wrds
+    auth: WRDS_USERNAME
+    # companion secret: WRDS_PASSWORD (not itself a registry field; probe.py's
+    # sql branch looks it up by this fixed name alongside `auth`)
+    launcher: none
+    durability: substrate
+    rate_limit: "per WRDS account terms (institutional subscription, not a public API tier)"
+    last_verified: 2026-07-08
+    fallback: null
+    # probe_url intentionally omitted: WRDS is a Postgres endpoint, not HTTP.
+    # probe.py does a bare TCP connect to `endpoint` instead of a GET.

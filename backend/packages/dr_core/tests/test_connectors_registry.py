@@ -1,7 +1,6 @@
 """Tests for dr_core.connectors.registry (S9)."""
 
 import pytest
-
 from dr_core.connectors.registry import ConnectorValidationError, by_name, load_connectors
 
 
@@ -61,6 +60,11 @@ class TestClosedEnumValidation:
         connectors = load_connectors(path)
         assert connectors[0].name == "test_connector"
 
+    def test_sql_is_a_valid_access_value(self, tmp_path):
+        path = _write_yaml(tmp_path, [_good_row(access="sql")])
+        connectors = load_connectors(path)
+        assert connectors[0].access == "sql"
+
     @pytest.mark.parametrize(
         "field,bad_value",
         [
@@ -113,3 +117,12 @@ class TestConnectorHelpers:
         assert not idx["jina_reader"].has_mcp()
         assert idx["docling"].has_mcp()
         assert not idx["docling"].has_rest()
+
+    def test_wrds_is_sql_access_with_no_mcp_or_rest_fragment(self):
+        connectors = load_connectors()
+        wrds = by_name(connectors)["wrds"]
+        assert wrds.access == "sql"
+        assert wrds.tier == 1
+        assert wrds.used_by("financial")
+        assert not wrds.has_rest()
+        assert not wrds.has_mcp()

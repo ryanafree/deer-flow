@@ -18,6 +18,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import socket
 import sys
 import urllib.error
 import urllib.request
@@ -27,6 +28,12 @@ from dr_core.connectors.registry import Connector, ConnectorValidationError, loa
 TIMEOUT_S = 10.0
 
 STATUSES_FAIL = {"DOWN", "AUTH", "BADROW"}
+
+# sql-access connectors have no probe_url (they're not HTTP) and no generic
+# "companion secret" field in the registry schema -- `auth` names the primary
+# credential (e.g. WRDS_USERNAME) and this maps connector name -> the paired
+# secret env var name the probe also requires before attempting a TCP connect.
+SQL_COMPANION_SECRET = {"wrds": "WRDS_PASSWORD"}
 
 
 def _env_value(name: str | None, env: dict | None) -> str:
@@ -72,8 +79,41 @@ def _fetch(url: str, headers: dict, timeout: float) -> tuple[str, str]:
         return "DOWN", str(e)[:60]
 
 
+def _probe_sql_connector(row: Connector, env: dict | None = None, timeout: float = TIMEOUT_S) -> tuple[str, str]:
+    """TCP-connect-only reachability check for `access: sql` rows (e.g. WRDS).
+
+    No SQL is executed and no database driver (psycopg2 etc.) is imported --
+    this only confirms the host:port accepts a connection. Requires both the
+    primary `auth` env var and its companion secret (SQL_COMPANION_SECRET) to
+    be present before even attempting the socket connect, since a bare TCP
+    probe can't distinguish "reachable but no creds" from "reachable and
+    usable" the way an HTTP 401 can.
+    """
+    user_val = _env_value(row.auth, env)
+    companion_name = SQL_COMPANION_SECRET.get(row.name)
+    password_val = _env_value(companion_name, env) if companion_name else ""
+    if not user_val or not password_val:
+        missing = ", ".join(n for n, v in ((row.auth, user_val), (companion_name, password_val)) if n and not v)
+        return ("NEEDS-KEY", f"{missing} empty")
+    if not row.endpoint:
+        return ("BADROW", "sql access row has no endpoint")
+    host, _, rest = row.endpoint.partition(":")
+    port_str = rest.partition("/")[0]
+    try:
+        port = int(port_str)
+    except ValueError:
+        return ("BADROW", f"could not parse host:port from endpoint {row.endpoint!r}")
+    try:
+        with socket.create_connection((host, port), timeout=timeout):
+            return ("OK", f"tcp connect {host}:{port}")
+    except Exception as e:  # noqa: BLE001 -- probe must never crash on one bad row
+        return ("DOWN", str(e)[:60])
+
+
 def probe_connector(row: Connector, env: dict | None = None, timeout: float = TIMEOUT_S) -> tuple[str, str]:
     """Return (status, detail) for one connector. Never raises."""
+    if row.access == "sql":
+        return _probe_sql_connector(row, env=env, timeout=timeout)
     has_auth = (not row.auth or row.auth == "none") or bool(_env_value(row.auth, env))
     if not row.probe_url:
         return ("SKIP", "no safe probe_url; launcher/auth check only")

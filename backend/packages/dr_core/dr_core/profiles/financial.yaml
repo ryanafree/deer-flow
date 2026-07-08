@@ -20,6 +20,7 @@ tool_allowlist:
   - nber_tsv
   - polymarket
   - kalshi
+  - wrds
 model_tiers:
   gruntwork: or-cheap
   verify: or-sonnet

@@ -1,11 +1,9 @@
 """Tests for dr_core.connectors.probe (S9). All HTTP is stubbed -- no real network calls."""
 
-import socket
 import urllib.error
 from unittest.mock import MagicMock, patch
 
 import pytest
-
 from dr_core.connectors.probe import build_probe_request, probe_all, probe_connector
 from dr_core.connectors.registry import Connector
 
@@ -80,7 +78,7 @@ class TestProbeConnectorNeverRaises:
 
     def test_timeout_returns_down_not_raise(self):
         row = _connector(probe_url="https://example.test/x")
-        with patch("dr_core.connectors.probe.urllib.request.urlopen", side_effect=socket.timeout("timed out")):
+        with patch("dr_core.connectors.probe.urllib.request.urlopen", side_effect=TimeoutError("timed out")):
             status, detail = probe_connector(row, env={}, timeout=0.01)
         assert status == "DOWN"
 
@@ -161,6 +159,60 @@ class TestProbeAllScoping:
             mock_open.return_value.__enter__.return_value.status = 200
             results = probe_all(connectors, do_all=True)
         assert {r["name"] for r in results} == {"t0", "t2"}
+
+
+class TestSqlAccessProbe:
+    def _sql_row(self, **overrides):
+        defaults = dict(
+            name="wrds",
+            type="structured",
+            tier=1,
+            profiles=["financial"],
+            access="sql",
+            auth="WRDS_USERNAME",
+            launcher="none",
+            durability="substrate",
+            rate_limit="per account terms",
+            last_verified="2026-07-08",
+            fallback=None,
+            endpoint="wrds-pgdata.wharton.upenn.edu:9737/wrds",
+            probe_url=None,
+        )
+        defaults.update(overrides)
+        return Connector(**defaults)
+
+    def test_needs_key_when_both_env_vars_absent(self):
+        row = self._sql_row()
+        status, detail = probe_connector(row, env={})
+        assert status == "NEEDS-KEY"
+
+    def test_needs_key_when_only_username_present(self):
+        row = self._sql_row()
+        status, detail = probe_connector(row, env={"WRDS_USERNAME": "ryan"})
+        assert status == "NEEDS-KEY"
+
+    def test_tcp_connect_ok_when_both_env_vars_present(self):
+        row = self._sql_row()
+        env = {"WRDS_USERNAME": "ryan", "WRDS_PASSWORD": "secret"}
+        with patch("dr_core.connectors.probe.socket.create_connection") as mock_connect:
+            mock_connect.return_value.__enter__ = MagicMock(return_value=MagicMock())
+            mock_connect.return_value.__exit__ = MagicMock(return_value=False)
+            status, detail = probe_connector(row, env=env)
+        assert status == "OK"
+        mock_connect.assert_called_once_with(("wrds-pgdata.wharton.upenn.edu", 9737), timeout=10.0)
+
+    def test_tcp_connect_failure_returns_down_not_raise(self):
+        row = self._sql_row()
+        env = {"WRDS_USERNAME": "ryan", "WRDS_PASSWORD": "secret"}
+        with patch("dr_core.connectors.probe.socket.create_connection", side_effect=OSError("connection refused")):
+            status, detail = probe_connector(row, env=env)
+        assert status == "DOWN"
+
+    def test_never_imports_a_sql_driver(self):
+        """Sanity check the probe module has no psycopg2/db driver dependency."""
+        import dr_core.connectors.probe as probe_mod
+
+        assert not hasattr(probe_mod, "psycopg2")
 
 
 @pytest.mark.parametrize("cli_flag", ["--json", None])
