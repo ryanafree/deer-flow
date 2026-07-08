@@ -15,6 +15,6 @@ tool_allowlist:
   - semantic_scholar
 model_tiers:
   gruntwork: or-cheap
-  verify: or-mid
+  verify: or-sonnet
   top: claude-top
 depth_default: standard

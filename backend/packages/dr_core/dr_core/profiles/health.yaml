@@ -16,6 +16,6 @@ tool_allowlist:
   - europe_pmc
 model_tiers:
   gruntwork: or-cheap
-  verify: or-mid
+  verify: or-sonnet
   top: claude-top
 depth_default: standard

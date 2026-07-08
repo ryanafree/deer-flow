@@ -24,6 +24,7 @@ METRICS = ("input_tokens", "output_tokens", "cache_read_tokens", "cache_write_to
 MODEL_TIER_IDS = {
     "or-cheap": "openai/gpt-oss-20b",
     "or-mid": "openai/gpt-4o-mini",
+    "or-sonnet": "anthropic/claude-sonnet-5",
     "claude-top": "claude-top",
 }
 
@@ -33,6 +34,7 @@ MODEL_TIER_IDS = {
 PRICING = {
     "openai/gpt-oss-20b": {"input": 0.03, "output": 0.14},
     "openai/gpt-4o-mini": {"input": 0.15, "output": 0.60},
+    "anthropic/claude-sonnet-5": {"input": 3.00, "output": 15.00},
     "claude-top": {"input": 0.0, "output": 0.0},
 }
 

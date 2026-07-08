@@ -147,7 +147,7 @@ def _get_vote_model():
     rather than reaching into ``deerflow.models``."""
     from deerflow.models import create_chat_model
 
-    return create_chat_model(os.environ.get("DR_VERIFY_MODEL", "or-mid"))
+    return create_chat_model(os.environ.get("DR_VERIFY_MODEL", "or-sonnet"))
 
 
 def _format_evidence(claim: Claim, source: dict | None, evidence_excerpt: str | None) -> str:
