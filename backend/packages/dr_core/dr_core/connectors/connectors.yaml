@@ -1,0 +1,565 @@
+# --------------------------------------------------------------------------
+# PROVENANCE (dr_core fork copy, S9 / REVIEW_FINISH_PLAN_2026-07-06.md):
+# Vendored from ~/Documents/Projects/DeepResearch/harness/connectors.yaml on
+# 2026-07-07. That file remains the frozen, human-reviewed source of truth for
+# the old dr.js-era harness; THIS copy is the source of truth for dr_core's
+# connector registry/generator/probe going forward. When the upstream file is
+# updated (new connector, auth change, re-probe), re-vendor this copy by hand
+# -- do not silently diverge, and do not edit the upstream file from here.
+# --------------------------------------------------------------------------
+# connectors.yaml — machine-readable source of truth for the deep-research harness.
+#
+# This file, plus `install.sh --probe`, is authoritative. CONNECTORS.md is human
+# documentation of what is recorded here, not an authority of its own. When a
+# connector moves, dies, or changes auth, edit this file and re-probe; do not rely
+# on prose anywhere else staying in sync.
+#
+# Row schema
+# ----------
+#   name           unique id, referenced by `fallback:` and by profile docs
+#   type           unstructured | structured | graph
+#                    unstructured = pages/PDFs you crawl + quote-extract
+#                    structured   = typed-query data APIs parsed into data records
+#                    graph        = discovery / citation graphs (metadata + edges)
+#   tier           0 always wired | 1 per-profile anchor (MCP only when active) | 2 runtime REST, no MCP
+#   profiles       which profiles use it; `all` for Tier 0
+#   access         mcp | rest | mcp+rest
+#   endpoint       MCP endpoint or primary REST base
+#   rest_endpoint  the substrate REST base when access is mcp (REST is substrate, MCP is ergonomics)
+#   auth           env var holding the credential, or `none`
+#   launcher       how an MCP is started: uvx | npx | http (hosted) | none (rest-only)
+#   probe_url      lightweight GET target for reachability; omit if none is safe/cheap
+#   probe_auth     (optional) how the probe authenticates the probe_url when the key is set:
+#                    query:NAME (append ?NAME=key) | header:NAME | bearer | token
+#                    omit when the endpoint answers without auth (a bare reachability GET)
+#   durability     substrate (OSS lib / official primary API) | stable-api | fragile-wrapper
+#   rate_limit     free-tier ceiling in human terms
+#   throughput_note (optional) behavior under five-way fan-out, for capped connectors
+#   last_verified  YYYY-MM-DD the row was checked against primary sources
+#   fallback       connector name to fall to on 429 / auth failure, or null
+#
+# Enum discipline: `type`, `tier`, `access`, `durability`, and `launcher` are
+# closed sets. The probe validates them; an unknown value is a hard error, not a warning.
+
+connectors:
+
+  # ----------------------------------------------------------------------------
+  # TIER 0 — retrieval backbone. Always wired. Used by every profile.
+  # ----------------------------------------------------------------------------
+
+  - name: tavily
+    type: unstructured
+    tier: 0
+    profiles: all
+    access: mcp+rest
+    endpoint: tavily-mcp
+    rest_endpoint: https://api.tavily.com
+    auth: TAVILY_API_KEY
+    launcher: npx
+    probe_url: https://api.tavily.com
+    durability: stable-api
+    rate_limit: "1,000 credits/mo free; ~$8/1k PAYG"
+    throughput_note: "Standing search fallback for the whole harness; reliable under concurrent search agents where SearXNG throttles"
+    last_verified: 2026-06-23
+    fallback: searxng
+
+  - name: searxng
+    type: unstructured
+    tier: 0
+    profiles: all
+    access: mcp
+    endpoint: SEARXNG_URL
+    rest_endpoint: SEARXNG_URL
+    auth: SEARXNG_URL
+    launcher: uvx
+    probe_url: null
+    durability: fragile-wrapper
+    rate_limit: "self-host, free; upstream engines throttle under concurrency"
+    throughput_note: "Throttles under five-way fan-out; Tavily is the standing fallback, not the other way round"
+    last_verified: 2026-06-23
+    fallback: tavily
+
+  - name: crawl4ai
+    type: unstructured
+    tier: 0
+    profiles: all
+    access: mcp
+    endpoint: crawl4ai-sse
+    rest_endpoint: null
+    auth: none
+    launcher: uvx
+    probe_url: null
+    durability: substrate
+    rate_limit: "self-host, free; bounded by local concurrency"
+    last_verified: 2026-06-23
+    fallback: jina_reader
+
+  - name: docling
+    type: unstructured
+    tier: 0
+    profiles: all
+    access: mcp
+    endpoint: docling-mcp
+    rest_endpoint: null
+    auth: none
+    launcher: uvx
+    probe_url: null
+    durability: substrate
+    rate_limit: "self-host, free; bounded by local CPU"
+    last_verified: 2026-06-23
+    fallback: jina_reader
+
+  - name: jina_reader
+    type: unstructured
+    tier: 0
+    profiles: all
+    access: rest
+    endpoint: https://r.jina.ai/
+    rest_endpoint: https://r.jina.ai/
+    auth: none
+    launcher: none
+    probe_url: https://r.jina.ai/
+    durability: stable-api
+    rate_limit: "keyless ~100 RPM"
+    last_verified: 2026-06-23
+    fallback: null
+
+  # ----------------------------------------------------------------------------
+  # TIER 1 — academic core. Anchors for General, Tech, Health, Financial (not Legal).
+  # OpenAlex and Semantic Scholar are declared mutual fallbacks: either alone is a
+  # degraded-but-functional academic mode.
+  # ----------------------------------------------------------------------------
+
+  - name: openalex
+    type: graph
+    tier: 1
+    profiles: [general, financial, tech, health]
+    access: mcp+rest
+    endpoint: openalex-mcp
+    rest_endpoint: https://api.openalex.org
+    auth: OPENALEX_API_KEY
+    launcher: uvx
+    probe_url: https://api.openalex.org/works?per-page=1
+    durability: stable-api
+    rate_limit: "free key required since 2026-02-24; ~$1/day free allowance (≈unlimited at research scale)"
+    throughput_note: "Community MCP wrappers predate the key change; confirm the wrapper forwards api_key. REST is the substrate."
+    last_verified: 2026-06-23
+    fallback: semantic_scholar
+
+  - name: semantic_scholar
+    type: graph
+    tier: 1
+    profiles: [general, financial, tech, health]
+    access: mcp+rest
+    endpoint: semantic-scholar-mcp
+    rest_endpoint: https://api.semanticscholar.org
+    auth: SEMANTIC_SCHOLAR_API_KEY
+    launcher: uvx
+    probe_url: https://api.semanticscholar.org/graph/v1/paper/search?query=test&limit=1
+    durability: stable-api
+    rate_limit: "free; shared pool is slow, key raises the limit"
+    last_verified: 2026-06-23
+    fallback: openalex
+
+  # ----------------------------------------------------------------------------
+  # TIER 1 — Financial anchors (structured-data path).
+  # ----------------------------------------------------------------------------
+
+  - name: edgar
+    type: structured
+    tier: 1
+    profiles: [financial]
+    access: mcp+rest
+    endpoint: secedgar-mcp
+    rest_endpoint: https://data.sec.gov
+    auth: SEC_EDGAR_USER_AGENT
+    launcher: uvx
+    probe_url: https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&type=10-K&dateb=&owner=include&count=1
+    durability: substrate
+    rate_limit: "10 req/s; descriptive User-Agent header mandatory or requests are blocked"
+    throughput_note: "Primary-filing numbers come from XBRL companyfacts as structured records, not crawled pages"
+    last_verified: 2026-06-23
+    fallback: openbb
+
+  - name: openbb
+    type: structured
+    tier: 1
+    profiles: [financial]
+    access: mcp+rest
+    endpoint: openbb-mcp-server
+    rest_endpoint: https://data.openbb.co
+    auth: OPENBB_PAT
+    launcher: uvx
+    probe_url: null
+    durability: stable-api
+    rate_limit: "aggregates ~100 providers; limits vary by underlying provider/key"
+    last_verified: 2026-06-23
+    fallback: edgar
+
+  # ----------------------------------------------------------------------------
+  # TIER 1 — Legal anchors. EDU membership on CourtListener is a hard prerequisite
+  # for the Legal profile (see throughput_note); confirmed at M3, not M0.
+  # ----------------------------------------------------------------------------
+
+  - name: courtlistener
+    type: graph
+    tier: 1
+    profiles: [legal]
+    access: mcp+rest
+    endpoint: https://mcp.courtlistener.com
+    rest_endpoint: https://www.courtlistener.com/api/rest/v4
+    auth: COURTLISTENER_TOKEN
+    launcher: http
+    probe_url: https://www.courtlistener.com/api/rest/v4/
+    durability: stable-api
+    rate_limit: "~125 req/day free; $10/mo or free EDU membership lifts it"
+    throughput_note: "Eyecite gate fires once per cite; one citation-heavy run can spend a large share of the free cap. EDU membership is a hard Legal prerequisite."
+    last_verified: 2026-06-23
+    fallback: courtlistener_rest
+
+  - name: courtlistener_rest
+    type: graph
+    tier: 1
+    profiles: [legal]
+    access: rest
+    endpoint: https://www.courtlistener.com/api/rest/v4
+    rest_endpoint: https://www.courtlistener.com/api/rest/v4
+    auth: COURTLISTENER_TOKEN
+    launcher: none
+    probe_url: https://www.courtlistener.com/api/rest/v4/
+    durability: substrate
+    rate_limit: "same account cap as the MCP; this is the substrate the MCP wraps"
+    last_verified: 2026-06-23
+    fallback: null
+
+  - name: govinfo
+    type: unstructured
+    tier: 1
+    profiles: [legal]
+    access: mcp+rest
+    endpoint: https://api.govinfo.gov/mcp
+    rest_endpoint: https://api.govinfo.gov
+    auth: DATA_GOV_API_KEY
+    launcher: http
+    probe_url: https://api.govinfo.gov/collections
+    probe_auth: query:api_key   # api.govinfo.gov wants the key in the query string
+    durability: stable-api
+    rate_limit: "api.data.gov shared key; 1k req/hr default"
+    last_verified: 2026-06-23
+    fallback: federal_register
+
+  # ----------------------------------------------------------------------------
+  # TIER 1 — Health anchor.
+  # ----------------------------------------------------------------------------
+
+  - name: pubmed
+    type: graph
+    tier: 1
+    profiles: [health]
+    access: mcp+rest
+    endpoint: pubmed-mcp-server
+    rest_endpoint: https://eutils.ncbi.nlm.nih.gov/entrez/eutils
+    auth: NCBI_API_KEY
+    launcher: uvx
+    probe_url: https://eutils.ncbi.nlm.nih.gov/entrez/eutils/einfo.fcgi
+    durability: stable-api
+    rate_limit: "3 req/s keyless; 10 req/s with free key. cyanheads server bundles Europe PMC + Unpaywall + MeSH"
+    last_verified: 2026-06-23
+    fallback: europe_pmc
+
+  # ----------------------------------------------------------------------------
+  # TIER 1 — Tech anchors.
+  # ----------------------------------------------------------------------------
+
+  - name: arxiv
+    type: graph
+    tier: 1
+    profiles: [tech, financial]
+    access: mcp+rest
+    endpoint: arxiv-mcp-server
+    rest_endpoint: http://export.arxiv.org/api
+    auth: none
+    launcher: uvx
+    probe_url: http://export.arxiv.org/api/query?search_query=all:test&max_results=1
+    durability: stable-api
+    rate_limit: "keyless; be polite (1 req/3s). Use blazickjp/arxiv-mcp-server, not 2725244134 (404)"
+    last_verified: 2026-06-23
+    fallback: openalex
+
+  - name: huggingface
+    type: graph
+    tier: 1
+    profiles: [tech]
+    access: mcp+rest
+    endpoint: https://hf.co/mcp
+    rest_endpoint: https://huggingface.co/api
+    auth: HF_TOKEN
+    launcher: http
+    probe_url: https://huggingface.co/api/models?limit=1
+    durability: stable-api
+    rate_limit: "free; token optional (raises limits, unlocks gated repos)"
+    last_verified: 2026-06-23
+    fallback: null
+
+  - name: github
+    type: graph
+    tier: 1
+    profiles: [tech]
+    access: mcp+rest
+    endpoint: github-mcp-server
+    rest_endpoint: https://api.github.com
+    auth: GITHUB_PAT
+    launcher: npx
+    probe_url: https://api.github.com
+    durability: stable-api
+    rate_limit: "60 req/hr unauthenticated; 5,000 req/hr with PAT"
+    last_verified: 2026-06-23
+    fallback: null
+
+  # ----------------------------------------------------------------------------
+  # TIER 2 — runtime REST, no MCP. Reached with generic fetch using the endpoint
+  # recorded here and in the profile CLAUDE.md. Keyless or single free api.data.gov key.
+  # ----------------------------------------------------------------------------
+
+  # Legal Tier 2
+  - name: federal_register
+    type: unstructured
+    tier: 2
+    profiles: [legal]
+    access: rest
+    endpoint: https://www.federalregister.gov/api/v1
+    rest_endpoint: https://www.federalregister.gov/api/v1
+    auth: none
+    launcher: none
+    probe_url: https://www.federalregister.gov/api/v1/documents?per_page=1
+    durability: stable-api
+    rate_limit: "free, keyless"
+    last_verified: 2026-06-23
+    fallback: null
+
+  - name: regulations_gov
+    type: unstructured
+    tier: 2
+    profiles: [legal]
+    access: rest
+    endpoint: https://api.regulations.gov/v4
+    rest_endpoint: https://api.regulations.gov/v4
+    auth: DATA_GOV_API_KEY
+    launcher: none
+    probe_url: null
+    durability: stable-api
+    rate_limit: "free api.data.gov key; 1k req/hr"
+    last_verified: 2026-06-23
+    fallback: null
+
+  - name: congress_gov
+    type: unstructured
+    tier: 2
+    profiles: [legal]
+    access: rest
+    endpoint: https://api.congress.gov/v3
+    rest_endpoint: https://api.congress.gov/v3
+    auth: DATA_GOV_API_KEY
+    launcher: none
+    probe_url: null
+    durability: stable-api
+    rate_limit: "free api.data.gov key"
+    last_verified: 2026-06-23
+    fallback: null
+
+  - name: openstates
+    type: structured
+    tier: 2
+    profiles: [legal]
+    access: rest
+    endpoint: https://v3.openstates.org
+    rest_endpoint: https://v3.openstates.org
+    auth: OPENSTATES_API_KEY
+    launcher: none
+    probe_url: null
+    durability: stable-api
+    rate_limit: "free key; covers 50 states + DC + PR"
+    last_verified: 2026-06-23
+    fallback: null
+
+  # Health Tier 2
+  - name: clinicaltrials_gov
+    type: structured
+    tier: 2
+    profiles: [health]
+    access: rest
+    endpoint: https://clinicaltrials.gov/api/v2
+    rest_endpoint: https://clinicaltrials.gov/api/v2
+    auth: none
+    launcher: none
+    probe_url: https://clinicaltrials.gov/api/v2/studies?pageSize=1
+    durability: stable-api
+    rate_limit: "free, keyless (v2)"
+    last_verified: 2026-06-23
+    fallback: null
+
+  - name: usda_fdc
+    type: structured
+    tier: 2
+    profiles: [health]
+    access: rest
+    endpoint: https://api.nal.usda.gov/fdc/v1
+    rest_endpoint: https://api.nal.usda.gov/fdc/v1
+    auth: DATA_GOV_API_KEY
+    launcher: none
+    probe_url: null
+    durability: stable-api
+    rate_limit: "free api.data.gov key; 300k+ foods"
+    last_verified: 2026-06-23
+    fallback: open_food_facts
+
+  - name: open_food_facts
+    type: structured
+    tier: 2
+    profiles: [health]
+    access: rest
+    endpoint: https://world.openfoodfacts.org
+    rest_endpoint: https://world.openfoodfacts.org
+    auth: none
+    launcher: none
+    probe_url: https://world.openfoodfacts.org/api/v2/product/737628064502.json
+    durability: stable-api
+    rate_limit: "free, keyless; branded/barcode products, Nutri-Score"
+    last_verified: 2026-06-23
+    fallback: null
+
+  - name: europe_pmc
+    type: graph
+    tier: 2
+    profiles: [health]
+    access: rest
+    endpoint: https://www.ebi.ac.uk/europepmc/webservices/rest
+    rest_endpoint: https://www.ebi.ac.uk/europepmc/webservices/rest
+    auth: none
+    launcher: none
+    probe_url: https://www.ebi.ac.uk/europepmc/webservices/rest/search?query=test&format=json&pageSize=1
+    durability: stable-api
+    rate_limit: "free, keyless; OA full text, indexes bioRxiv/medRxiv"
+    last_verified: 2026-06-23
+    fallback: null
+
+  # Financial Tier 2
+  - name: fred
+    type: structured
+    tier: 2
+    profiles: [financial]
+    access: rest
+    endpoint: https://api.stlouisfed.org/fred
+    rest_endpoint: https://api.stlouisfed.org/fred
+    auth: FRED_API_KEY
+    launcher: none
+    probe_url: null
+    durability: stable-api
+    rate_limit: "free key; 800k+ series; 120 req/min"
+    last_verified: 2026-06-23
+    fallback: world_bank
+
+  - name: world_bank
+    type: structured
+    tier: 2
+    profiles: [financial]
+    access: rest
+    endpoint: https://api.worldbank.org/v2
+    rest_endpoint: https://api.worldbank.org/v2
+    auth: none
+    launcher: none
+    probe_url: https://api.worldbank.org/v2/country?format=json&per_page=1
+    durability: stable-api
+    rate_limit: "free, keyless"
+    last_verified: 2026-06-23
+    fallback: null
+
+  - name: treasury_fiscaldata
+    type: structured
+    tier: 2
+    profiles: [financial]
+    access: rest
+    endpoint: https://api.fiscaldata.treasury.gov/services/api/fiscal_service
+    rest_endpoint: https://api.fiscaldata.treasury.gov/services/api/fiscal_service
+    auth: none
+    launcher: none
+    probe_url: https://api.fiscaldata.treasury.gov/services/api/fiscal_service/v2/accounting/od/avg_interest_rates?page%5Bsize%5D=1
+    durability: stable-api
+    rate_limit: "free, keyless"
+    last_verified: 2026-06-23
+    fallback: null
+
+  - name: bls
+    type: structured
+    tier: 2
+    profiles: [financial]
+    access: rest
+    endpoint: https://api.bls.gov/publicAPI/v2
+    rest_endpoint: https://api.bls.gov/publicAPI/v2
+    auth: BLS_API_KEY
+    launcher: none
+    probe_url: null
+    durability: stable-api
+    rate_limit: "free key; 500 req/day"
+    last_verified: 2026-06-23
+    fallback: fred
+
+  - name: bea
+    type: structured
+    tier: 2
+    profiles: [financial]
+    access: rest
+    endpoint: https://apps.bea.gov/api/data
+    rest_endpoint: https://apps.bea.gov/api/data
+    auth: BEA_API_KEY
+    launcher: none
+    probe_url: null
+    durability: stable-api
+    rate_limit: "free key"
+    last_verified: 2026-06-23
+    fallback: fred
+
+  - name: nber_tsv
+    type: structured
+    tier: 2
+    profiles: [financial]
+    access: rest
+    endpoint: https://data.nber.org
+    rest_endpoint: https://data.nber.org
+    auth: none
+    launcher: none
+    probe_url: https://data.nber.org/
+    durability: stable-api
+    rate_limit: "free, keyless; bulk TSV metadata/abstracts. RePEc/IDEAS reached via OpenAlex"
+    last_verified: 2026-06-23
+    fallback: openalex
+
+  - name: polymarket
+    type: structured
+    tier: 2
+    profiles: [financial]
+    access: rest
+    endpoint: https://gamma-api.polymarket.com
+    rest_endpoint: https://gamma-api.polymarket.com
+    auth: none
+    launcher: none
+    probe_url: https://gamma-api.polymarket.com/markets?limit=1
+    durability: stable-api
+    rate_limit: "free, unauthenticated reads (Gamma/CLOB/Data). Partly covered by the last30days skill"
+    last_verified: 2026-06-23
+    fallback: null
+
+  - name: kalshi
+    type: structured
+    tier: 2
+    profiles: [financial]
+    access: rest
+    endpoint: https://external-api.kalshi.com/trade-api/v2
+    rest_endpoint: https://external-api.kalshi.com/trade-api/v2
+    auth: none
+    launcher: none
+    probe_url: https://external-api.kalshi.com/trade-api/v2/markets?limit=1
+    durability: stable-api
+    rate_limit: "free, unauthenticated market-data reads. Host changed May 2026"
+    last_verified: 2026-06-23
+    fallback: polymarket

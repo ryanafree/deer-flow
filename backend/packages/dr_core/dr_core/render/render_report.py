@@ -46,7 +46,7 @@ import sys
 try:
     import markdown as md_lib
 except ImportError:
-    sys.exit("render_report.py: requires the 'markdown' package — run via " "`uv run --with markdown python3 -m dr_core.render.render_report ...`")
+    sys.exit("render_report.py: requires the 'markdown' package — run via `uv run --with markdown python3 -m dr_core.render.render_report ...`")
 
 from dr_core.models import (
     Claim,
@@ -122,7 +122,7 @@ def split_sections(body_md):
     m = re.match(r"^#\s+(.+?)\s*\n+", body_md)
     if m:
         title = m.group(1).strip()
-        body_md = body_md[m.end():]
+        body_md = body_md[m.end() :]
     parts = re.split(r"(?m)^##\s+(.+?)\s*$", body_md)
     # re.split with a capturing group yields: [prefix, heading1, content1, heading2, content2, ...]
     prefix = parts[0].strip()
@@ -209,8 +209,8 @@ def render_key_stat_cards(claims, src_by_id, claim_refnum_by_claim_id, conflicts
         ref = claim_refnum_by_claim_id.get(c.claim_id)
         cite = f' <a class="cite" href="#ref-{ref}">[{ref}]</a>' if ref else ""
         period_html = f'<div class="card-period">as of {period}</div>' if period else ""
-        cards.append(f'<div class="card"><div class="card-value">{value}</div>{period_html}' f'<div class="card-label">{label}{cite}</div></div>')
-    return '<section class="cards-section"><h2>Key figures</h2>' '<div class="cards">' + "".join(cards) + "</div></section>"
+        cards.append(f'<div class="card"><div class="card-value">{value}</div>{period_html}<div class="card-label">{label}{cite}</div></div>')
+    return '<section class="cards-section"><h2>Key figures</h2><div class="cards">' + "".join(cards) + "</div></section>"
 
 
 def render_structured_table(claims, src_by_id, claim_refnum_by_claim_id):
@@ -225,8 +225,7 @@ def render_structured_table(claims, src_by_id, claim_refnum_by_claim_id):
         status = c.verification.status
         status_cls = {VerificationStatus.SUPPORTED: "ok", VerificationStatus.KILLED_ON_REFUTE: "bad"}.get(status, "neutral")
         rows.append(
-            "<tr><td>{claim}</td><td>{value}</td><td>{period}</td><td>{src}</td>"
-            '<td class="status {cls}">{status}</td></tr>'.format(
+            '<tr><td>{claim}</td><td>{value}</td><td>{period}</td><td>{src}</td><td class="status {cls}">{status}</td></tr>'.format(
                 claim=esc(first_sentence(c.text or "", max_len=90)),
                 value=esc(dr.get("value")),
                 period=esc(dr.get("period") or "—"),
@@ -248,15 +247,15 @@ def render_callouts(requirements, claims, manifest):
     boxes = []
     must_open = [r for r in requirements if r.must_cover and r.kind != RequirementKind.DELIVERABLE and r.terminal_state != RequirementState.COVERED]
     for r in must_open:
-        boxes.append('<div class="callout warn"><strong>Not fully answered:</strong> ' f'{esc(r.text)} <span class="callout-meta">(state: {esc(r.terminal_state or "not_attempted")})</span></div>')
+        boxes.append(f'<div class="callout warn"><strong>Not fully answered:</strong> {esc(r.text)} <span class="callout-meta">(state: {esc(r.terminal_state or "not_attempted")})</span></div>')
 
     loop = manifest.get("loop") or {}
     open_conflicts = loop.get("conflicts_open") or 0
     if open_conflicts:
         boxes.append(
             '<div class="callout warn"><strong>Unresolved contradiction'
-            f'{"s" if open_conflicts != 1 else ""}:</strong> {open_conflicts} conflicting source span'
-            f'{"s remain" if open_conflicts != 1 else " remains"} unreconciled in the evidence '
+            f"{'s' if open_conflicts != 1 else ''}:</strong> {open_conflicts} conflicting source span"
+            f"{'s remain' if open_conflicts != 1 else ' remains'} unreconciled in the evidence "
             "(see the technical appendix's evidence ledger).</div>"
         )
 
@@ -266,17 +265,11 @@ def render_callouts(requirements, claims, manifest):
             flag_counts[flag] = flag_counts.get(flag, 0) + 1
     if flag_counts:
         parts = ", ".join(f"{v} {esc(k)}" for k, v in sorted(flag_counts.items(), key=lambda kv: -kv[1]))
-        boxes.append(
-            '<div class="callout caution"><strong>Caveat flags in the evidence:</strong> '
-            f"{parts}. These claims are not presented as established findings in the narrative "
-            "above; see the appendix ledger for which ones.</div>"
-        )
+        boxes.append(f'<div class="callout caution"><strong>Caveat flags in the evidence:</strong> {parts}. These claims are not presented as established findings in the narrative above; see the appendix ledger for which ones.</div>')
 
     killed = (manifest.get("counts") or {}).get("claims_killed") or 0
     if killed:
-        boxes.append(
-            '<div class="callout bad"><strong>Killed on refutation:</strong> ' f"{killed} claim{'s' if killed != 1 else ''} failed adversarial verification and " "were excluded from the narrative above.</div>"
-        )
+        boxes.append(f'<div class="callout bad"><strong>Killed on refutation:</strong> {killed} claim{"s" if killed != 1 else ""} failed adversarial verification and were excluded from the narrative above.</div>')
 
     if not boxes:
         return ""
@@ -293,7 +286,7 @@ def render_body(body_md, claim_refnum):
         section_html = rewrite_citations(md_to_html(content), claim_refnum)
         takeaway_html = f'<p class="takeaway">{esc(takeaway)}</p>' if takeaway else ""
         css_class = "muted-section" if heading.strip().lower() == "open questions" else ""
-        parts.append(f'<section class="body-section {css_class}"><h2>{esc(heading)}</h2>' f"{takeaway_html}{section_html}</section>")
+        parts.append(f'<section class="body-section {css_class}"><h2>{esc(heading)}</h2>{takeaway_html}{section_html}</section>')
     return title, "\n".join(parts)
 
 
@@ -326,11 +319,7 @@ def render_appendix(manifest, claims, sources, requirements, coverage=()):
     counts = manifest.get("counts") or {}
     loop = manifest.get("loop") or {}
     verify_on = "on" if manifest.get("verify_mode") else "off"
-    methodology = (
-        f"Profile: {esc(manifest.get('profile'))} · depth: {esc(manifest.get('depth'))} · "
-        f"verify: {verify_on} · engine: v{esc(manifest.get('engine_version'))} · "
-        f"generated {esc(manifest.get('timestamp'))}"
-    )
+    methodology = f"Profile: {esc(manifest.get('profile'))} · depth: {esc(manifest.get('depth'))} · verify: {verify_on} · engine: v{esc(manifest.get('engine_version'))} · generated {esc(manifest.get('timestamp'))}"
     verification = (
         f"{counts.get('claims', 0)} claims · {counts.get('claims_verified', 0)} verified · "
         f"{counts.get('claims_killed', 0)} killed on refutation · {counts.get('claims_flagged', 0)} flagged. "
@@ -360,12 +349,7 @@ def render_appendix(manifest, claims, sources, requirements, coverage=()):
     )
     req_html = ""
     if requirements:
-        req_html = (
-            "<h3>Requirement coverage</h3>"
-            f"<table class='data-table'><thead><tr><th>Req</th><th>Ask</th><th>Kind</th>"
-            f"<th>Must-cover</th><th>State</th>{evidence_th}</tr></thead>"
-            f"<tbody>{req_rows}</tbody></table>"
-        )
+        req_html = f"<h3>Requirement coverage</h3><table class='data-table'><thead><tr><th>Req</th><th>Ask</th><th>Kind</th><th>Must-cover</th><th>State</th>{evidence_th}</tr></thead><tbody>{req_rows}</tbody></table>"
 
     ledger_rows = []
     for i, c in enumerate(claims, start=1):
@@ -405,9 +389,7 @@ def render_appendix(manifest, claims, sources, requirements, coverage=()):
         "<h3>Evidence ledger</h3>"
         f"<p class='section-intro'>{tier_note}</p>"
         "<table class='data-table'><thead><tr><th>#</th><th>Claim</th><th>Source</th><th>Tier</th>"
-        f"<th>Support</th><th>Status</th><th>Flags</th></tr></thead><tbody>{''.join(ledger_rows)}</tbody></table>"
-        + (f"<p class='disclaimers'>{' '.join(esc(d) for d in disclaimers)}</p>" if disclaimers else "")
-        + "</section>"
+        f"<th>Support</th><th>Status</th><th>Flags</th></tr></thead><tbody>{''.join(ledger_rows)}</tbody></table>" + (f"<p class='disclaimers'>{' '.join(esc(d) for d in disclaimers)}</p>" if disclaimers else "") + "</section>"
     )
 
 

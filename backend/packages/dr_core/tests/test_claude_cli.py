@@ -36,6 +36,7 @@ class _FakeProc:
     async def wait(self):
         return self.returncode
 
+
 # asyncio_mode = "auto" is set in packages/dr_core/pyproject.toml, so async
 # test functions below need no explicit @pytest.mark.asyncio.
 

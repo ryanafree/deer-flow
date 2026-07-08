@@ -220,10 +220,7 @@ def build_appendix(claims, sources, requirements, *, profile, model, ts_iso, con
         "evidence ledger and numbered source list are rendered from claims.jsonl/sources.jsonl by "
         "the report renderer; this appendix carries the aggregate summary.*\n"
     )
-    L.append(
-        f"**Methodology.** Profile: {profile} · engine: dr_core · model: {model} · generated {ts_iso}. "
-        f"Connectors: {', '.join(connectors_used or []) or '—'}.\n"
-    )
+    L.append(f"**Methodology.** Profile: {profile} · engine: dr_core · model: {model} · generated {ts_iso}. Connectors: {', '.join(connectors_used or []) or '—'}.\n")
     L.append(
         f"**Verification.** {counts['claims']} claims · {counts['supported']} supported · "
         f"{counts['contested']} contested · {counts['excluded']} excluded · {counts['killed_on_refute']} "

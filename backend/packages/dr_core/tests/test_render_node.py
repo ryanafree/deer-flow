@@ -203,6 +203,48 @@ class TestDeterminism:
         assert report1 == report2
 
 
+class TestManifestAccounting:
+    """S9: render_node must pass accounting/depth/profile/verify_mode through into
+    the written manifest.json (REVIEW_FINISH_PLAN_2026-07-06.md Part III gaps)."""
+
+    def test_manifest_carries_accounting_depth_profile(self, tmp_path):
+        state = _happy_path_state(str(tmp_path))
+        state["messages"] = []
+        result = render_node(state)
+        manifest = json.loads(Path(result["dr_run"]["run_dir"], "manifest.json").read_text())
+
+        assert "accounting" in manifest
+        assert set(manifest["accounting"].keys()) == {"phases", "totals", "dollar_cost"}
+        assert set(manifest["accounting"]["phases"].keys()) == {"research", "verify"}
+        assert manifest["depth"] == "quick"
+        assert manifest["profile"] == "general"
+        assert manifest["verify_mode"] == "off"
+
+    def test_manifest_verify_mode_reflects_dr_run(self, tmp_path):
+        state = _happy_path_state(str(tmp_path))
+        state["dr_run"]["verify_mode"] = "adaptive_1_3"
+        result = render_node(state)
+        manifest = json.loads(Path(result["dr_run"]["run_dir"], "manifest.json").read_text())
+        assert manifest["verify_mode"] == "adaptive_1_3"
+
+    def test_manifest_accounting_reflects_message_usage(self, tmp_path):
+        from langchain_core.messages import AIMessage
+
+        state = _happy_path_state(str(tmp_path))
+        state["messages"] = [AIMessage(content="x", usage_metadata={"input_tokens": 7, "output_tokens": 3, "total_tokens": 10})]
+        result = render_node(state)
+        manifest = json.loads(Path(result["dr_run"]["run_dir"], "manifest.json").read_text())
+        assert manifest["accounting"]["phases"]["research"]["input_tokens"] == 7
+        assert manifest["accounting"]["phases"]["research"]["output_tokens"] == 3
+
+    def test_unknown_profile_degrades_without_crashing(self, tmp_path):
+        state = _happy_path_state(str(tmp_path))
+        state["dr_run"]["profile"] = "not-a-real-profile"
+        result = render_node(state)
+        manifest = json.loads(Path(result["dr_run"]["run_dir"], "manifest.json").read_text())
+        assert manifest["accounting"]["dollar_cost"] is None
+
+
 class TestOrdinalInvariant:
     def test_markers_resolve_to_the_nth_claims_jsonl_line(self, tmp_path):
         state = _happy_path_state(str(tmp_path))

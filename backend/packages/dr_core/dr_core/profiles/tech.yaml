@@ -1,0 +1,20 @@
+# Profile: Tech — distilled from the old harness's profiles/tech/CLAUDE.md.
+# Verify defaults off (opt-in); the deterministic vendor/unreproduced-claim gate
+# runs regardless.
+name: tech
+tool_allowlist:
+  - tavily
+  - searxng
+  - crawl4ai
+  - docling
+  - jina_reader
+  - arxiv
+  - huggingface
+  - github
+  - openalex
+  - semantic_scholar
+model_tiers:
+  gruntwork: or-cheap
+  verify: or-mid
+  top: claude-top
+depth_default: standard

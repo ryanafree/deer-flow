@@ -1,0 +1,27 @@
+# Profile: Financial — distilled from the old harness's profiles/financial/CLAUDE.md.
+# Verify is on by default for this profile (structured-data / numeric-claim discipline).
+name: financial
+tool_allowlist:
+  - tavily
+  - searxng
+  - crawl4ai
+  - docling
+  - jina_reader
+  - openalex
+  - semantic_scholar
+  - edgar
+  - openbb
+  - arxiv
+  - fred
+  - world_bank
+  - treasury_fiscaldata
+  - bls
+  - bea
+  - nber_tsv
+  - polymarket
+  - kalshi
+model_tiers:
+  gruntwork: or-cheap
+  verify: or-mid
+  top: claude-top
+depth_default: standard

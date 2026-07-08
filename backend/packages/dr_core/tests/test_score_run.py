@@ -37,11 +37,7 @@ def test_general_smoke_fixture_passes_against_a_clean_run(tmp_path):
         )
         for i in range(1, 4)
     ]
-    body = (
-        "# Report\n\n## Executive summary\n\n"
-        + ("Homicide rates rose sharply after 2020 across multiple jurisdictions. " * 20)
-        + "\n\n## Conclusion\n\nThe rise appears durable.\n"
-    )
+    body = "# Report\n\n## Executive summary\n\n" + ("Homicide rates rose sharply after 2020 across multiple jurisdictions. " * 20) + "\n\n## Conclusion\n\nThe rise appears durable.\n"
     folder = write_run(report_body=body, sources=sources, claims=claims, requirements=[], profile="general", question=fx["question"], runs_dir=str(tmp_path))
 
     manifest, loaded_claims, loaded_sources, report = load_run_from_folder(folder)

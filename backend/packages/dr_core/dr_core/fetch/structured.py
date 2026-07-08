@@ -163,11 +163,21 @@ def fetch_edgar(
                 end_year = int(end[:4]) if end else None
                 if fy is not None and end_year != fy:
                     continue
-                matches.append({
-                    "concept": c, "label": label, "value": e.get("val"),
-                    "unit": u, "fy": e.get("fy"), "fp": e.get("fp"), "form": form,
-                    "start": start, "end": end, "accn": e.get("accn"), "filed": e.get("filed"),
-                })
+                matches.append(
+                    {
+                        "concept": c,
+                        "label": label,
+                        "value": e.get("val"),
+                        "unit": u,
+                        "fy": e.get("fy"),
+                        "fp": e.get("fp"),
+                        "form": form,
+                        "start": start,
+                        "end": end,
+                        "accn": e.get("accn"),
+                        "filed": e.get("filed"),
+                    }
+                )
     # Dedupe identical period figures reported across multiple filings (keep newest filed).
     seen: dict[tuple[Any, Any, Any], dict[str, Any]] = {}
     for m in sorted(matches, key=lambda x: x.get("filed") or "", reverse=True):
@@ -176,22 +186,25 @@ def fetch_edgar(
             seen[k] = m
     matches = list(seen.values())
     # Most relevant first: exact-keyword concepts, then larger magnitude (top-line first), then recency
-    matches.sort(key=lambda m: (
-        0 if kw and (kw == m["concept"].lower() or kw in (m["label"] or "").lower()) else 1,
-        -(abs(m["value"]) if isinstance(m["value"], (int, float)) else 0),
-        -(m["fy"] or 0),
-    ))
+    matches.sort(
+        key=lambda m: (
+            0 if kw and (kw == m["concept"].lower() or kw in (m["label"] or "").lower()) else 1,
+            -(abs(m["value"]) if isinstance(m["value"], (int, float)) else 0),
+            -(m["fy"] or 0),
+        )
+    )
     matches = matches[:max_results]
     if not matches:
-        return _fail("no matching annual (10-K) facts for that ticker/concept/fy",
-                      cik=cik10, company=name, ticker=t)
-    query = (f"EDGAR XBRL companyfacts CIK{cik10} ({name}); "
-             f"concept~='{concept or concept_keyword}'"
-             + (f" fy={fy}" if fy is not None else " (latest annual)")
-             + f" unit={unit}")
+        return _fail("no matching annual (10-K) facts for that ticker/concept/fy", cik=cik10, company=name, ticker=t)
+    query = f"EDGAR XBRL companyfacts CIK{cik10} ({name}); concept~='{concept or concept_keyword}'" + (f" fy={fy}" if fy is not None else " (latest annual)") + f" unit={unit}"
     return {
-        "ok": True, "source_system": "edgar", "source_class": "primary_filing",
-        "cik": cik10, "company": name, "ticker": t, "query": query,
+        "ok": True,
+        "source_system": "edgar",
+        "source_class": "primary_filing",
+        "cik": cik10,
+        "company": name,
+        "ticker": t,
+        "query": query,
         "matches": matches,
     }
 
@@ -214,18 +227,20 @@ def fetch_fred(series: str, year: int | None = None, latest: bool = False) -> di
         return _fail(f"FRED fetch failed: {e.code}", series=series)
     except (urllib.error.URLError, OSError) as e:
         return _fail(f"FRED fetch failed: {e}", series=series)
-    obs = [{"date": o["date"], "value": o["value"]} for o in data.get("observations", [])
-           if o.get("value") not in (".", None, "")]
+    obs = [{"date": o["date"], "value": o["value"]} for o in data.get("observations", []) if o.get("value") not in (".", None, "")]
     if not obs:
         return _fail("no observations returned", series=series)
     if latest and year is None:
         obs = obs[-1:]
     # scrubbed provenance (no api_key)
-    query = (f"FRED series/observations series_id={series} file_type=json"
-             + (f" observation window {year}" if year is not None else " (latest)"))
+    query = f"FRED series/observations series_id={series} file_type=json" + (f" observation window {year}" if year is not None else " (latest)")
     return {
-        "ok": True, "source_system": "fred", "source_class": "official_stat",
-        "series_id": series, "query": query, "observations": obs,
+        "ok": True,
+        "source_system": "fred",
+        "source_class": "official_stat",
+        "series_id": series,
+        "query": query,
+        "observations": obs,
     }
 
 
@@ -254,21 +269,24 @@ def fetch_courtlistener(text: str | None = None, textfile: str | None = None) ->
         return _fail(f"citation-lookup failed: {e}")
     # Normalize each returned citation to {citation, status, case_name, url, clusters, indices}.
     cites = []
-    for c in (res if isinstance(res, list) else []):
+    for c in res if isinstance(res, list) else []:
         clusters = c.get("clusters") or []
-        cites.append({
-            "citation": c.get("citation"),
-            "normalized": c.get("normalized_citations") or [],
-            "status": c.get("status"),
-            "error_message": c.get("error_message") or "",
-            "clusters_count": len(clusters),
-            "case_name": (clusters[0].get("case_name") if clusters else None),
-            "absolute_url": (("https://www.courtlistener.com" + clusters[0]["absolute_url"]) if clusters and clusters[0].get("absolute_url") else None),
-            "start_index": c.get("start_index"),
-            "end_index": c.get("end_index"),
-        })
+        cites.append(
+            {
+                "citation": c.get("citation"),
+                "normalized": c.get("normalized_citations") or [],
+                "status": c.get("status"),
+                "error_message": c.get("error_message") or "",
+                "clusters_count": len(clusters),
+                "case_name": (clusters[0].get("case_name") if clusters else None),
+                "absolute_url": (("https://www.courtlistener.com" + clusters[0]["absolute_url"]) if clusters and clusters[0].get("absolute_url") else None),
+                "start_index": c.get("start_index"),
+                "end_index": c.get("end_index"),
+            }
+        )
     return {
-        "ok": True, "source_system": "courtlistener",
+        "ok": True,
+        "source_system": "courtlistener",
         "query": "citation-lookup (Eyecite) over submitted text",
         "cites": cites,
     }
@@ -283,10 +301,16 @@ def _print_and_exit(record: dict[str, Any]) -> None:
 
 
 def _cli_edgar(args: argparse.Namespace) -> None:
-    _print_and_exit(fetch_edgar(
-        ticker=args.ticker, concept=args.concept, concept_keyword=args.concept_keyword,
-        fy=args.fy, unit=args.unit, max_results=args.max,
-    ))
+    _print_and_exit(
+        fetch_edgar(
+            ticker=args.ticker,
+            concept=args.concept,
+            concept_keyword=args.concept_keyword,
+            fy=args.fy,
+            unit=args.unit,
+            max_results=args.max,
+        )
+    )
 
 
 def _cli_fred(args: argparse.Namespace) -> None:

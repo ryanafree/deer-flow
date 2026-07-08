@@ -38,9 +38,20 @@ import sys
 from dr_core.models import Claim, Conflict, PublicationStatus, claim_caveat, is_grounded, materiality_of, publication_status
 
 BANNED = [
-    "this run", "gate flag", "gate_flags", "killed on refut", "not-verified", "claim ledger",
-    "seeded-trap", "checkpoint", "verification apparatus", "worth holding in tension",
-    "useful corrective", "the honest state of", "should be weighted accordingly", "papering over",
+    "this run",
+    "gate flag",
+    "gate_flags",
+    "killed on refut",
+    "not-verified",
+    "claim ledger",
+    "seeded-trap",
+    "checkpoint",
+    "verification apparatus",
+    "worth holding in tension",
+    "useful corrective",
+    "the honest state of",
+    "should be weighted accordingly",
+    "papering over",
     "worth carrying forward",
 ]
 APPENDIX_RE = re.compile(r"^##+\s*Appendix", re.M)
@@ -60,7 +71,7 @@ HEDGE_END_RE = re.compile(r"(?:may|might|possibly|unclear|unconfirmed|uncertain)
 
 def body_of(md):
     match = APPENDIX_RE.search(md)
-    return md[:match.start()] if match else md
+    return md[: match.start()] if match else md
 
 
 # ---------------------------------------------------------------------------
@@ -143,7 +154,7 @@ def _split_conclusion(body):
     match = CONCLUSION_RE.search(body)
     if not match:
         return body, ""
-    return body[:match.start()], body[match.start():]
+    return body[: match.start()], body[match.start() :]
 
 
 def _eligibility_findings(body, claims, conflicts):
@@ -211,10 +222,7 @@ def main():
         if len(re.findall(r"\[\d+\]", sentence)) >= 3:
             findings.append(f"3+ citation markers in one sentence: {sentence[:80]!r}")
             break
-    paragraphs = [
-        p for p in body.split("\n\n")
-        if len(p.split()) > 5 and not p.lstrip().startswith(("#", "|", "-", "*", ">"))
-    ]
+    paragraphs = [p for p in body.split("\n\n") if len(p.split()) > 5 and not p.lstrip().startswith(("#", "|", "-", "*", ">"))]
     if paragraphs:
         lengths = sorted(len(p.split()) for p in paragraphs)
         p90 = lengths[min(len(lengths) - 1, int(0.9 * len(lengths)))]

@@ -10,8 +10,8 @@ package, so it is NOT a DeerFlow core edit (no FORK_DELTA entry).
 import sys
 from pathlib import Path
 
-_dr_core_pkg_root = Path(__file__).resolve().parent          # packages/dr_core (holds dr_core/)
-_harness_root = _dr_core_pkg_root.parent / "harness"         # packages/harness (holds deerflow/)
+_dr_core_pkg_root = Path(__file__).resolve().parent  # packages/dr_core (holds dr_core/)
+_harness_root = _dr_core_pkg_root.parent / "harness"  # packages/harness (holds deerflow/)
 
 for _p in (_dr_core_pkg_root, _harness_root):
     _s = str(_p)

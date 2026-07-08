@@ -1,0 +1,17 @@
+# Profile: General — distilled from the old harness's profiles/general/CLAUDE.md.
+# The bare-backbone profile: retrieval backbone + academic core, no domain specialists.
+# Verify defaults off for General (opt-in), per the old harness.
+name: general
+tool_allowlist:
+  - tavily
+  - searxng
+  - crawl4ai
+  - docling
+  - jina_reader
+  - openalex
+  - semantic_scholar
+model_tiers:
+  gruntwork: or-cheap
+  verify: or-mid
+  top: claude-top
+depth_default: standard

@@ -277,10 +277,12 @@ def test_fetch_fred_filters_dot_observations_and_scrubs_key(monkeypatch):
 
     def _fake(url, headers=None):
         captured_urls.append(url)
-        return {"observations": [
-            {"date": "2020-01-01", "value": "3.5"},
-            {"date": "2020-02-01", "value": "."},  # missing observation, filtered
-        ]}
+        return {
+            "observations": [
+                {"date": "2020-01-01", "value": "3.5"},
+                {"date": "2020-02-01", "value": "."},  # missing observation, filtered
+            ]
+        }
 
     monkeypatch.setattr(structured, "_get_json", _fake)
 
@@ -296,9 +298,13 @@ def test_fetch_fred_filters_dot_observations_and_scrubs_key(monkeypatch):
 
 def test_fetch_fred_latest_ignored_when_year_given(monkeypatch):
     monkeypatch.setattr(structured, "env", lambda key: "k")
-    monkeypatch.setattr(structured, "_get_json", lambda url, headers=None: {
-        "observations": [{"date": "2020-01-01", "value": "1"}, {"date": "2020-06-01", "value": "2"}],
-    })
+    monkeypatch.setattr(
+        structured,
+        "_get_json",
+        lambda url, headers=None: {
+            "observations": [{"date": "2020-01-01", "value": "1"}, {"date": "2020-06-01", "value": "2"}],
+        },
+    )
 
     result = structured.fetch_fred(series="UNRATE", year=2020, latest=True)
 
@@ -307,9 +313,13 @@ def test_fetch_fred_latest_ignored_when_year_given(monkeypatch):
 
 def test_fetch_fred_latest_true_year_none_slices_to_last(monkeypatch):
     monkeypatch.setattr(structured, "env", lambda key: "k")
-    monkeypatch.setattr(structured, "_get_json", lambda url, headers=None: {
-        "observations": [{"date": "2020-01-01", "value": "1"}, {"date": "2020-06-01", "value": "2"}],
-    })
+    monkeypatch.setattr(
+        structured,
+        "_get_json",
+        lambda url, headers=None: {
+            "observations": [{"date": "2020-01-01", "value": "1"}, {"date": "2020-06-01", "value": "2"}],
+        },
+    )
 
     result = structured.fetch_fred(series="UNRATE", latest=True)
 
@@ -332,16 +342,20 @@ def test_fetch_fred_no_observations_fails(monkeypatch):
 
 def test_fetch_courtlistener_normalizes_citations(monkeypatch):
     monkeypatch.setattr(structured, "env", lambda key: "test-token")
-    monkeypatch.setattr(structured, "_post_form", lambda url, fields, headers=None: [
-        {
-            "citation": "410 U.S. 113",
-            "normalized_citations": ["410 U.S. 113"],
-            "status": 200,
-            "clusters": [{"case_name": "Roe v. Wade", "absolute_url": "/opinion/108713/roe-v-wade/"}],
-            "start_index": 0,
-            "end_index": 12,
-        }
-    ])
+    monkeypatch.setattr(
+        structured,
+        "_post_form",
+        lambda url, fields, headers=None: [
+            {
+                "citation": "410 U.S. 113",
+                "normalized_citations": ["410 U.S. 113"],
+                "status": 200,
+                "clusters": [{"case_name": "Roe v. Wade", "absolute_url": "/opinion/108713/roe-v-wade/"}],
+                "start_index": 0,
+                "end_index": 12,
+            }
+        ],
+    )
 
     result = structured.fetch_courtlistener(text="see 410 U.S. 113")
 

@@ -20,8 +20,10 @@ from __future__ import annotations
 
 import os
 
+from dr_core.accounting import build_accounting
 from dr_core.models.eligibility import ineligibility_reason
 from dr_core.models.ledger import Claim, Source
+from dr_core.profiles import ProfileError, load_profile
 from dr_core.render.body import generate_body
 from dr_core.render.render_report import render as render_html
 from dr_core.run.write_run import write_run
@@ -70,20 +72,33 @@ def render_node(state) -> dict:
     runs_dir = _resolve_runs_dir(dr_run)
     os.makedirs(runs_dir, exist_ok=True)
 
+    question = dr_run.get("question") or "Untitled research question"
+    profile = dr_run.get("profile", "general")
+
+    # Profile lookup is deterministic (a static YAML keyed by dr_run's own profile
+    # string) so accounting stays a pure function of state, per this node's
+    # contract. An unrecognized/invalid profile degrades to unpriced accounting
+    # rather than failing the render.
+    try:
+        model_tiers = load_profile(profile).get("model_tiers")
+    except (ValueError, ProfileError):
+        model_tiers = None
+
+    accounting = build_accounting(state.get("messages"), dr_run, profile_tiers=model_tiers)
+
     manifest_in = {
         "loop": {
             "conflicts_open": 0,
             "requirements_covered": 0,
             "requirements_must_cover": 0,
         },
-        "verify_mode": "off",
+        "verify_mode": dr_run.get("verify_mode", "off"),
         "depth": dr_run.get("depth", "quick"),
+        "profile": profile,
+        "accounting": accounting,
     }
     if dr_run.get("stop_reason"):
         manifest_in["stop_reason"] = dr_run["stop_reason"]
-
-    question = dr_run.get("question") or "Untitled research question"
-    profile = dr_run.get("profile", "general")
 
     run_dir = write_run(
         report_body=body,

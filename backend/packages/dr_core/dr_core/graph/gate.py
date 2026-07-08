@@ -37,13 +37,7 @@ def _corrective_message(dr_claims: dict, excluded: list[tuple[str, str]]) -> Hum
     else:
         examples = ", ".join(f"{claim_id} ({reason})" for claim_id, reason in excluded[:3])
         gap = f"no eligible claims recorded -- all {len(dr_claims)} recorded claim(s) are ineligible: {examples}."
-    content = (
-        "<dr_corrective>\n"
-        f"Gap: {gap}\n"
-        "Search for sources and record each supported fact via the record_claim tool, "
-        "citing a source_id from a web_search/web_fetch result.\n"
-        "</dr_corrective>"
-    )
+    content = f"<dr_corrective>\nGap: {gap}\nSearch for sources and record each supported fact via the record_claim tool, citing a source_id from a web_search/web_fetch result.\n</dr_corrective>"
     return HumanMessage(
         content=content,
         additional_kwargs={

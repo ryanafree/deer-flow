@@ -42,7 +42,7 @@ class TestUrlCitationResolution:
     def test_url_citation_resolves_to_ledger_id(self):
         ledger_id, state = self._url_state()
         out = _record(source_id=self.URL, state=state)
-        (_, payload), = out.update["dr_claims"].items()
+        ((_, payload),) = out.update["dr_claims"].items()
         assert payload["source_id"] == ledger_id
 
     def test_url_and_id_citations_yield_same_claim_id(self):
@@ -62,7 +62,7 @@ class TestValidClaim:
     def test_records_claim_under_deterministic_id(self):
         out = _record()
         assert "dr_claims" in out.update
-        (claim_id, payload), = out.update["dr_claims"].items()
+        ((claim_id, payload),) = out.update["dr_claims"].items()
         assert payload["text"] == "The sky is blue."
         assert payload["source_id"] == SOURCE_ID
         message = out.update["messages"][0]
@@ -71,7 +71,7 @@ class TestValidClaim:
 
     def test_dump_reloads_via_claim_model(self):
         out = _record()
-        (claim_id, payload), = out.update["dr_claims"].items()
+        ((claim_id, payload),) = out.update["dr_claims"].items()
         claim = Claim(**payload)
         assert claim.claim_id == claim_id
         assert claim.support.quote == "the sky appears blue"
@@ -83,7 +83,7 @@ class TestValidClaim:
 
     def test_initial_verification_citation_provenance_at_exact_defaults(self):
         out = _record()
-        (_, payload), = out.update["dr_claims"].items()
+        ((_, payload),) = out.update["dr_claims"].items()
         assert payload["verification"]["status"] == VerificationStatus.PENDING.value
         assert payload["verification"]["complete"] is False
         assert payload["verification"]["selected"] is False
@@ -115,7 +115,7 @@ class TestDeterministicId:
         # Second call is a duplicate re-assert (identical payload) -- confirms,
         # writes nothing -- but the id it references must match the first.
         assert "dr_claims" not in out_2.update
-        (claim_id_1, _), = out_1.update["dr_claims"].items()
+        ((claim_id_1, _),) = out_1.update["dr_claims"].items()
         assert claim_id_1 in out_2.update["messages"][0].content
 
     def test_different_source_id_yields_different_id(self):
@@ -126,8 +126,8 @@ class TestDeterministicId:
         out_1 = _record(state=state)
         out_2 = _record(source_id=other_source, state=state)
 
-        (claim_id_1, _), = out_1.update["dr_claims"].items()
-        (claim_id_2, _), = out_2.update["dr_claims"].items()
+        ((claim_id_1, _),) = out_1.update["dr_claims"].items()
+        ((claim_id_2, _),) = out_2.update["dr_claims"].items()
         assert claim_id_1 != claim_id_2
 
 
@@ -149,7 +149,7 @@ class TestDuplicateDivergent:
     def test_same_id_different_importance_keeps_first_and_writes_nothing(self):
         first = _record(importance=3, tool_call_id="tc1")
         dr_claims = merge_ledger(None, first.update["dr_claims"])
-        (claim_id, first_payload), = dr_claims.items()
+        ((claim_id, first_payload),) = dr_claims.items()
         assert first_payload["importance"] == 3
 
         second = _record(importance=4, tool_call_id="tc2", state=_state(dr_claims))
@@ -166,7 +166,7 @@ class TestDuplicateDivergent:
 class TestGateFlags:
     def test_valid_hyphenated_flag_is_normalized_and_lands(self):
         out = _record(gate_flags=["vendor-reported"])
-        (_, payload), = out.update["dr_claims"].items()
+        ((_, payload),) = out.update["dr_claims"].items()
         assert payload["gate_flags"] == ["vendor_reported"]
 
     def test_unknown_flag_is_rejected_with_no_write(self):
