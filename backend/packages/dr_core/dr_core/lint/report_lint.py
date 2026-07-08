@@ -58,6 +58,16 @@ APPENDIX_RE = re.compile(r"^##+\s*Appendix", re.M)
 CONCLUSION_RE = re.compile(r"^##\s+Conclusion\b", re.M)
 CITATION_RE = re.compile(r"\[(\d+)\]")
 
+# PART 2 sentence splitter (not the PART 1 verbatim port at line ~221): a bare
+# `(?<=[.!?])\s+` treats any single-letter abbreviation ending in a period -- "v."
+# in a case citation ("Harlow v. Fitzgerald"), "U.S."/"S." in a reporter citation --
+# as a sentence boundary, which fires a false [cite-required] finding on a legal
+# claim whose citation marker is at the TRUE end of the sentence (found live on a
+# legal-profile trap run, 2026-07-08). The negative lookbehind skips a split
+# immediately after a lone letter + period; genuine sentence ends (multi-letter
+# words) are unaffected.
+_SENTENCE_SPLIT_RE = re.compile(r"(?<!\b[A-Za-z]\.)(?<=[.!?])\s+")
+
 # Best-effort heuristic for PART 2 rule 5 (not_verified claims must read as attributed or
 # hedged). Catches common surface forms; not a real NLP classifier - see
 # _looks_attributed_or_hedged for its documented limits.
@@ -163,7 +173,7 @@ def _eligibility_findings(body, claims, conflicts):
     first_seen: set[int] = set()
 
     def scan(segment, *, require_citation):
-        for raw_sentence in re.split(r"(?<=[.!?])\s+", _strip_structural_lines(segment)):
+        for raw_sentence in _SENTENCE_SPLIT_RE.split(_strip_structural_lines(segment)):
             s = raw_sentence.strip()
             if not _is_factual_sentence(s):
                 continue

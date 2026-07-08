@@ -181,3 +181,51 @@ class TestVerifyNodeGraphWiring:
 
         assert ("plan_coverage", "verify") in compiled.builder.edges
         assert ("verify", "eligibility_gate") in compiled.builder.edges
+
+
+class TestEvidenceFetchHeaders:
+    """D10 addendum: the S10 re-acceptance saw live 403s from primary .gov sources
+    on the bare default urllib User-Agent; the evidence fetch must send a
+    browser-like User-Agent/Accept pair, with the timeout/no-raise contract
+    unchanged. Hermetic: urlopen is monkeypatched, no live HTTP."""
+
+    def test_request_carries_browser_like_headers(self, monkeypatch):
+        from dr_core.graph.verify import _fetch_evidence_sync
+
+        captured = {}
+
+        class _FakeResp:
+            def read(self, n=-1):
+                return b"hello"
+
+            def __enter__(self):
+                return self
+
+            def __exit__(self, *exc):
+                return False
+
+        def _fake_urlopen(req, timeout=None):
+            captured["request"] = req
+            captured["timeout"] = timeout
+            return _FakeResp()
+
+        monkeypatch.setattr("urllib.request.urlopen", _fake_urlopen)
+        result = _fetch_evidence_sync("https://www.dol.gov/some-page")
+
+        assert result == "hello"
+        headers = captured["request"].headers
+        # urllib.request.Request title-cases header keys internally.
+        assert headers.get("User-agent", "").lower().startswith("mozilla/")
+        assert "text/html" in headers.get("Accept", "")
+        assert captured["timeout"] == 15.0
+
+    def test_failure_still_returns_none_without_raising(self, monkeypatch):
+        import urllib.error
+
+        from dr_core.graph.verify import _fetch_evidence_sync
+
+        def _boom(req, timeout=None):
+            raise urllib.error.URLError("blocked")
+
+        monkeypatch.setattr("urllib.request.urlopen", _boom)
+        assert _fetch_evidence_sync("https://example.test/blocked") is None

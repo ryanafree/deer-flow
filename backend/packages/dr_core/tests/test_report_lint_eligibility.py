@@ -12,8 +12,8 @@ import json
 
 from dr_core.lint.report_lint import main
 from dr_core.models import (
-    Claim,
     CitationStatus,
+    Claim,
     GateFlag,
     SupportRecord,
     SupportRelation,
@@ -125,3 +125,15 @@ def test_not_verified_claim_without_attribution_warns(tmp_path, monkeypatch, cap
     out = capsys.readouterr().out
     assert "LINT-WARN" in out
     assert "unattributed-not-verified" in out
+
+
+def test_legal_citation_v_abbreviation_does_not_false_split_the_sentence(tmp_path, monkeypatch):
+    """D10 addendum (LEG-trap lint gap): a case citation's 'v.' (and a reporter
+    citation's 'U.S.') must not be mistaken for a sentence boundary -- a correctly
+    cited sentence containing one must not produce a [cite-required] false
+    positive. Reproduces the live 2026-07-08-015448-legal-* run's failure mode."""
+    report = CLEAN_REPORT.replace(
+        "According to analysts, the trend may continue [4].",
+        "According to analysts, officials get qualified immunity under Harlow v. Fitzgerald, 457 U.S. 800 (1982) [4].",
+    )
+    assert _run(tmp_path, monkeypatch, report) == 0

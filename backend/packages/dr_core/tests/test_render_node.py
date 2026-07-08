@@ -314,6 +314,47 @@ class TestOpenMustCoverUnsubstantiated:
         assert code == 0, out
 
 
+class TestLegalCitationSentenceSplit:
+    """D10 addendum (LEG-trap lint gap): a legal-profile run whose only surviving
+    claims are NOT_VERIFIED (so `generate_body` wraps them "According to X, ..."),
+    with an excluded trap claim and an open stop_reason, mirroring the live
+    2026-07-08-015448-legal-* run shape that failed report_lint. Root cause: the
+    lint's PART 2 sentence splitter treated the "v." in a case citation ("Harlow v.
+    Fitzgerald") as a sentence boundary, producing a fragment with no citation
+    marker even though the real sentence ends correctly with `[n]`."""
+
+    def _state(self, runs_dir: str) -> dict:
+        return {
+            "dr_claims": {
+                "c1": _not_verified_claim("c1", "Officials get qualified immunity under Harlow v. Fitzgerald, 457 U.S. 800 (1982).", "s1"),
+                "c-trap": _excluded_claim("c-trap", "The Supreme Court abolished qualified immunity in Roe v. Doe, 605 U.S. 217 (2025).", "s2"),
+            },
+            "dr_sources": {
+                "s1": _source("s1", "Qualified Immunity - Justia"),
+                "s2": _source("s2", "Example Legal Blog"),
+            },
+            "dr_run": {
+                "citation_ordinals": {"c1": 1},
+                "question": "What is qualified immunity?",
+                "profile": "legal",
+                "runs_dir": runs_dir,
+                "stop_reason": StopReason.COMPLETED_WITH_OPEN_REQUIREMENTS.value,
+            },
+        }
+
+    def test_case_citation_sentence_lints_clean(self, tmp_path, capsys):
+        state = self._state(str(tmp_path))
+        result = render_node(state)
+        run_dir = result["dr_run"]["run_dir"]
+        report_md = Path(run_dir, "report.md").read_text()
+        assert "Harlow v. Fitzgerald" in report_md
+
+        code = _run_lint(run_dir)
+        out = capsys.readouterr().out
+        assert code == 0, out
+        assert "cite-required" not in out
+
+
 class TestOrdinalInvariant:
     def test_markers_resolve_to_the_nth_claims_jsonl_line(self, tmp_path):
         state = _happy_path_state(str(tmp_path))

@@ -24,8 +24,8 @@ def _source(**overrides) -> dict:
     return defaults
 
 
-def _vote_response(refuted: bool, abstain: bool, confidence: str = "high", reasoning: str = "ok") -> SimpleNamespace:
-    content = json.dumps({"refuted": refuted, "abstain": abstain, "confidence": confidence, "reasoning": reasoning})
+def _vote_response(refuted: bool, abstain: bool, confidence: str = "high", reasoning: str = "ok", **extra) -> SimpleNamespace:
+    content = json.dumps({"refuted": refuted, "abstain": abstain, "confidence": confidence, "reasoning": reasoning, **extra})
     return SimpleNamespace(content=content, usage_metadata={"input_tokens": 10, "output_tokens": 5, "input_token_details": {"cache_read": 1, "cache_creation": 0}})
 
 
@@ -100,9 +100,11 @@ class TestCastVoteParsing:
         assert response is not None
 
     async def test_json_wrapped_in_prose_is_extracted(self, monkeypatch):
+        # Evidence-present call (excerpt given): the D10 contradiction clamp only
+        # applies in the evidence-absent regime, so this stays a pure extraction test.
         wrapped = SimpleNamespace(content='Here is my answer:\n{"refuted": true, "abstain": false, "confidence": "low", "reasoning": "weak"}\nThanks.')
         monkeypatch.setattr(votes_mod, "_get_vote_model", lambda: _FakeModel([wrapped]))
-        vote, _ = await cast_vote(_claim(), _source(), None, 1, [])
+        vote, _ = await cast_vote(_claim(), _source(), "some excerpt", 1, [])
         assert vote.refuted is True
 
     async def test_unparseable_output_becomes_abstain(self, monkeypatch):
@@ -262,6 +264,50 @@ class TestVoterEpistemicRegimes:
         system_content = model.calls[0][0].content
         assert "do not treat unavailability as falsity" not in system_content
         assert "default toward refuted=true" in system_content.lower()
+
+
+class TestRefuteRequiresContradictionClamp:
+    """D10 addendum: in the evidence-absent regime, a refute with no quoted
+    contradiction is deterministically coerced to abstain BEFORE aggregation --
+    a code clamp, never a second prose judgment call. Evidence-present votes are
+    unaffected (no `contradiction` field is requested or checked there)."""
+
+    async def test_evidence_absent_refute_with_contradiction_survives(self, monkeypatch):
+        response = _vote_response(True, False, "high", "overstated", contradiction="the quote says X, not Y as claimed")
+        monkeypatch.setattr(votes_mod, "_get_vote_model", lambda: _FakeModel([response]))
+        vote, _ = await cast_vote(_claim(), _source(), None, 1, [])
+        assert vote.refuted is True
+        assert vote.abstain is False
+
+    async def test_evidence_absent_refute_without_contradiction_is_clamped_to_abstain(self, monkeypatch):
+        response = _vote_response(True, False, "high", "seems weak")  # no contradiction field at all
+        monkeypatch.setattr(votes_mod, "_get_vote_model", lambda: _FakeModel([response]))
+        vote, _ = await cast_vote(_claim(), _source(), None, 1, [])
+        assert vote.refuted is False
+        assert vote.abstain is True
+        assert "clamp" in vote.reasoning.lower()
+
+    async def test_evidence_absent_refute_with_blank_contradiction_is_clamped_to_abstain(self, monkeypatch):
+        response = _vote_response(True, False, "high", "seems weak", contradiction="   ")
+        monkeypatch.setattr(votes_mod, "_get_vote_model", lambda: _FakeModel([response]))
+        vote, _ = await cast_vote(_claim(), _source(), None, 1, [])
+        assert vote.refuted is False
+        assert vote.abstain is True
+
+    async def test_evidence_present_refute_is_unaffected_by_the_clamp(self, monkeypatch):
+        response = _vote_response(True, False, "high", "contradicted by the excerpt")  # no contradiction field
+        monkeypatch.setattr(votes_mod, "_get_vote_model", lambda: _FakeModel([response]))
+        vote, _ = await cast_vote(_claim(), _source(), "an excerpt", 1, [])
+        assert vote.refuted is True
+        assert vote.abstain is False
+
+    async def test_non_refute_evidence_absent_vote_is_unaffected(self, monkeypatch):
+        response = _vote_response(False, True, "low", "cannot verify")
+        monkeypatch.setattr(votes_mod, "_get_vote_model", lambda: _FakeModel([response]))
+        vote, _ = await cast_vote(_claim(), _source(), None, 1, [])
+        assert vote.refuted is False
+        assert vote.abstain is True
+        assert "clamp" not in vote.reasoning.lower()
 
 
 class TestSourceUnreachableRiskReason:

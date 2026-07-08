@@ -21,6 +21,17 @@ kill rate. The system prompt now branches on evidence availability -- the
 adversarial refute-on-weak-support bias survives ONLY when a fetched excerpt is
 present; when it is absent, the voter is told explicitly that unavailability is
 not falsity and judges claim-vs-quote consistency only (see DECISIONS.md D10).
+
+D10 addendum: the prompt-only fix was insufficient -- a cheap voter (or-mid) kept
+refuting plainly-true claims at high confidence in the evidence-absent regime
+(an instruction-following gap, not a code bug). ``cast_vote`` now enforces a
+DETERMINISTIC clamp in that regime only: the vote JSON schema gains a
+``contradiction`` field the voter must fill with a verbatim claim-vs-quote
+conflict when refuting; a parsed ``refuted=true`` with an empty/missing
+``contradiction`` is coerced to ``abstain=True`` in code, before aggregation,
+never by asking the model to reconsider. ``contradiction`` is not a ``Vote``
+model field -- it is consumed at parse time and folded into ``reasoning`` for
+auditability. Evidence-present votes are unaffected.
 """
 
 from __future__ import annotations
@@ -68,6 +79,16 @@ def _vote_system_instructions(evidence_available: bool) -> str:
 
 
 _VOTE_JSON_SHAPE = '{"refuted": <bool>, "abstain": <bool>, "confidence": "<low|medium|high>", "reasoning": "<short string>"}'
+
+# D10 addendum: evidence-absent regime only. `contradiction` is not a Vote model field
+# (see module docstring) -- it exists purely so `cast_vote` can deterministically clamp
+# an unsupported refute before it ever reaches aggregation.
+_VOTE_JSON_SHAPE_EVIDENCE_ABSENT = '{"refuted": <bool>, "abstain": <bool>, "confidence": "<low|medium|high>", "reasoning": "<short string>", "contradiction": "<verbatim quote of the conflict, or empty string>"}'
+_CONTRADICTION_INSTRUCTION = (
+    '\n\nIf refuted=true, "contradiction" MUST quote, verbatim, the exact words from the supporting '
+    "quote above that conflict with or plainly fail to support the claim text. If you are not "
+    'refuting, leave "contradiction" as an empty string.'
+)
 
 
 def _empty_usage() -> dict[str, int]:
@@ -143,11 +164,14 @@ def _format_evidence(claim: Claim, source: dict | None, evidence_excerpt: str | 
 
 def _build_vote_prompt(claim: Claim, source: dict | None, evidence_excerpt: str | None, risk: list[str]) -> str:
     risk_text = ", ".join(risk) if risk else "none"
+    evidence_available = evidence_excerpt is not None
+    shape = _VOTE_JSON_SHAPE if evidence_available else _VOTE_JSON_SHAPE_EVIDENCE_ABSENT
+    contradiction_note = "" if evidence_available else _CONTRADICTION_INSTRUCTION
     return (
         f"{_format_evidence(claim, source, evidence_excerpt)}\n\n"
         f"Risk signals already flagged for this claim: {risk_text}.\n\n"
         "Decide whether the evidence actually supports the claim as stated. Respond with ONLY a JSON "
-        f"object matching exactly this shape: {_VOTE_JSON_SHAPE}"
+        f"object matching exactly this shape: {shape}{contradiction_note}"
     )
 
 
@@ -192,13 +216,28 @@ async def cast_vote(claim: Claim, source: dict | None, evidence_excerpt: str | N
     if parsed is None:
         return Vote(vote_id=vote_id, refuted=False, abstain=True, confidence="low", reasoning="unparseable vote output"), response
 
+    refuted = bool(parsed.get("refuted", False))
+    abstain = bool(parsed.get("abstain", False))
+    reasoning = str(parsed.get("reasoning", ""))
+
+    # D10 addendum: in the evidence-absent regime, a refute with no quoted
+    # contradiction is code-coerced to abstain BEFORE aggregation -- a deterministic
+    # clamp, never a second prose judgment call. Evidence-present votes are untouched
+    # (no `contradiction` field is requested or checked there).
+    if evidence_excerpt is None and refuted:
+        contradiction = str(parsed.get("contradiction") or "").strip()
+        if not contradiction:
+            refuted = False
+            abstain = True
+            reasoning = f"{reasoning} [D10 clamp: refuted=true with no quoted contradiction in the evidence-absent regime -> coerced to abstain]".strip()
+
     return (
         Vote(
             vote_id=vote_id,
-            refuted=bool(parsed.get("refuted", False)),
-            abstain=bool(parsed.get("abstain", False)),
+            refuted=refuted,
+            abstain=abstain,
             confidence=str(parsed.get("confidence", "low")),
-            reasoning=str(parsed.get("reasoning", ""))[:2000],
+            reasoning=reasoning[:2000],
         ),
         response,
     )
