@@ -105,6 +105,50 @@ async def _return_excerpt():
     return "some fetched excerpt text"
 
 
+class TestSoleMustCoverSupporterRiskReason:
+    """D9: verify_node derives sole-must-cover-supporter from dr_requirements/
+    dr_coverage (via derive.reopens_requirement) and threads it into
+    verify_claim, so the claim escalates to full 3-vote scrutiny even on a
+    clean vote1."""
+
+    async def test_sole_direct_supporter_of_must_cover_requirement_escalates(self, monkeypatch):
+        clean_votes = [_clean_vote_response(), _clean_vote_response(), _clean_vote_response()]
+
+        class _ThreeVoteModel:
+            def __init__(self):
+                self.calls = 0
+
+            async def ainvoke(self, messages):
+                response = clean_votes[self.calls] if self.calls < len(clean_votes) else clean_votes[-1]
+                self.calls += 1
+                return response
+
+        monkeypatch.setattr(votes_mod, "_get_vote_model", lambda: _ThreeVoteModel())
+        monkeypatch.setattr("dr_core.graph.verify._fetch_evidence", lambda url: _return_excerpt())
+
+        dr_claims = {"c1": _claim()}
+        dr_requirements = {"req1": {"id": "req1", "kind": "entity", "text": "must-cover ask", "must_cover": True, "entities": [], "attempts": 0, "terminal_state": None, "window": None}}
+        dr_coverage = {"req1:c1": {"requirement_id": "req1", "claim_id": "c1", "relation": "direct", "elements_satisfied": [], "relationship_stated": None}}
+        state = {"dr_claims": dr_claims, "dr_sources": {"s1": _source()}, "dr_requirements": dr_requirements, "dr_coverage": dr_coverage, "dr_run": {"depth": "quick"}}
+
+        result = await verify_node(state)
+        touched = result["dr_claims"]["c1"]
+        assert touched["verification"]["mode"] == "three_vote"
+        assert "sole-must-cover-supporter" in touched["verification"]["risk_reasons"]
+
+    async def test_non_sole_or_non_must_cover_supporter_does_not_escalate_solely_for_that_reason(self, monkeypatch):
+        monkeypatch.setattr(votes_mod, "_get_vote_model", lambda: _FakeModel())
+        monkeypatch.setattr("dr_core.graph.verify._fetch_evidence", lambda url: _return_excerpt())
+
+        dr_claims = {"c1": _claim()}
+        state = {"dr_claims": dr_claims, "dr_sources": {"s1": _source()}, "dr_requirements": {}, "dr_coverage": {}, "dr_run": {"depth": "quick"}}
+
+        result = await verify_node(state)
+        touched = result["dr_claims"]["c1"]
+        assert touched["verification"]["mode"] == "single_clear"
+        assert "sole-must-cover-supporter" not in touched["verification"]["risk_reasons"]
+
+
 class TestVerifyNodeGraphWiring:
     def test_research_routes_through_verify_to_eligibility_gate(self, monkeypatch):
         class _Stub(AgentState):
@@ -128,10 +172,12 @@ class TestVerifyNodeGraphWiring:
         compiled = make_dr_agent(config={}, app_config=object())
 
         assert "verify" in compiled.nodes
+        assert "plan_coverage" in compiled.nodes
 
         branches = compiled.builder.branches.get("research", {})
         assert branches, "expected a conditional edge registered on research"
         branch_spec = next(iter(branches.values()))
-        assert branch_spec.ends.get("gate") == "verify"
+        assert branch_spec.ends.get("gate") == "plan_coverage"
 
+        assert ("plan_coverage", "verify") in compiled.builder.edges
         assert ("verify", "eligibility_gate") in compiled.builder.edges

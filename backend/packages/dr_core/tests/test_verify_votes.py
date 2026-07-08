@@ -75,6 +75,14 @@ class TestRiskReasons:
         claim = _claim(data_ref={"value": "1"}, data_provenance=DataProvenance.UNAUDITED)
         assert "structured-unmatched" in risk_reasons(claim, _source())
 
+    def test_sole_must_cover_supporter_flags_risk(self):
+        """D9: activates the deferred D8 risk reason once the caller (graph.verify)
+        derives it from real requirement/coverage state."""
+        assert "sole-must-cover-supporter" in risk_reasons(_claim(), _source(), sole_must_cover_supporter=True)
+
+    def test_sole_must_cover_supporter_absent_by_default(self):
+        assert "sole-must-cover-supporter" not in risk_reasons(_claim(), _source())
+
 
 class TestCastVoteParsing:
     async def test_clean_json_parses(self, monkeypatch):
@@ -157,6 +165,17 @@ class TestVerifyClaimThreeVoteEscalation:
         record, _ = await verify_claim(_claim(), _source(source_system="seeded-trap"), "excerpt", reserve_votes=_reserve_all)
         assert record.mode == "three_vote"
         assert len(record.votes) == 3
+
+    async def test_sole_must_cover_supporter_escalates_even_with_clean_vote1(self, monkeypatch):
+        """D9: a claim flagged as the sole direct supporter of a must-cover
+        requirement must not take the single-vote fast path, even on a clean
+        vote1 -- losing it on refutation would uncover a mandatory requirement."""
+        responses = [_vote_response(False, False, "high")] * 3
+        fake_model = _FakeModel(responses)
+        monkeypatch.setattr(votes_mod, "_get_vote_model", lambda: fake_model)
+        record, _ = await verify_claim(_claim(), _source(), "excerpt", reserve_votes=_reserve_all, sole_must_cover_supporter=True)
+        assert record.mode == "three_vote"
+        assert "sole-must-cover-supporter" in record.risk_reasons
 
 
 class TestVerifyClaimIncompleteOnBudget:

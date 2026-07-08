@@ -53,12 +53,18 @@ def _accumulate_usage(usage: dict[str, int], response) -> None:
     usage["calls"] += 1
 
 
-def risk_reasons(claim: Claim, source: dict | None) -> list[str]:
+def risk_reasons(claim: Claim, source: dict | None, *, sole_must_cover_supporter: bool = False) -> list[str]:
     """Deterministic per-claim risk signals (ports dr.js:2536-2544
-    ``verificationRiskReasons``, minus ``sole-must-cover-supporter`` which is
-    deferred to S8's requirement/coverage channels per D8): seeded/injected
-    source, any gate flag, authority_tier>=3 (or unranked), and a structured
-    claim whose provenance is not yet MATCHED."""
+    ``verificationRiskReasons``): seeded/injected source, any gate flag,
+    authority_tier>=3 (or unranked), a structured claim whose provenance is
+    not yet MATCHED, and (D9, activating the S8 requirement/coverage
+    channels) whether this claim is the SOLE direct supporter of an active
+    must-cover requirement -- losing it on refutation would uncover a
+    mandatory requirement, so it forces full 3-vote scrutiny instead of the
+    single-vote fast path. ``sole_must_cover_supporter`` is a plain bool the
+    caller derives from state (``dr_core.graph.verify``, via
+    ``dr_core.models.derive.reopens_requirement``) -- this function stays
+    pure."""
     reasons: list[str] = []
     if source and source.get("source_system") == "seeded-trap":
         reasons.append("injected")
@@ -70,6 +76,8 @@ def risk_reasons(claim: Claim, source: dict | None) -> list[str]:
         reasons.append("tier-3-or-worse")
     if claim.data_ref and claim.data_provenance != DataProvenance.MATCHED:
         reasons.append("structured-unmatched")
+    if sole_must_cover_supporter:
+        reasons.append("sole-must-cover-supporter")
     return reasons
 
 
@@ -162,6 +170,7 @@ async def verify_claim(
     evidence_excerpt: str | None,
     *,
     reserve_votes: Callable[[int], Awaitable[bool]],
+    sole_must_cover_supporter: bool = False,
 ) -> tuple[VerificationRecord, dict[str, int]]:
     """The adaptive 1-3 vote protocol for one claim (D8, ports dr.js:2536-2648):
     vote 1 always attempted, subject to budget; ``is_single_clear`` fast path ->
@@ -172,9 +181,10 @@ async def verify_claim(
     ``reserve_votes(n)`` reserves N vote calls against the caller's shared
     budget; a fetch failure for this claim's source should already be folded
     into ``evidence_excerpt is None`` (adds the ``source_unreachable`` risk
-    reason) by the caller before calling this.
+    reason) by the caller before calling this. ``sole_must_cover_supporter``
+    (D9) is threaded straight into ``risk_reasons`` -- see its docstring.
     """
-    risk = risk_reasons(claim, source)
+    risk = risk_reasons(claim, source, sole_must_cover_supporter=sole_must_cover_supporter)
     if source is not None and evidence_excerpt is None and source.get("url_or_id"):
         risk = [*risk, "source_unreachable"]
 

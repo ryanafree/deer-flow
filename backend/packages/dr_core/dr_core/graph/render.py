@@ -22,7 +22,7 @@ import os
 
 from dr_core.accounting import build_accounting
 from dr_core.models.eligibility import ineligibility_reason
-from dr_core.models.ledger import Claim, Source
+from dr_core.models.ledger import Claim, CoverageMapping, Requirement, Source
 from dr_core.profiles import ProfileError, load_profile
 from dr_core.render.body import generate_body
 from dr_core.render.render_report import render as render_html
@@ -45,7 +45,17 @@ def render_node(state) -> dict:
     """
     dr_claims = state.get("dr_claims") or {}
     dr_sources = state.get("dr_sources") or {}
+    dr_requirements = state.get("dr_requirements") or {}
+    dr_coverage = state.get("dr_coverage") or {}
     dr_run = dict(state.get("dr_run") or {})
+
+    # D9: gate and render derive materiality/status identically (D6-B) -- both
+    # get the SAME real mappings/requirements, never re-derived ad hoc.
+    requirements_by_id: dict[str, Requirement] = {req_id: Requirement.model_validate(payload) for req_id, payload in dr_requirements.items()}
+    coverage_mappings: list[CoverageMapping] = [CoverageMapping.model_validate(payload) for payload in dr_coverage.values()]
+    mappings_by_claim: dict[str, list[CoverageMapping]] = {}
+    for mapping in coverage_mappings:
+        mappings_by_claim.setdefault(mapping.claim_id, []).append(mapping)
 
     citation_ordinals: dict[str, int] = dr_run.get("citation_ordinals") or {}
 
@@ -61,12 +71,19 @@ def render_node(state) -> dict:
             # per-claim derivation exactly, so a None here would mean gate and
             # render have drifted out of sync (should never happen -- D6-B ties
             # both to the same fixed formula).
-            reason = ineligibility_reason(claim, dr_sources) or "excluded"
+            reason = ineligibility_reason(claim, dr_sources, mappings_by_claim.get(claim_id, ()), requirements_by_id) or "excluded"
             ineligible.append((claim_id, claim, reason))
 
     sources_by_id: dict[str, Source] = {source_id: Source.model_validate(payload) for source_id, payload in dr_sources.items()}
 
-    body = generate_body(claims_by_ordinal, sources_by_id, dr_run, ineligible=ineligible)
+    body = generate_body(
+        claims_by_ordinal,
+        sources_by_id,
+        dr_run,
+        ineligible=ineligible,
+        mappings_by_claim=mappings_by_claim,
+        requirements_by_id=requirements_by_id,
+    )
     eligible_claims = [claims_by_ordinal[n] for n in sorted(claims_by_ordinal)]
 
     runs_dir = _resolve_runs_dir(dr_run)
@@ -89,8 +106,8 @@ def render_node(state) -> dict:
     manifest_in = {
         "loop": {
             "conflicts_open": 0,
-            "requirements_covered": 0,
-            "requirements_must_cover": 0,
+            "requirements_covered": dr_run.get("requirements_covered", 0),
+            "requirements_must_cover": dr_run.get("requirements_must_cover", 0),
         },
         "verify_mode": dr_run.get("verify_mode", "off"),
         "depth": dr_run.get("depth", "quick"),
@@ -104,7 +121,8 @@ def render_node(state) -> dict:
         report_body=body,
         sources=list(sources_by_id.values()),
         claims=eligible_claims,
-        requirements=[],
+        requirements=list(requirements_by_id.values()),
+        coverage=coverage_mappings,
         profile=profile,
         question=question,
         runs_dir=runs_dir,

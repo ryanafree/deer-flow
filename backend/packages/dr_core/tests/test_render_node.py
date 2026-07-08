@@ -245,6 +245,41 @@ class TestManifestAccounting:
         assert manifest["accounting"]["dollar_cost"] is None
 
 
+class TestOpenMustCoverUnsubstantiated:
+    """D9: render's Unsubstantiated section additionally enumerates ACTIVE
+    must-cover requirements the gate froze as not fully COVERED
+    (dr_run["must_cover_states"]), by id + text + evidence state."""
+
+    def _state(self, runs_dir: str) -> dict:
+        from dr_core.models.ledger import Requirement
+
+        state = _happy_path_state(runs_dir)
+        state["dr_run"]["stop_reason"] = StopReason.COMPLETED_WITH_OPEN_REQUIREMENTS.value
+        state["dr_run"]["must_cover_states"] = {"req1": "uncovered", "req2": "covered"}
+        state["dr_requirements"] = {
+            "req1": Requirement(id="req1", kind="entity", text="Name the acting director.", must_cover=True).model_dump(mode="json"),
+            "req2": Requirement(id="req2", kind="entity", text="State the founding year.", must_cover=True).model_dump(mode="json"),
+        }
+        return state
+
+    def test_open_must_cover_requirement_named_in_unsubstantiated(self, tmp_path, capsys):
+        state = self._state(str(tmp_path))
+        result = render_node(state)
+        run_dir = result["dr_run"]["run_dir"]
+        report_md = Path(run_dir, "report.md").read_text()
+        unsubstantiated = report_md.split("## Unsubstantiated")[1].split("## Conclusion")[0]
+
+        assert "req1" in unsubstantiated
+        assert "Name the acting director." in unsubstantiated
+        assert "uncovered" in unsubstantiated
+        # req2 is COVERED -- must NOT be listed as an open gap.
+        assert "req2" not in unsubstantiated
+
+        code = _run_lint(run_dir)
+        out = capsys.readouterr().out
+        assert code == 0, out
+
+
 class TestOrdinalInvariant:
     def test_markers_resolve_to_the_nth_claims_jsonl_line(self, tmp_path):
         state = _happy_path_state(str(tmp_path))

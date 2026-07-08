@@ -6,19 +6,20 @@ directly with synthetic state dicts.
 import hashlib
 import json
 
-from langchain.agents import AgentState
-from langgraph.graph import END, StateGraph
-
 from dr_core.graph.agent import make_dr_agent, route_after_gate
 from dr_core.graph.gate import eligibility_gate
 from dr_core.graph.middleware import DrLedgerMiddleware
 from dr_core.models.enums import CitationStatus, StopReason
 from dr_core.models.ledger import Claim
+from langchain.agents import AgentState
+from langgraph.graph import END, StateGraph
 
 
-def _sig(eligible_ids: list[str], n_claims: int, n_sources: int) -> str:
-    """Mirrors gate.py's own sig formula, for tests that need to pre-seed it."""
-    return hashlib.sha256(json.dumps([sorted(eligible_ids), n_claims, n_sources], sort_keys=True).encode()).hexdigest()
+def _sig(eligible_ids: list[str], n_claims: int, n_sources: int, must_cover_pairs: list[tuple[str, str]] | None = None) -> str:
+    """Mirrors gate.py's own sig formula (D9-extended with sorted (active
+    req_id, evidence_state) pairs), for tests that need to pre-seed it."""
+    pairs = sorted(must_cover_pairs or [])
+    return hashlib.sha256(json.dumps([sorted(eligible_ids), n_claims, n_sources, pairs], sort_keys=True).encode()).hexdigest()
 
 
 def _claim(claim_id: str, source_id: str = "s1", **overrides) -> dict:

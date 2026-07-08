@@ -18,8 +18,8 @@ from collections.abc import Mapping, Sequence
 
 from dr_core.models.derive import claim_caveat
 from dr_core.models.eligibility import derive_status
-from dr_core.models.enums import PublicationStatus
-from dr_core.models.ledger import Claim, Source
+from dr_core.models.enums import PublicationStatus, RequirementState
+from dr_core.models.ledger import Claim, CoverageMapping, Requirement, Source
 
 _URL_HOST_RE = re.compile(r"^https?://([^/]+)")
 
@@ -43,12 +43,18 @@ def _source_label(source: Source | None) -> str:
     return source.source_system or "an unspecified source"
 
 
-def _claim_sentence(ordinal: int, claim: Claim, source: Source | None) -> str:
+def _claim_sentence(
+    ordinal: int,
+    claim: Claim,
+    source: Source | None,
+    mappings_for_claim: Sequence[CoverageMapping] = (),
+    requirements_by_id: Mapping[str, Requirement] | None = None,
+) -> str:
     """One sentence per eligible claim, carrying its `[n]` marker. Contested
     claims carry `claim_caveat(claim)` verbatim (their only citation is this one,
     so it is always the "first citation"); not_verified claims render attributed
     ("According to <source>, ...") per the D6-D render policy."""
-    status = derive_status(claim)
+    status = derive_status(claim, mappings_for_claim, requirements_by_id)
     text = _clean(claim.text).rstrip(".") or "(no claim text recorded)"
     if status == PublicationStatus.NOT_VERIFIED:
         label = _source_label(source)
@@ -71,7 +77,10 @@ def _executive_summary(
     claims_by_ordinal: Mapping[int, Claim],
     sources: Mapping[str, Source],
     dr_run: Mapping,
+    mappings_by_claim: Mapping[str, Sequence[CoverageMapping]] | None = None,
+    requirements_by_id: Mapping[str, Requirement] | None = None,
 ) -> list[str]:
+    mappings_by_claim = mappings_by_claim or {}
     lines: list[str] = []
     n_claims = len(claims_by_ordinal)
     n_sources = len(sources)
@@ -85,8 +94,11 @@ def _executive_summary(
         else:
             lines.append("- No sources were consulted.")
 
-    contested = sum(1 for c in claims_by_ordinal.values() if derive_status(c) == PublicationStatus.CONTESTED)
-    not_verified = sum(1 for c in claims_by_ordinal.values() if derive_status(c) == PublicationStatus.NOT_VERIFIED)
+    def _status(claim: Claim) -> PublicationStatus:
+        return derive_status(claim, mappings_by_claim.get(claim.claim_id, ()), requirements_by_id)
+
+    contested = sum(1 for c in claims_by_ordinal.values() if _status(c) == PublicationStatus.CONTESTED)
+    not_verified = sum(1 for c in claims_by_ordinal.values() if _status(c) == PublicationStatus.NOT_VERIFIED)
     if contested:
         lines.append(f"- {contested} claim(s) carry an explicit caveat noted at first citation.")
     if not_verified:
@@ -96,13 +108,33 @@ def _executive_summary(
     return lines
 
 
-def _unsubstantiated_section(ineligible: Sequence[tuple[str, Claim, str]]) -> list[str]:
+def _unsubstantiated_section(
+    ineligible: Sequence[tuple[str, Claim, str]],
+    dr_run: Mapping,
+    requirements_by_id: Mapping[str, Requirement] | None = None,
+) -> list[str]:
+    """D6-D machinery, extended by D9: on top of the ineligible-claim gaps
+    already listed, also names each ACTIVE must-cover requirement the gate
+    froze as not fully COVERED (`dr_run["must_cover_states"]`, id + text +
+    evidence state) -- the frozen set from the gate's own decision, not a
+    re-derivation of "active" at render time."""
+    requirements_by_id = requirements_by_id or {}
     lines = ["## Unsubstantiated", ""]
     if not ineligible:
         lines.append("- No additional claims were recorded.")
     else:
         for claim_id, _claim, reason in ineligible:
             lines.append(f"- Claim `{claim_id}` was not included in the findings above ({reason}).")
+
+    must_cover_states: Mapping[str, str] = dr_run.get("must_cover_states") or {}
+    open_items = sorted((req_id, state) for req_id, state in must_cover_states.items() if state != RequirementState.COVERED.value)
+    for req_id, state in open_items:
+        # Bullet-prefixed, like every other line in this section (`-` exempts
+        # it from the linter's cite-required rule, same as the ineligible-claim
+        # bullets above -- these are gap disclosures, not new factual assertions).
+        requirement = requirements_by_id.get(req_id)
+        text = requirement.text if requirement is not None else req_id
+        lines.append(f"- Required item not yet fully covered: requirement `{req_id}` ({text}) -- evidence state: `{state}`.")
     return lines
 
 
@@ -118,15 +150,22 @@ def generate_body(
     dr_run: Mapping,
     *,
     ineligible: Sequence[tuple[str, Claim, str]] = (),
+    mappings_by_claim: Mapping[str, Sequence[CoverageMapping]] | None = None,
+    requirements_by_id: Mapping[str, Requirement] | None = None,
 ) -> str:
     """Deterministic report.md body: `# Title`, `## Executive summary`, per-claim
     findings under `## Findings` (eligible claims only, ordinal order), an
     optional `## Unsubstantiated` section when `dr_run` carries a `stop_reason`,
     and a citation-exempt `## Conclusion`. Zero-eligible still emits all
-    mandatory sections (the linter requires them)."""
+    mandatory sections (the linter requires them).
+
+    D9: `mappings_by_claim`/`requirements_by_id` feed the SAME materiality
+    derivation the gate used (D6-B), so a claim's rendered status here can
+    never disagree with the gate's eligibility decision."""
     dr_run = dr_run or {}
+    mappings_by_claim = mappings_by_claim or {}
     lines: list[str] = [f"# {_title(dr_run)}", "", "## Executive summary", ""]
-    lines.extend(_executive_summary(claims_by_ordinal, sources, dr_run))
+    lines.extend(_executive_summary(claims_by_ordinal, sources, dr_run, mappings_by_claim, requirements_by_id))
     lines.append("")
 
     if claims_by_ordinal:
@@ -135,11 +174,11 @@ def generate_body(
         for ordinal in sorted(claims_by_ordinal):
             claim = claims_by_ordinal[ordinal]
             source = sources.get(claim.source_id)
-            lines.append(_claim_sentence(ordinal, claim, source))
+            lines.append(_claim_sentence(ordinal, claim, source, mappings_by_claim.get(claim.claim_id, ()), requirements_by_id))
             lines.append("")
 
     if dr_run.get("stop_reason"):
-        lines.extend(_unsubstantiated_section(ineligible))
+        lines.extend(_unsubstantiated_section(ineligible, dr_run, requirements_by_id))
         lines.append("")
 
     lines.append("## Conclusion")

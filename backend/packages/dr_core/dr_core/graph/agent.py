@@ -1,17 +1,21 @@
-"""make_dr_agent — the D5 gated outer-graph wrap, now with the D6 corrective loop
-and the D8 verification layer.
+"""make_dr_agent — the D5 gated outer-graph wrap, now with the D6 corrective loop,
+the D8 verification layer, and the D9 requirement/coverage planning layer.
 
 A thin ``StateGraph(DrOuterState)``: node "research" (the DeerFlow lead-agent
-subgraph, carrying ``DrLedgerMiddleware``) -> conditional edge -> node "verify"
-(the D8 citation gate / provenance audit / adaptive vote pass) -> node
-"eligibility_gate" -> conditional edge -> node "research" (corrective retry)
-or node "render" (stub) -> END. See D5 in DECISIONS.md for the
+subgraph, carrying ``DrLedgerMiddleware``) -> conditional edge -> node
+"plan_coverage" (the D9 requirement extraction / coverage mapping pass) ->
+node "verify" (the D8 citation gate / provenance audit / adaptive vote pass)
+-> node "eligibility_gate" -> conditional edge -> node "research" (corrective
+retry) or node "render" (stub) -> END. See D5 in DECISIONS.md for the
 research-routing design caveat, D6 for the gate/loop policy this graph
 implements, D7 for the turn-scoped ``deliverable`` marker that decides
-``route_after_research``, and D8 for the verify node's topology (the
-corrective loop re-enters through "verify" too -- safe because verify skips
-claims whose ``verification.complete`` is true or whose ladders are terminal,
-so re-entry and resume re-execution are cheap no-ops).
+``route_after_research``, D8 for the verify node's topology, and D9 for the
+planning node's turn-scoped extraction + every-pass mapping (the corrective
+loop re-enters through "plan_coverage" -> "verify" too -- safe because both
+skip already-settled work: plan_coverage's extraction is gated on
+``gate_decision`` and verify skips claims whose ``verification.complete`` is
+true or whose ladders are terminal, so re-entry and resume re-execution are
+cheap).
 """
 
 from __future__ import annotations
@@ -22,6 +26,7 @@ from deerflow.agents.lead_agent.agent import _make_lead_agent
 from deerflow.config.app_config import get_app_config
 from dr_core.graph.gate import eligibility_gate
 from dr_core.graph.middleware import DrLedgerMiddleware
+from dr_core.graph.plan import plan_coverage_node
 from dr_core.graph.render import render_node
 from dr_core.graph.state import DrOuterState
 from dr_core.graph.verify import verify_node
@@ -74,14 +79,16 @@ def make_dr_agent(config, app_config=None):
 
     graph = StateGraph(DrOuterState)
     graph.add_node("research", research_agent)
+    graph.add_node("plan_coverage", plan_coverage_node)
     graph.add_node("verify", verify_node)
     graph.add_node("eligibility_gate", eligibility_gate)
     graph.add_node("render", render_node)
 
     graph.set_entry_point("research")
-    # route_after_research's returned keys are unchanged ("gate" | END); only the
-    # wiring target for "gate" moves from eligibility_gate to verify (D8).
-    graph.add_conditional_edges("research", route_after_research, {"gate": "verify", END: END})
+    # route_after_research's returned keys are unchanged ("gate" | END); the
+    # wiring target for "gate" is now plan_coverage (D9), ahead of verify (D8).
+    graph.add_conditional_edges("research", route_after_research, {"gate": "plan_coverage", END: END})
+    graph.add_edge("plan_coverage", "verify")
     graph.add_edge("verify", "eligibility_gate")
     graph.add_conditional_edges("eligibility_gate", route_after_gate, {"research": "research", "render": "render"})
     graph.add_edge("render", END)

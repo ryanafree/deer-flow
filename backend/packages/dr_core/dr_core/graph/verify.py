@@ -21,8 +21,9 @@ import os
 import urllib.error
 import urllib.request
 
-from dr_core.models.enums import CitationStatus, VerificationStatus
-from dr_core.models.ledger import Claim
+from dr_core.models.derive import reopens_requirement
+from dr_core.models.enums import CitationStatus, CoverageRelation, VerificationStatus
+from dr_core.models.ledger import Claim, CoverageMapping, Requirement
 from dr_core.verify.citation import CITE_RE, decide_citation_status, lookup_citations
 from dr_core.verify.provenance import audit_provenance, rescue_unaudited_matched
 from dr_core.verify.selection import max_verify_for_depth, select_verification_claim_ids
@@ -36,6 +37,29 @@ _EVIDENCE_READ_CAP = _EVIDENCE_MAX_CHARS * 4  # bound the read() itself, not jus
 
 def _is_terminal(claim: Claim) -> bool:
     return claim.verification.complete or claim.verification.status == VerificationStatus.KILLED_ON_REFUTE
+
+
+def _must_cover_sole_supporter_ids(dr_requirements: dict, dr_coverage: dict) -> set[str]:
+    """D9: claim ids that are the SOLE direct supporter of an active
+    must-cover requirement. Reuses ``derive.reopens_requirement`` verbatim --
+    "the only direct support a kill would reopen" is exactly "the sole direct
+    supporter" -- rather than reimplementing the same check."""
+    requirements = {req_id: Requirement.model_validate(payload) for req_id, payload in dr_requirements.items()}
+    mappings_by_req: dict[str, list[CoverageMapping]] = {}
+    for payload in dr_coverage.values():
+        mapping = CoverageMapping.model_validate(payload)
+        mappings_by_req.setdefault(mapping.requirement_id, []).append(mapping)
+
+    sole_ids: set[str] = set()
+    for req_id, requirement in requirements.items():
+        if not requirement.must_cover:
+            continue
+        mappings_for_req = mappings_by_req.get(req_id, [])
+        direct_claim_ids = {m.claim_id for m in mappings_for_req if m.relation == CoverageRelation.DIRECT}
+        for claim_id in direct_claim_ids:
+            if reopens_requirement(claim_id, mappings_for_req):
+                sole_ids.add(claim_id)
+    return sole_ids
 
 
 def _fetch_evidence_sync(url: str) -> str | None:
@@ -106,6 +130,7 @@ async def verify_node(state) -> dict:
     max_verify = max_verify_for_depth(depth)
     selected_ids = select_verification_claim_ids(active, dr_sources, dr_requirements, dr_coverage, max_verify)
     max_vote_calls = 3 * max_verify
+    sole_supporter_ids = _must_cover_sole_supporter_ids(dr_requirements, dr_coverage)
 
     votes_used = 0
     budget_lock = asyncio.Lock()
@@ -139,7 +164,7 @@ async def verify_node(state) -> dict:
         source = dr_sources.get(claim.source_id)
         async with semaphore:
             evidence = await _evidence_for(source)
-            record, usage = await verify_claim(claim, source, evidence, reserve_votes=_reserve)
+            record, usage = await verify_claim(claim, source, evidence, reserve_votes=_reserve, sole_must_cover_supporter=claim_id in sole_supporter_ids)
         _merge_usage(usage_totals, usage)
         claim.verification = record
         _touch(claim)
