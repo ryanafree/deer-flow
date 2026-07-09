@@ -201,7 +201,7 @@ export function MessageList({
     prevIsLoading.current = thread.isLoading;
   }, [thread.isLoading]);
   const messages = thread.messages;
-  const groupedMessages = getMessageGroups(messages);
+  const groupedMessages = useMemo(() => getMessageGroups(messages), [messages]);
   const [regeneratingMessageId, setRegeneratingMessageId] = useState<
     string | null
   >(null);

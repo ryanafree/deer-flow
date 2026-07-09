@@ -6,6 +6,9 @@ import type { BuildVisitor } from "unist-util-visit";
 const CJK_TEXT_RE =
   /[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Hangul}]/u;
 
+// Cache the segmenter to avoid high instantiation overhead during AST traversal
+const segmenter = new Intl.Segmenter("zh", { granularity: "word" });
+
 export function rehypeSplitWordsIntoSpans() {
   return (tree: Root) => {
     visit(tree, "element", ((node: Element) => {
@@ -22,7 +25,6 @@ export function rehypeSplitWordsIntoSpans() {
               newChildren.push(child);
               return;
             }
-            const segmenter = new Intl.Segmenter("zh", { granularity: "word" });
             const segments = segmenter.segment(child.value);
             const words = Array.from(segments)
               .map((segment) => segment.segment)
