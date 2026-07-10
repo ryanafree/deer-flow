@@ -32,16 +32,32 @@ from dr_core.models import Source
 # Single extension point for future source-bearing tool providers (exa/serper/
 # brave/ddg, ...); out of scope for the walking skeleton. Stage C's typed
 # structured-connector tools (dr_core.connectors.tools) extend this set at
-# their own module import time -- see _STRUCTURED_TOOL_SOURCE_SYSTEMS below
-# for the per-tool source_system/authority_tier binding.
-SOURCE_TOOL_NAMES = frozenset({"web_search", "web_fetch", "wrds_query"})
+# their own module import time -- see _STRUCTURED_TOOL_SOURCE_SYSTEMS and
+# _STRUCTURED_SEARCH_TOOL_SOURCE_SYSTEMS below for the per-tool
+# source_system/authority_tier binding.
+SOURCE_TOOL_NAMES = frozenset({"web_search", "web_fetch", "wrds_query", "edgar_company_facts", "fred_series", "courtlistener_search"})
 
-# Stage C structured connector tools (WRDS first) are self-describing JSON
-# (see connectors/tools.py's payload shape) rather than url-scraped pages, so
-# they get a HIGHER default authority than the generic web tier -- this is
-# institutional primary data, not a crawled page. One entry per tool name.
+# Stage C structured connector SINGLE-FACT tools (WRDS, EDGAR, FRED) are
+# self-describing JSON (see connectors/tools.py's payload shape) rather than
+# url-scraped pages, so they get a HIGHER default authority than the generic
+# web tier -- this is institutional primary data, not a crawled page. One
+# entry per tool name; each mints exactly ONE Source per tool call from a
+# top-level `url_or_id`.
 _STRUCTURED_TOOL_SOURCE_SYSTEMS: dict[str, tuple[str, int]] = {
     "wrds_query": ("wrds", 1),
+    "edgar_company_facts": ("edgar", 1),
+    "fred_series": ("fred", 1),
+}
+
+# Stage C structured connector SEARCH tools (CourtListener opinions search)
+# return MULTIPLE candidate results per call, each independently citable --
+# unlike the single-fact tools above, one entry here mints ONE Source PER
+# RESULT from a `results: [{url_or_id, title, ...}, ...]` list. Case law is
+# treated as tier-1 institutional primary data, matching the single-fact
+# tools' authority (a CourtListener opinion is the primary published text of
+# a court's holding, not a crawled secondary summary).
+_STRUCTURED_SEARCH_TOOL_SOURCE_SYSTEMS: dict[str, tuple[str, int]] = {
+    "courtlistener_search": ("courtlistener", 1),
 }
 
 _DEFAULT_AUTHORITY_TIER = 3
@@ -145,6 +161,43 @@ def _source_from_structured_tool(content: str, retrieved_at: str, *, source_syst
     return {record["id"]: record}
 
 
+def _sources_from_structured_search_tool(content: str, retrieved_at: str, *, source_system: str, authority_tier: int) -> dict[str, dict]:
+    """Generic parser for Stage-C structured connector SEARCH tools (multiple
+    results per call, e.g. courtlistener_search): reads a `results` list of
+    `{url_or_id, title, ...}` dicts from the tool's own JSON payload and
+    mints ONE Source per result -- mirrors `_sources_from_web_search`'s
+    per-result minting, but keyed on `url_or_id` (the structured-tool
+    convention) instead of `url` (the web-tool convention)."""
+    try:
+        payload = json.loads(content)
+    except (TypeError, ValueError):
+        return {}
+    if not isinstance(payload, dict) or not payload.get("ok"):
+        return {}
+    results = payload.get("results")
+    if not isinstance(results, list):
+        return {}
+
+    sources: dict[str, dict] = {}
+    for result in results:
+        if not isinstance(result, dict):
+            continue
+        url_or_id = result.get("url_or_id")
+        if not isinstance(url_or_id, str) or not url_or_id:
+            continue
+        source = Source(
+            id=_source_id(url_or_id),
+            url_or_id=url_or_id,
+            source_system=source_system,
+            title=result.get("title"),
+            authority_tier=authority_tier,
+            retrieved_at=retrieved_at,
+        )
+        record = source.model_dump(mode="json")
+        sources[record["id"]] = record
+    return sources
+
+
 class DrLedgerMiddleware(AgentMiddleware):
     """Contributes the dr_* ledger channels, the C2 source-extraction hook, and
     the C1 record_claim tool."""
@@ -196,6 +249,9 @@ class DrLedgerMiddleware(AgentMiddleware):
             elif message.name in _STRUCTURED_TOOL_SOURCE_SYSTEMS:
                 source_system, authority_tier = _STRUCTURED_TOOL_SOURCE_SYSTEMS[message.name]
                 extracted = _source_from_structured_tool(content, retrieved_at, source_system=source_system, authority_tier=authority_tier)
+            elif message.name in _STRUCTURED_SEARCH_TOOL_SOURCE_SYSTEMS:
+                source_system, authority_tier = _STRUCTURED_SEARCH_TOOL_SOURCE_SYSTEMS[message.name]
+                extracted = _sources_from_structured_search_tool(content, retrieved_at, source_system=source_system, authority_tier=authority_tier)
             else:
                 url = call_args_by_id.get(tool_call_id, {}).get("url")
                 extracted = _source_from_web_fetch(content, url, retrieved_at)
