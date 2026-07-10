@@ -317,3 +317,33 @@ class TestSourceUnreachableRiskReason:
         assert "source_unreachable" in record.risk_reasons
         # single_clear requires zero risk reasons, so this must have escalated.
         assert record.mode != "single_clear"
+
+
+class TestGetVoteModelDefault:
+    """q.5 (2026-07-10): DR_VERIFY_MODEL now defaults to the subscription-billed
+    `claude-verify` shim (ChatClaudeCLI --model sonnet) instead of the OpenRouter
+    `or-sonnet`. Hermetic -- monkeypatches `deerflow.models.create_chat_model`
+    itself (the import `_get_vote_model` performs at call time), never invoking
+    the real model factory or a live `claude -p` process."""
+
+    def test_defaults_to_claude_verify_when_env_unset(self, monkeypatch):
+        import deerflow.models as deerflow_models_mod
+
+        monkeypatch.delenv("DR_VERIFY_MODEL", raising=False)
+        captured: dict = {}
+        monkeypatch.setattr(deerflow_models_mod, "create_chat_model", lambda name: captured.setdefault("name", name))
+
+        votes_mod._get_vote_model()
+
+        assert captured["name"] == "claude-verify"
+
+    def test_env_override_falls_back_to_or_sonnet(self, monkeypatch):
+        import deerflow.models as deerflow_models_mod
+
+        monkeypatch.setenv("DR_VERIFY_MODEL", "or-sonnet")
+        captured: dict = {}
+        monkeypatch.setattr(deerflow_models_mod, "create_chat_model", lambda name: captured.setdefault("name", name))
+
+        votes_mod._get_vote_model()
+
+        assert captured["name"] == "or-sonnet"

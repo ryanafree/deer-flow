@@ -144,10 +144,19 @@ def risk_reasons(claim: Claim, source: dict | None, *, sole_must_cover_supporter
 
 def _get_vote_model():
     """Module-level injectable factory -- tests monkeypatch this name directly
-    rather than reaching into ``deerflow.models``."""
+    rather than reaching into ``deerflow.models``.
+
+    q.5 (2026-07-10): default is ``claude-verify`` (subscription-billed
+    ``claude -p --model sonnet`` via ``ChatClaudeCLI``), replacing the
+    OpenRouter ``or-sonnet`` default -- a bounded live throughput probe (8
+    concurrent verify-vote-shaped calls, 0 failures, ~10s wall clock vs ~47s
+    naive-sequential) showed the shim holds up under real vote load. Set
+    ``DR_VERIFY_MODEL=or-sonnet`` (or any other configured model name) to
+    fall back to the OpenRouter path explicitly.
+    """
     from deerflow.models import create_chat_model
 
-    return create_chat_model(os.environ.get("DR_VERIFY_MODEL", "or-sonnet"))
+    return create_chat_model(os.environ.get("DR_VERIFY_MODEL", "claude-verify"))
 
 
 def _format_evidence(claim: Claim, source: dict | None, evidence_excerpt: str | None) -> str:

@@ -23,6 +23,6 @@ tool_allowlist:
   - wrds
 model_tiers:
   gruntwork: or-cheap
-  verify: or-sonnet
+  verify: claude-verify  # q.5 2026-07-10: subscription shim default (or-sonnet = explicit OpenRouter fallback)
   top: claude-top
 depth_default: standard

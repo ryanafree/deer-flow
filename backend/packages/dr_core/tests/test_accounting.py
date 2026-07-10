@@ -54,6 +54,13 @@ class TestPricePhase:
         usage = {"input_tokens": 1_000_000, "output_tokens": 1_000_000, "cache_read_tokens": 0, "cache_write_tokens": 0}
         assert price_phase(usage, "claude-top") == 0.0
 
+    def test_claude_verify_resolves_to_claude_top_pricing(self):
+        """q.5 (2026-07-10): claude-verify is the DR_VERIFY_MODEL default (subscription
+        `claude -p` shim) and must price as free, same as claude-top, not fall through
+        to None or the old or-sonnet OpenRouter row."""
+        usage = {"input_tokens": 1_000_000, "output_tokens": 1_000_000, "cache_read_tokens": 0, "cache_write_tokens": 0}
+        assert price_phase(usage, "claude-verify") == 0.0
+
     def test_unknown_model_returns_none_not_crash(self):
         usage = {"input_tokens": 1, "output_tokens": 1, "cache_read_tokens": 0, "cache_write_tokens": 0}
         assert price_phase(usage, "some-made-up-model") is None
