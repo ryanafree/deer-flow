@@ -135,6 +135,88 @@ class TestUnknownToolDefaultDeny:
         assert "legal" in result.content
 
 
+class TestSubagentDispatchGate:
+    """P-09: the subagent path (SubagentExecutor / build_subagent_runtime_middlewares)
+    never carries DrProfileToolMiddleware / DrConnectorToolsMiddleware, so a dr run
+    with subagent_enabled=True could otherwise dispatch a subagent whose own tool
+    loop bypasses profile/connector enforcement entirely. Since 'task' (the
+    subagent-dispatch tool) is bound on the RESEARCH agent's own toolset, and this
+    middleware already wraps every one of that agent's tool calls, blocking 'task'
+    here closes the gap without ever needing to reach into the subagent's assembly."""
+
+    def test_task_tool_stripped_from_bound_schema_regardless_of_profile(self):
+        mw = _middleware()
+        tools = [SimpleNamespace(name="task"), SimpleNamespace(name="record_claim")]
+        for profile in ("general", "financial", "legal", "tech", "health", None):
+            filtered = mw._filter_tools(_model_request(tools, profile))
+            assert {t.name for t in filtered.tools} == {"record_claim"}, profile
+
+    def test_wrap_model_call_never_exposes_task_to_the_model(self):
+        mw = _middleware()
+        tools = [SimpleNamespace(name="task")]
+        captured = {}
+
+        def handler(req):
+            captured["tools"] = req.tools
+            return "model-response"
+
+        out = mw.wrap_model_call(_model_request(tools, "financial"), handler)
+        assert out == "model-response"
+        assert captured["tools"] == []
+
+    async def test_awrap_model_call_never_exposes_task_to_the_model(self):
+        mw = _middleware()
+        tools = [SimpleNamespace(name="task")]
+        captured = {}
+
+        async def handler(req):
+            captured["tools"] = req.tools
+            return "model-response"
+
+        out = await mw.awrap_model_call(_model_request(tools, "financial"), handler)
+        assert out == "model-response"
+        assert captured["tools"] == []
+
+    def test_wrap_tool_call_blocks_task_dispatch_before_execution(self):
+        mw = _middleware()
+        request = _tool_call_request("task", "financial")
+
+        def handler(req):
+            raise AssertionError("handler must not run -- subagent dispatch must never execute")
+
+        result = mw.wrap_tool_call(request, handler)
+        assert isinstance(result, ToolMessage)
+        assert result.status == "error"
+        assert "task" in result.content
+        assert "subagent" in result.content.lower()
+
+    async def test_awrap_tool_call_blocks_task_dispatch_before_execution(self):
+        mw = _middleware()
+        request = _tool_call_request("task", "financial")
+
+        async def handler(req):
+            raise AssertionError("handler must not run -- subagent dispatch must never execute")
+
+        result = await mw.awrap_tool_call(request, handler)
+        assert isinstance(result, ToolMessage)
+        assert result.status == "error"
+        assert "task" in result.content
+
+    def test_task_dispatch_blocked_even_with_no_profile_or_dr_run_at_all(self):
+        # The gate is unconditional -- this middleware is only ever wired into
+        # make_dr_agent's research agent, so its mere presence is the "dr run"
+        # signal; it must not depend on dr_run/profile contents.
+        mw = _middleware()
+        request = SimpleNamespace(tool_call={"name": "task", "id": "tc1"}, state={})
+
+        def handler(req):
+            raise AssertionError("handler must not run")
+
+        result = mw.wrap_tool_call(request, handler)
+        assert isinstance(result, ToolMessage)
+        assert result.status == "error"
+
+
 class TestPolicyTimeout:
     def test_timeout_fires_and_returns_an_error_without_opening_the_breaker(self):
         mw = _middleware()

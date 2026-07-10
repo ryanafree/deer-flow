@@ -40,16 +40,28 @@ Two independent jobs, both riding the ``extra_middlewares`` seam
    connector-reliability failure and does not strike the breaker -- that
    distinction is deliberate, not an oversight.
 
-Known scope gap (flagged for the orchestrator, not fixed here): this
-middleware only reaches tool calls made by the top-level ``research`` node's
-own agent loop, because ``extra_middlewares`` is a parameter of
-``_make_lead_agent`` and is NOT threaded into subagent construction
-(``SubagentExecutor`` builds subagents via
-``build_subagent_runtime_middlewares``, a separate assembly path). A dr run
-with ``subagent_enabled=True`` whose subagents call connector tools directly
-would bypass this enforcement. Reaching subagents would require a change
-outside the extra_middlewares seam -- out of B's ZERO-FORK_DELTA scope by
-design; flagged here rather than silently left undiscoverable.
+Scope note -- subagent bypass gap CLOSED (P-09, 2026-07-10): this middleware
+only reaches tool calls made by the top-level ``research`` node's own agent
+loop, because ``extra_middlewares`` is a parameter of ``_make_lead_agent`` and
+is NOT threaded into subagent construction (``SubagentExecutor`` builds
+subagents via ``build_subagent_runtime_middlewares``, a separate assembly
+path with no injection seam reachable from ``dr_core`` alone -- closing it
+properly would require editing core deer-flow files, out of scope). Rather
+than leave a dr run with ``subagent_enabled=True`` able to reach connector
+tools through an unenforced subagent loop, this middleware now blocks the
+dispatch mechanism itself: ``task`` (the subagent-dispatch tool bound on the
+research agent's own toolset -- see ``tools/builtins/task_tool.py``) is
+stripped from the bound schema in ``wrap_model_call``/``awrap_model_call``
+and, defense-in-depth, any call to it is denied with a clear error in
+``wrap_tool_call``/``awrap_tool_call`` (see ``SUBAGENT_DISPATCH_TOOL_NAME``
+below). Since ``task`` is the *only* path into ``SubagentExecutor``, and that
+call is itself a tool call on the node this middleware already wraps, no
+subagent can ever be spawned on a dr run -- the enforcement gap in the
+subagent's own middleware assembly is now moot because the subagent path is
+never reached at all. This gate is unconditional (it does not key off
+``dr_run`` contents) because this middleware is only ever wired into
+``make_dr_agent``'s research agent (never a plain, non-dr lead agent), so its
+mere presence on a graph is itself the "this is a dr run" signal.
 """
 
 from __future__ import annotations
@@ -73,6 +85,13 @@ from dr_core.connectors.tool_map import TOOL_TO_CONNECTORS
 from dr_core.profiles import ProfileError, load_profile
 
 _MISSING_TOOL_CALL_ID = "missing_tool_call_id"
+
+# The subagent-dispatch tool (`@tool("task", ...)` in
+# tools/builtins/task_tool.py). It is the sole entry point into
+# SubagentExecutor; blocking it here closes the subagent-bypass gap (see the
+# module docstring's "Scope note" above) without touching any core
+# deer-flow file.
+SUBAGENT_DISPATCH_TOOL_NAME = "task"
 
 
 class DrProfileToolMiddleware(AgentMiddleware):
@@ -132,7 +151,11 @@ class DrProfileToolMiddleware(AgentMiddleware):
 
     def _filter_tools(self, request: ModelRequest) -> ModelRequest:
         allowlist = self._allowlist(request.state)
-        kept = [t for t in request.tools if self._is_allowed(getattr(t, "name", None) or "", allowlist)]
+        kept = [
+            t
+            for t in request.tools
+            if (getattr(t, "name", None) or "") != SUBAGENT_DISPATCH_TOOL_NAME and self._is_allowed(getattr(t, "name", None) or "", allowlist)
+        ]
         if len(kept) == len(request.tools):
             return request
         return request.override(tools=kept)
@@ -156,6 +179,20 @@ class DrProfileToolMiddleware(AgentMiddleware):
     # -- wrap_tool_call: execution enforcement + policy ----------------------
 
     def _blocked_message(self, request: ToolCallRequest, name: str) -> ToolMessage | None:
+        if name == SUBAGENT_DISPATCH_TOOL_NAME:
+            tool_call_id = str(request.tool_call.get("id") or _MISSING_TOOL_CALL_ID)
+            return ToolMessage(
+                content=(
+                    "Error: subagent dispatch via 'task' is disabled on dr-assurance runs. "
+                    "Profile/connector enforcement (DrProfileToolMiddleware, DrConnectorToolsMiddleware) "
+                    "only reaches this agent's own tool-call loop, not a subagent's separate middleware "
+                    "assembly, so dispatching a subagent here would bypass that enforcement. This call is "
+                    "blocked outright rather than allowed to run unenforced."
+                ),
+                tool_call_id=tool_call_id,
+                name=name,
+                status="error",
+            )
         if not name or self._is_allowed(name, self._allowlist(request.state)):
             return None
         tool_call_id = str(request.tool_call.get("id") or _MISSING_TOOL_CALL_ID)
