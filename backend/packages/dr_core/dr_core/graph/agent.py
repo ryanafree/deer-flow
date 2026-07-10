@@ -27,6 +27,7 @@ from deerflow.config.app_config import get_app_config
 from dr_core.graph.gate import eligibility_gate
 from dr_core.graph.middleware import DrLedgerMiddleware
 from dr_core.graph.plan import plan_coverage_node
+from dr_core.graph.profile_middleware import DrProfileToolMiddleware
 from dr_core.graph.render import render_node
 from dr_core.graph.state import DrOuterState
 from dr_core.graph.verify import verify_node
@@ -74,7 +75,13 @@ def make_dr_agent(config, app_config=None):
     research_agent = _make_lead_agent(
         config,
         app_config=resolved_app_config,
-        extra_middlewares=[DrLedgerMiddleware()],
+        # DrProfileToolMiddleware after DrLedgerMiddleware: ordering doesn't
+        # matter for state_schema contribution (only DrLedgerMiddleware
+        # declares one), but langchain's factory composes wrap_tool_call
+        # handlers so earlier entries end up outer / later entries closer to
+        # the actual tool call -- profile enforcement should sit as close to
+        # execution as this list lets it (S9-B).
+        extra_middlewares=[DrLedgerMiddleware(), DrProfileToolMiddleware()],
     )
 
     graph = StateGraph(DrOuterState)
