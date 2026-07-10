@@ -163,6 +163,30 @@ class TestDuplicateDivergent:
         assert dr_claims[claim_id]["importance"] == 3
 
 
+class TestDataRef:
+    """S9-C: record_claim accepts an optional data_ref, passed through verbatim
+    to the Claim so the provenance audit can see it -- the one content field
+    the model doesn't author, only relays from a structured tool's payload."""
+
+    def test_data_ref_lands_on_the_claim_unmodified(self):
+        data_ref = {"period": "2023", "source_class": "primary_database"}
+        out = _record(data_ref=data_ref)
+        ((_, payload),) = out.update["dr_claims"].items()
+        assert payload["data_ref"] == data_ref
+
+    def test_omitted_data_ref_defaults_to_none(self):
+        out = _record()
+        ((_, payload),) = out.update["dr_claims"].items()
+        assert payload["data_ref"] is None
+
+    def test_data_ref_reloads_via_claim_model(self):
+        data_ref = {"period": "2023-09-30", "claimed_period": "2024-09-30", "source_class": "primary_filing"}
+        out = _record(data_ref=data_ref)
+        ((_, payload),) = out.update["dr_claims"].items()
+        claim = Claim(**payload)
+        assert claim.data_ref == data_ref
+
+
 class TestGateFlags:
     def test_valid_hyphenated_flag_is_normalized_and_lands(self):
         out = _record(gate_flags=["vendor-reported"])

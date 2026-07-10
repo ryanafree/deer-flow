@@ -24,6 +24,7 @@ from langgraph.graph import END, StateGraph
 
 from deerflow.agents.lead_agent.agent import _make_lead_agent
 from deerflow.config.app_config import get_app_config
+from dr_core.connectors.tools import DrConnectorToolsMiddleware
 from dr_core.graph.gate import eligibility_gate
 from dr_core.graph.middleware import DrLedgerMiddleware
 from dr_core.graph.plan import plan_coverage_node
@@ -75,13 +76,16 @@ def make_dr_agent(config, app_config=None):
     research_agent = _make_lead_agent(
         config,
         app_config=resolved_app_config,
-        # DrProfileToolMiddleware after DrLedgerMiddleware: ordering doesn't
-        # matter for state_schema contribution (only DrLedgerMiddleware
-        # declares one), but langchain's factory composes wrap_tool_call
-        # handlers so earlier entries end up outer / later entries closer to
-        # the actual tool call -- profile enforcement should sit as close to
-        # execution as this list lets it (S9-B).
-        extra_middlewares=[DrLedgerMiddleware(), DrProfileToolMiddleware()],
+        # DrConnectorToolsMiddleware contributes Stage-C typed tools (WRDS
+        # first) the same way DrLedgerMiddleware contributes record_claim --
+        # via its `tools` class attribute, no hooks, so its position in this
+        # list doesn't affect wrap_tool_call composition. DrProfileToolMiddleware
+        # last: langchain's factory composes wrap_tool_call handlers so
+        # earlier entries end up outer / later entries closer to the actual
+        # tool call -- profile enforcement should sit as close to execution
+        # as this list lets it (S9-B), and it must see the Stage-C tools
+        # already bound so it can filter/deny them by profile.
+        extra_middlewares=[DrLedgerMiddleware(), DrConnectorToolsMiddleware(), DrProfileToolMiddleware()],
     )
 
     graph = StateGraph(DrOuterState)

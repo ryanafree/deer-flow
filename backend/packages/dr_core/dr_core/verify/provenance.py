@@ -14,7 +14,9 @@ structured-claim writer populates it); their disagreement is the "stale vintage"
 trap (`eval/profile_questions.yaml`'s ``financial_vintage`` fixture: a real FY2023
 figure mislabeled as FY2024). A ``source_class`` of ``primary_filing`` or
 ``official_stat`` (the two structured source classes ``fetch/structured.py``'s
-EDGAR/FRED connectors emit) marks the data_ref as primary-source.
+EDGAR/FRED connectors emit), or ``primary_database`` (S9-C: WRDS's CRSP/Compustat
+institutional academic data -- primary in the same sense, just not a filing or a
+government statistic), marks the data_ref as primary-source.
 """
 
 from __future__ import annotations
@@ -29,7 +31,7 @@ _MISMATCH_BLOCKING_FLAGS: frozenset[GateFlag] = frozenset(
         GateFlag.NUMERIC_WITHOUT_PRIMARY_TRACE,
     }
 )
-_PRIMARY_SOURCE_CLASSES = frozenset({"primary_filing", "official_stat"})
+_PRIMARY_SOURCE_CLASSES = frozenset({"primary_filing", "official_stat", "primary_database"})
 
 
 def audit_provenance(claim: Claim) -> DataProvenance | None:

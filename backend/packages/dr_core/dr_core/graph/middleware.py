@@ -30,8 +30,19 @@ from dr_core.graph.state import DrAgentState
 from dr_core.models import Source
 
 # Single extension point for future source-bearing tool providers (exa/serper/
-# brave/ddg, ...); out of scope for the walking skeleton.
-SOURCE_TOOL_NAMES = frozenset({"web_search", "web_fetch"})
+# brave/ddg, ...); out of scope for the walking skeleton. Stage C's typed
+# structured-connector tools (dr_core.connectors.tools) extend this set at
+# their own module import time -- see _STRUCTURED_TOOL_SOURCE_SYSTEMS below
+# for the per-tool source_system/authority_tier binding.
+SOURCE_TOOL_NAMES = frozenset({"web_search", "web_fetch", "wrds_query"})
+
+# Stage C structured connector tools (WRDS first) are self-describing JSON
+# (see connectors/tools.py's payload shape) rather than url-scraped pages, so
+# they get a HIGHER default authority than the generic web tier -- this is
+# institutional primary data, not a crawled page. One entry per tool name.
+_STRUCTURED_TOOL_SOURCE_SYSTEMS: dict[str, tuple[str, int]] = {
+    "wrds_query": ("wrds", 1),
+}
 
 _DEFAULT_AUTHORITY_TIER = 3
 _SOURCED_MSG_IDS_KEY = "_sourced_msg_ids"
@@ -106,6 +117,34 @@ def _source_from_web_fetch(content: str, url: str | None, retrieved_at: str) -> 
     return {record["id"]: record}
 
 
+def _source_from_structured_tool(content: str, retrieved_at: str, *, source_system: str, authority_tier: int) -> dict[str, dict]:
+    """Generic parser for Stage-C structured connector tools: reads a
+    `url_or_id` (+ optional `title`) straight from the tool's own JSON
+    payload -- no tool-call-args lookup needed, the payload is
+    self-describing (connectors/tools.py's contract). Anything that isn't
+    `ok: true` JSON with a string `url_or_id` yields no source, mirroring
+    _source_from_web_fetch's error-string skip."""
+    try:
+        payload = json.loads(content)
+    except (TypeError, ValueError):
+        return {}
+    if not isinstance(payload, dict) or not payload.get("ok"):
+        return {}
+    url_or_id = payload.get("url_or_id")
+    if not isinstance(url_or_id, str) or not url_or_id:
+        return {}
+    source = Source(
+        id=_source_id(url_or_id),
+        url_or_id=url_or_id,
+        source_system=source_system,
+        title=payload.get("title"),
+        authority_tier=authority_tier,
+        retrieved_at=retrieved_at,
+    )
+    record = source.model_dump(mode="json")
+    return {record["id"]: record}
+
+
 class DrLedgerMiddleware(AgentMiddleware):
     """Contributes the dr_* ledger channels, the C2 source-extraction hook, and
     the C1 record_claim tool."""
@@ -154,6 +193,9 @@ class DrLedgerMiddleware(AgentMiddleware):
             retrieved_at = datetime.now(UTC).isoformat()
             if message.name == "web_search":
                 extracted = _sources_from_web_search(content, retrieved_at)
+            elif message.name in _STRUCTURED_TOOL_SOURCE_SYSTEMS:
+                source_system, authority_tier = _STRUCTURED_TOOL_SOURCE_SYSTEMS[message.name]
+                extracted = _source_from_structured_tool(content, retrieved_at, source_system=source_system, authority_tier=authority_tier)
             else:
                 url = call_args_by_id.get(tool_call_id, {}).get("url")
                 extracted = _source_from_web_fetch(content, url, retrieved_at)

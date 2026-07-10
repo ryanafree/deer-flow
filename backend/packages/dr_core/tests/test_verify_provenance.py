@@ -49,6 +49,11 @@ class TestAuditProvenanceMatched:
         claim = _claim(data_ref={"value": "1", "period": "2024-01-01", "source_class": "official_stat"})
         assert audit_provenance(claim) == DataProvenance.MATCHED
 
+    def test_primary_database_source_class_matches(self):
+        """S9-C: WRDS's CRSP/Compustat data_ref source_class."""
+        claim = _claim(data_ref={"period": "2023", "source_class": "primary_database"})
+        assert audit_provenance(claim) == DataProvenance.MATCHED
+
 
 class TestAuditProvenanceInconclusive:
     def test_non_primary_source_class_stays_unaudited(self):

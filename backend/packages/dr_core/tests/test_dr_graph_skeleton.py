@@ -13,6 +13,7 @@ import typing
 from langchain.agents import AgentState
 from langgraph.graph import END, StateGraph
 
+from dr_core.connectors.tools import DrConnectorToolsMiddleware
 from dr_core.graph.agent import make_dr_agent, route_after_research
 from dr_core.graph.middleware import DrLedgerMiddleware
 from dr_core.graph.state import DrAgentState, merge_by_id
@@ -114,6 +115,10 @@ class TestMakeDrAgentCompiles:
             # requiring a live app_config/model.
             assert extra_middlewares is not None
             assert isinstance(extra_middlewares[0], DrLedgerMiddleware)
+            # S9-C: Stage-C's typed connector tools ride the same tools=[...]
+            # seam, contributed after DrLedgerMiddleware and before
+            # DrProfileToolMiddleware (which must see them already bound).
+            assert any(isinstance(m, DrConnectorToolsMiddleware) for m in extra_middlewares)
             return stub_subgraph
 
         monkeypatch.setattr("dr_core.graph.agent._make_lead_agent", _fake_make_lead_agent)

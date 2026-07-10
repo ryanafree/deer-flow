@@ -176,11 +176,24 @@ connectors:
     rest_endpoint: https://data.sec.gov
     auth: SEC_EDGAR_USER_AGENT
     launcher: uvx
-    probe_url: https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&type=10-K&dateb=&owner=include&count=1
+    # probe_url repointed at data.sec.gov (the runtime rest_endpoint the
+    # connector actually uses) 2026-07-09/10 per HANDOFF_CONNECTORS_BC.md open
+    # question 6 / BUILD_LEDGER 2026-07-08's diagnosis: www.sec.gov/cgi-bin
+    # 403s a non-descriptive UA even when auth IS configured, while
+    # data.sec.gov returns 200 regardless -- the old probe_url was stricter
+    # than the path the connector uses, a false-negative generator. A single
+    # companyconcept lookup (~20KB) is far lighter than a full companyfacts
+    # dump for a reachability check. probe_auth added so the probe actually
+    # SENDS the descriptive UA (build_probe_request only attaches auth when
+    # probe_auth is present; without it every edgar probe went out as the
+    # generic dr-core-connector-probe/0.1 UA, defeating the "descriptive
+    # UA required" rate_limit note below).
+    probe_url: https://data.sec.gov/api/xbrl/companyconcept/CIK0000320193/us-gaap/Assets.json
+    probe_auth: header:User-Agent
     durability: substrate
     rate_limit: "10 req/s; descriptive User-Agent header mandatory or requests are blocked"
     throughput_note: "Primary-filing numbers come from XBRL companyfacts as structured records, not crawled pages"
-    last_verified: 2026-06-23
+    last_verified: 2026-07-10
     fallback: openbb
 
   - name: openbb

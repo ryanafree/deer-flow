@@ -3,10 +3,14 @@
 A model-facing tool the ASSERTING MODEL calls to place a claim in the
 ``dr_claims`` channel so ``eligibility_gate`` has something to gate. The
 handler is DETERMINISTIC (no LLM, no network): the model supplies content
-fields only (text/source_id/quote/importance/gate_flags); verification,
-citation_status, and data_provenance are minted here at their INITIAL model
-values -- those ladders belong to later verify passes, never the asserting
-model (D6 ruling A.4).
+fields only (text/source_id/quote/importance/gate_flags/data_ref);
+verification, citation_status, and data_provenance are minted here at their
+INITIAL model values -- those ladders belong to later verify passes, never
+the asserting model (D6 ruling A.4). ``data_ref`` (Stage C, S9-C) is the one
+exception to "content only, no interpretation": the model passes it through
+VERBATIM from a structured connector tool's own payload (see
+``dr_core/connectors/tools.py``), never authors it -- the provenance audit
+(``verify/provenance.py``) reads its ``period``/``source_class`` keys.
 
 Four binding refinements (D6 ruling A):
 1. rides ``DrLedgerMiddleware.tools`` -- zero FORK_DELTA (factory.py:876 /
@@ -83,21 +87,30 @@ def record_claim(
     tool_call_id: Annotated[str, InjectedToolCallId],
     state: Annotated[dict, InjectedState],
     gate_flags: list[str] | None = None,
+    data_ref: dict | None = None,
 ) -> Command:
     """Record a factual claim asserted from a previously retrieved source.
 
-    Call this once you have found a claim-worthy fact via web_search/web_fetch.
-    Cite the source_id from that prior tool result and quote the exact
-    supporting span. This call is content-only -- verification and citation
-    status are decided by later verify passes, not by you.
+    Call this once you have found a claim-worthy fact via web_search/web_fetch
+    (or a Stage-C structured tool like wrds_query). Cite the source_id from
+    that prior tool result and quote the exact supporting span. This call is
+    content-only -- verification and citation status are decided by later
+    verify passes, not by you.
 
     Args:
         text: The claim being asserted, in your own words.
-        source_id: The exact url of a source already returned by
-            web_search/web_fetch (its ledger id is also accepted).
-        quote: The exact supporting span from that source.
+        source_id: The exact url_or_id of a source already returned by
+            web_search/web_fetch/a structured tool (its ledger id is also
+            accepted).
+        quote: The exact supporting span from that source. For a structured
+            (data_ref) claim, a brief description of the retrieved figure is
+            fine -- structured claims ground on data_ref, not the quote.
         importance: 1 (minor) to 5 (central to the answer).
         gate_flags: Optional risk flags, e.g. "vendor-reported", "period-mismatch".
+        data_ref: For a claim grounded in a structured connector tool (e.g.
+            wrds_query), pass that tool's returned `data_ref` object VERBATIM.
+            This is what lets the provenance audit verify the claim against
+            the data's actual retrieved period. Omit for ordinary web claims.
     """
     dr_sources = state.get("dr_sources") or {}
     if source_id not in dr_sources:
@@ -125,6 +138,7 @@ def record_claim(
             source_id=source_id,
             support=SupportRecord(quote=quote, relation_extractor=SupportRelation.SUPPORTS_DIRECTLY),
             gate_flags=normalized_flags,
+            data_ref=data_ref,
         )
     except ValidationError as exc:
         return _reject(tool_call_id, f"invalid claim: {exc}")

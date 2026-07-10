@@ -164,6 +164,59 @@ class TestWebFetchExtraction:
         assert out.get("dr_sources") is None or out["dr_sources"] == {}
 
 
+def _wrds_query_call(tool_call_id: str = "call_wrds") -> AIMessage:
+    return AIMessage(
+        content="",
+        tool_calls=[{"name": "wrds_query", "args": {"ticker": "AAPL", "period": "2023"}, "id": tool_call_id, "type": "tool_call"}],
+    )
+
+
+class TestStructuredToolExtraction:
+    """S9-C: Stage-C structured connector tools (WRDS first) are self-describing
+    JSON, not url-scraped pages -- the parser reads url_or_id/title straight
+    from the payload, no tool-call-args lookup, and gets a higher default
+    authority_tier than the generic web tier."""
+
+    def test_wrds_success_payload_yields_one_source_at_authority_tier_1(self):
+        payload = {"ok": True, "source_system": "wrds", "url_or_id": "wrds://crsp-compustat/AAPL/2023", "title": "WRDS CRSP/Compustat AAPL 2023"}
+        messages = [
+            _wrds_query_call(),
+            ToolMessage(content=json.dumps(payload), tool_call_id="call_wrds", name="wrds_query"),
+        ]
+
+        out = DrLedgerMiddleware().before_model({"messages": messages, "dr_run": {}}, None)
+
+        assert out is not None
+        sources = out["dr_sources"]
+        assert len(sources) == 1
+        record = next(iter(sources.values()))
+        assert record["url_or_id"] == "wrds://crsp-compustat/AAPL/2023"
+        assert record["source_system"] == "wrds"
+        assert record["authority_tier"] == 1
+        assert record["title"] == "WRDS CRSP/Compustat AAPL 2023"
+
+    def test_wrds_failure_payload_yields_no_source(self):
+        payload = {"ok": False, "error": "WRDS unavailable"}
+        messages = [
+            _wrds_query_call(),
+            ToolMessage(content=json.dumps(payload), tool_call_id="call_wrds", name="wrds_query"),
+        ]
+
+        out = DrLedgerMiddleware().before_model({"messages": messages, "dr_run": {}}, None)
+
+        assert out is not None
+        assert out.get("dr_sources") is None or out["dr_sources"] == {}
+        assert out["dr_run"]["deliverable"] is True
+
+    def test_wrds_malformed_json_yields_no_source_without_crash(self):
+        messages = [_wrds_query_call(), ToolMessage(content="not json{{", tool_call_id="call_wrds", name="wrds_query")]
+
+        out = DrLedgerMiddleware().before_model({"messages": messages, "dr_run": {}}, None)
+
+        assert out is not None
+        assert out.get("dr_sources") is None or out["dr_sources"] == {}
+
+
 class TestNonSourceToolIgnored:
     def test_bash_tool_message_ignored(self):
         messages = [
