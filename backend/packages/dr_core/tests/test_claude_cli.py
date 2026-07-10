@@ -3,21 +3,35 @@
 Per build-logs/task-claude-cli-wrapper.md and DECISIONS.md D1. T1-T3 invoke the
 real `claude -p` CLI (a few cents; cold latency ~7s per call, per the task's
 empirical contract) — no mocking, because the whole point is to validate the
-real subprocess/accounting/cancellation/concurrency behavior. T4 is a pure
-unit test (argv inspection only, no network).
+real subprocess/accounting/cancellation/concurrency behavior. They are
+opt-in: set DR_LIVE_CLI=1 to run T1/T2, and additionally
+DR_LIVE_CLI_CONCURRENCY=1 for T3 (it fires 4 real calls). A default pytest
+run makes zero API calls from this file. T4 is a pure unit test (argv
+inspection only, no network).
 
 Run: cd deer-flow/backend && uv run pytest packages/dr_core/ -v
+Live: DR_LIVE_CLI=1 DR_LIVE_CLI_CONCURRENCY=1 uv run pytest packages/dr_core/tests/test_claude_cli.py -v
 """
 
 from __future__ import annotations
 
 import asyncio
 import json
+import os
 import tempfile
 import time
 
 import pytest
 from dr_core.models.claude_cli import ChatClaudeCLI
+
+live_cli = pytest.mark.skipif(
+    os.environ.get("DR_LIVE_CLI") != "1",
+    reason="invokes the real claude -p CLI; set DR_LIVE_CLI=1 to run",
+)
+live_cli_concurrency = pytest.mark.skipif(
+    os.environ.get("DR_LIVE_CLI_CONCURRENCY") != "1",
+    reason="fires 4 concurrent real claude -p calls; set DR_LIVE_CLI_CONCURRENCY=1 (with DR_LIVE_CLI=1) to run",
+)
 
 
 class _FakeProc:
@@ -41,6 +55,7 @@ class _FakeProc:
 # test functions below need no explicit @pytest.mark.asyncio.
 
 
+@live_cli
 async def test_t1_accounting() -> None:
     """T1: ainvoke returns an AIMessage with populated usage_metadata and
     total_cost_usd in response_metadata."""
@@ -57,6 +72,7 @@ async def test_t1_accounting() -> None:
     assert result.response_metadata["total_cost_usd"] is not None
 
 
+@live_cli
 async def test_t2_cancellation_kills_subprocess() -> None:
     """T2 (kill-gate): cancelling/timing out an in-flight ainvoke must leave
     no orphaned `claude` process running. A cold claude -p call takes ~7s
@@ -89,6 +105,8 @@ async def test_t2_cancellation_kills_subprocess() -> None:
     del _signal
 
 
+@live_cli
+@live_cli_concurrency
 async def test_t3_concurrency() -> None:
     """T3: N concurrent ainvoke calls all succeed and overlap (total
     wall-clock well under N times a single call), proving the event loop
@@ -176,3 +194,10 @@ def test_t4_stateless_argv_never_resumes() -> None:
     assert argv[1:5] == ["-p", "some prompt", "--output-format", "json"]
     assert "--model" in argv
     assert argv[argv.index("--model") + 1] == "opus"
+    # Token-diet guard: one-shot calls must never load user-level
+    # settings/plugins or built-in tool schemas (~25.5k → ~6.3k tokens of
+    # per-call context; this model plane is tool-free by design).
+    assert "--setting-sources" in argv
+    assert argv[argv.index("--setting-sources") + 1] == "project"
+    assert "--tools" in argv
+    assert argv[argv.index("--tools") + 1] == ""

@@ -137,6 +137,12 @@ class ChatClaudeCLI(BaseChatModel):
         """Build the claude -p argv. Unit-testable without spawning a process.
 
         Never includes --resume or --continue (D1: stateless one-shot only).
+        --setting-sources project (with cwd=$TMPDIR, which has no project
+        settings) keeps user-level settings/plugins out of the call, and
+        --tools "" drops every built-in tool schema — this model plane is
+        tool-free by design (see bind_tools), so the schemas were dead weight.
+        Measured per-call context: ~25.5k tokens without these flags, ~6.3k
+        with them (claude CLI 2.1.x, haiku).
         """
         argv = [
             self.claude_path,
@@ -146,6 +152,10 @@ class ChatClaudeCLI(BaseChatModel):
             "json",
             "--model",
             self.model,
+            "--setting-sources",
+            "project",
+            "--tools",
+            "",
         ]
         argv.extend(self.extra_args)
         return argv
