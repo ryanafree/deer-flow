@@ -11,7 +11,7 @@ reaches (and never raises inside) the reducer.
 
 from dr_core.graph.claim_tool import record_claim
 from dr_core.graph.state import merge_ledger
-from dr_core.models import Claim, CitationStatus, DataProvenance, VerificationStatus
+from dr_core.models import CitationStatus, Claim, DataProvenance, VerificationStatus
 
 SOURCE_ID = "src1"
 

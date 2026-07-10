@@ -7,7 +7,6 @@ Exercises the full 3x3 transition table for each ladder.
 from __future__ import annotations
 
 import pytest
-
 from dr_core.models.derive import (
     assert_citation_transition_allowed,
     assert_provenance_transition_allowed,

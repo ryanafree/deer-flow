@@ -7,10 +7,9 @@ pairing pattern established in deerflow's DurableContextMiddleware tests.
 
 import json
 
-from langchain_core.messages import AIMessage, HumanMessage, ToolMessage
-
 from dr_core.graph.middleware import DrLedgerMiddleware
 from dr_core.graph.state import merge_ledger, merge_run
+from langchain_core.messages import AIMessage, HumanMessage, ToolMessage
 
 
 def _web_search_call(tool_call_id: str = "call_search") -> AIMessage:

@@ -19,7 +19,6 @@ import json
 import re
 
 import pytest
-
 from dr_core.render.render_report import render
 
 REPORT_MD = """# Test Report Title

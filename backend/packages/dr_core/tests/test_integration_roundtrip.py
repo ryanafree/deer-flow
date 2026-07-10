@@ -16,8 +16,8 @@ import os
 
 from dr_core.lint.report_lint import _eligibility_findings, _load_claims, _load_conflicts, body_of
 from dr_core.models import (
-    Claim,
     CitationStatus,
+    Claim,
     Conflict,
     ConflictOutcome,
     CoverageMapping,

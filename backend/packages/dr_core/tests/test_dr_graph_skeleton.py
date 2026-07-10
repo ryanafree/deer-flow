@@ -10,13 +10,12 @@ not to exercise the lead agent itself.
 
 import typing
 
-from langchain.agents import AgentState
-from langgraph.graph import END, StateGraph
-
 from dr_core.connectors.tools import DrConnectorToolsMiddleware
 from dr_core.graph.agent import make_dr_agent, route_after_research
 from dr_core.graph.middleware import DrLedgerMiddleware
 from dr_core.graph.state import DrAgentState, merge_by_id
+from langchain.agents import AgentState
+from langgraph.graph import END, StateGraph
 
 
 class TestMergeById:

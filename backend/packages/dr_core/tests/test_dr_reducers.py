@@ -12,9 +12,8 @@ from __future__ import annotations
 import copy
 
 import pytest
-
 from dr_core.graph.state import merge_ledger
-from dr_core.models import Claim, CitationStatus, DataProvenance, VerificationRecord, VerificationStatus
+from dr_core.models import CitationStatus, Claim, DataProvenance, VerificationRecord, VerificationStatus
 
 
 def _claim(claim_id: str = "c1", *, status: VerificationStatus = VerificationStatus.PENDING, **overrides) -> dict:

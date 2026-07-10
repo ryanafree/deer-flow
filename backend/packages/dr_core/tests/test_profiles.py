@@ -1,7 +1,6 @@
 """Tests for dr_core.profiles (S9)."""
 
 import pytest
-
 from dr_core.connectors.registry import by_name, load_connectors
 from dr_core.profiles import KNOWN_PROFILES, ProfileError, load_all_profiles, load_profile
 
