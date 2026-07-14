@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { writeTextToClipboard } from "@/core/clipboard";
 import { cn } from "@/lib/utils";
 import { CheckIcon, CopyIcon } from "lucide-react";
+import { useI18n } from "@/core/i18n/hooks";
 import {
   type ComponentProps,
   createContext,
@@ -144,6 +145,7 @@ export const CodeBlockCopyButton = ({
   className,
   ...props
 }: CodeBlockCopyButtonProps) => {
+  const { t } = useI18n();
   const [isCopied, setIsCopied] = useState(false);
   const { code } = useContext(CodeBlockContext);
 
@@ -171,6 +173,7 @@ export const CodeBlockCopyButton = ({
       onClick={copyToClipboard}
       size="icon"
       variant="ghost"
+      aria-label={t.clipboard.copyToClipboard}
       {...props}
     >
       {children ?? <Icon size={14} />}
