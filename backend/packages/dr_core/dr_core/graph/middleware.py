@@ -25,40 +25,19 @@ from langchain.agents.middleware import AgentMiddleware
 from langchain_core.messages import AIMessage, AnyMessage, ToolMessage
 from langgraph.runtime import Runtime
 
+from dr_core.connectors.binding import ResultShape, ToolBinding, get_default_registry, mcp_generic_url_and_title, parse_mcp_generic_records
 from dr_core.graph.claim_tool import record_claim
 from dr_core.graph.state import DrAgentState
 from dr_core.models import Source
 
-# Single extension point for future source-bearing tool providers (exa/serper/
-# brave/ddg, ...); out of scope for the walking skeleton. Stage C's typed
-# structured-connector tools (dr_core.connectors.tools) extend this set at
-# their own module import time -- see _STRUCTURED_TOOL_SOURCE_SYSTEMS and
-# _STRUCTURED_SEARCH_TOOL_SOURCE_SYSTEMS below for the per-tool
-# source_system/authority_tier binding.
-SOURCE_TOOL_NAMES = frozenset({"web_search", "web_fetch", "wrds_query", "edgar_company_facts", "fred_series", "courtlistener_search"})
-
-# Stage C structured connector SINGLE-FACT tools (WRDS, EDGAR, FRED) are
-# self-describing JSON (see connectors/tools.py's payload shape) rather than
-# url-scraped pages, so they get a HIGHER default authority than the generic
-# web tier -- this is institutional primary data, not a crawled page. One
-# entry per tool name; each mints exactly ONE Source per tool call from a
-# top-level `url_or_id`.
-_STRUCTURED_TOOL_SOURCE_SYSTEMS: dict[str, tuple[str, int]] = {
-    "wrds_query": ("wrds", 1),
-    "edgar_company_facts": ("edgar", 1),
-    "fred_series": ("fred", 1),
-}
-
-# Stage C structured connector SEARCH tools (CourtListener opinions search)
-# return MULTIPLE candidate results per call, each independently citable --
-# unlike the single-fact tools above, one entry here mints ONE Source PER
-# RESULT from a `results: [{url_or_id, title, ...}, ...]` list. Case law is
-# treated as tier-1 institutional primary data, matching the single-fact
-# tools' authority (a CourtListener opinion is the primary published text of
-# a court's holding, not a crawled secondary summary).
-_STRUCTURED_SEARCH_TOOL_SOURCE_SYSTEMS: dict[str, tuple[str, int]] = {
-    "courtlistener_search": ("courtlistener", 1),
-}
+# Which tool names are source-bearing, and how to parse each one's payload,
+# is resolved entirely through dr_core.connectors.binding.ToolBindingRegistry
+# (D11 P0 "normalize the connector boundary" -- MYTHOS_REVIEW_2026-07-11.md).
+# The registry resolves a runtime ToolMessage.name -- whether or not
+# DeerFlow's MCP loader has prefixed it (harness/deerflow/mcp/tools.py,
+# tool_name_prefix=True) -- to a ToolBinding carrying the connector,
+# source_system, authority_tier, and ResultShape needed below. An unresolved
+# name is NOT a source-bearing tool call and is skipped, not guessed at.
 
 _DEFAULT_AUTHORITY_TIER = 3
 _SOURCED_MSG_IDS_KEY = "_sourced_msg_ids"
@@ -139,7 +118,10 @@ def _source_from_structured_tool(content: str, retrieved_at: str, *, source_syst
     payload -- no tool-call-args lookup needed, the payload is
     self-describing (connectors/tools.py's contract). Anything that isn't
     `ok: true` JSON with a string `url_or_id` yields no source, mirroring
-    _source_from_web_fetch's error-string skip."""
+    _source_from_web_fetch's error-string skip. Every Stage-C payload also
+    self-reports its own `source_system`; that wins over the binding's
+    default when present (the default only covers tools -- like
+    academic_search -- whose actual connector varies per call)."""
     try:
         payload = json.loads(content)
     except (TypeError, ValueError):
@@ -149,10 +131,11 @@ def _source_from_structured_tool(content: str, retrieved_at: str, *, source_syst
     url_or_id = payload.get("url_or_id")
     if not isinstance(url_or_id, str) or not url_or_id:
         return {}
+    payload_source_system = payload.get("source_system")
     source = Source(
         id=_source_id(url_or_id),
         url_or_id=url_or_id,
-        source_system=source_system,
+        source_system=payload_source_system if isinstance(payload_source_system, str) and payload_source_system else source_system,
         title=payload.get("title"),
         authority_tier=authority_tier,
         retrieved_at=retrieved_at,
@@ -163,11 +146,15 @@ def _source_from_structured_tool(content: str, retrieved_at: str, *, source_syst
 
 def _sources_from_structured_search_tool(content: str, retrieved_at: str, *, source_system: str, authority_tier: int) -> dict[str, dict]:
     """Generic parser for Stage-C structured connector SEARCH tools (multiple
-    results per call, e.g. courtlistener_search): reads a `results` list of
-    `{url_or_id, title, ...}` dicts from the tool's own JSON payload and
-    mints ONE Source per result -- mirrors `_sources_from_web_search`'s
-    per-result minting, but keyed on `url_or_id` (the structured-tool
-    convention) instead of `url` (the web-tool convention)."""
+    results per call, e.g. courtlistener_search, academic_search): reads a
+    `results` list of `{url_or_id, title, ...}` dicts from the tool's own
+    JSON payload and mints ONE Source per result -- mirrors
+    `_sources_from_web_search`'s per-result minting, but keyed on `url_or_id`
+    (the structured-tool convention) instead of `url` (the web-tool
+    convention). The payload's own top-level `source_system` wins over the
+    binding's default when present, same as the single-fact parser above --
+    academic_search's actual connector (semantic_scholar/openalex/arxiv)
+    varies per call and is only known from the payload."""
     try:
         payload = json.loads(content)
     except (TypeError, ValueError):
@@ -177,6 +164,8 @@ def _sources_from_structured_search_tool(content: str, retrieved_at: str, *, sou
     results = payload.get("results")
     if not isinstance(results, list):
         return {}
+    payload_source_system = payload.get("source_system")
+    resolved_source_system = payload_source_system if isinstance(payload_source_system, str) and payload_source_system else source_system
 
     sources: dict[str, dict] = {}
     for result in results:
@@ -188,7 +177,7 @@ def _sources_from_structured_search_tool(content: str, retrieved_at: str, *, sou
         source = Source(
             id=_source_id(url_or_id),
             url_or_id=url_or_id,
-            source_system=source_system,
+            source_system=resolved_source_system,
             title=result.get("title"),
             authority_tier=authority_tier,
             retrieved_at=retrieved_at,
@@ -196,6 +185,45 @@ def _sources_from_structured_search_tool(content: str, retrieved_at: str, *, sou
         record = source.model_dump(mode="json")
         sources[record["id"]] = record
     return sources
+
+
+def _sources_from_mcp_generic(content: str, retrieved_at: str, *, source_system: str, authority_tier: int) -> dict[str, dict]:
+    """Parser for ResultShape.MCP_GENERIC: the binding registry resolved the
+    CONNECTOR behind a prefixed MCP tool call by name, but not the
+    third-party MCP server's own JSON payload shape (dr_core doesn't control
+    it). ``connectors.binding.parse_mcp_generic_records`` does the permissive
+    list-of-dicts extraction; this mints one Source per record that carries a
+    url-like field, same fail-closed-on-no-match behavior as the other
+    parsers here."""
+    sources: dict[str, dict] = {}
+    for record in parse_mcp_generic_records(content):
+        url, title = mcp_generic_url_and_title(record)
+        if not url:
+            continue
+        source = Source(
+            id=_source_id(url),
+            url_or_id=url,
+            source_system=source_system,
+            title=title,
+            authority_tier=authority_tier,
+            retrieved_at=retrieved_at,
+        )
+        record_out = source.model_dump(mode="json")
+        sources[record_out["id"]] = record_out
+    return sources
+
+
+def _extract_for_binding(binding: ToolBinding, content: str, retrieved_at: str, call_args_by_id: dict[str, dict[str, Any]], tool_call_id: str) -> dict[str, dict]:
+    if binding.result_shape is ResultShape.SEARCH_URL:
+        return _sources_from_web_search(content, retrieved_at)
+    if binding.result_shape is ResultShape.FETCH_URL:
+        url = call_args_by_id.get(tool_call_id, {}).get("url")
+        return _source_from_web_fetch(content, url, retrieved_at)
+    if binding.result_shape is ResultShape.STRUCTURED_SINGLE:
+        return _source_from_structured_tool(content, retrieved_at, source_system=binding.source_system, authority_tier=binding.authority_tier)
+    if binding.result_shape is ResultShape.STRUCTURED_SEARCH:
+        return _sources_from_structured_search_tool(content, retrieved_at, source_system=binding.source_system, authority_tier=binding.authority_tier)
+    return _sources_from_mcp_generic(content, retrieved_at, source_system=binding.source_system, authority_tier=binding.authority_tier)
 
 
 class DrLedgerMiddleware(AgentMiddleware):
@@ -232,11 +260,15 @@ class DrLedgerMiddleware(AgentMiddleware):
         processed_ids: set[str] = set(dr_run.get(_SOURCED_MSG_IDS_KEY) or [])
         known_source_ids: set[str] = set((state.get("dr_sources") or {}).keys())
         call_args_by_id = _tool_call_args_by_id(messages)
+        registry = get_default_registry()
 
         new_sources: dict[str, dict] = {}
         newly_processed: list[str] = []
         for message in messages:
-            if not isinstance(message, ToolMessage) or message.name not in SOURCE_TOOL_NAMES:
+            if not isinstance(message, ToolMessage) or not message.name:
+                continue
+            binding = registry.resolve(message.name)
+            if binding is None:
                 continue
             tool_call_id = str(message.tool_call_id)
             if tool_call_id in processed_ids:
@@ -244,17 +276,7 @@ class DrLedgerMiddleware(AgentMiddleware):
 
             content = message.content if isinstance(message.content, str) else str(message.content)
             retrieved_at = datetime.now(UTC).isoformat()
-            if message.name == "web_search":
-                extracted = _sources_from_web_search(content, retrieved_at)
-            elif message.name in _STRUCTURED_TOOL_SOURCE_SYSTEMS:
-                source_system, authority_tier = _STRUCTURED_TOOL_SOURCE_SYSTEMS[message.name]
-                extracted = _source_from_structured_tool(content, retrieved_at, source_system=source_system, authority_tier=authority_tier)
-            elif message.name in _STRUCTURED_SEARCH_TOOL_SOURCE_SYSTEMS:
-                source_system, authority_tier = _STRUCTURED_SEARCH_TOOL_SOURCE_SYSTEMS[message.name]
-                extracted = _sources_from_structured_search_tool(content, retrieved_at, source_system=source_system, authority_tier=authority_tier)
-            else:
-                url = call_args_by_id.get(tool_call_id, {}).get("url")
-                extracted = _source_from_web_fetch(content, url, retrieved_at)
+            extracted = _extract_for_binding(binding, content, retrieved_at, call_args_by_id, tool_call_id)
 
             for source_id, record in extracted.items():
                 if source_id in known_source_ids or source_id in new_sources:

@@ -1,21 +1,24 @@
 """make_dr_agent — the D5 gated outer-graph wrap, now with the D6 corrective loop,
-the D8 verification layer, and the D9 requirement/coverage planning layer.
+the D8 verification layer, the D9 requirement/coverage planning layer, and the
+D11 initialize/entry-router layer.
 
-A thin ``StateGraph(DrOuterState)``: node "research" (the DeerFlow lead-agent
-subgraph, carrying ``DrLedgerMiddleware``) -> conditional edge -> node
-"plan_coverage" (the D9 requirement extraction / coverage mapping pass) ->
-node "verify" (the D8 citation gate / provenance audit / adaptive vote pass)
--> node "eligibility_gate" -> conditional edge -> node "research" (corrective
-retry) or node "render" (stub) -> END. See D5 in DECISIONS.md for the
-research-routing design caveat, D6 for the gate/loop policy this graph
-implements, D7 for the turn-scoped ``deliverable`` marker that decides
-``route_after_research``, D8 for the verify node's topology, and D9 for the
-planning node's turn-scoped extraction + every-pass mapping (the corrective
-loop re-enters through "plan_coverage" -> "verify" too -- safe because both
-skip already-settled work: plan_coverage's extraction is gated on
-``gate_decision`` and verify skips claims whose ``verification.complete`` is
-true or whose ladders are terminal, so re-entry and resume re-execution are
-cheap).
+A thin ``StateGraph(DrOuterState)``: node "initialize" (the D11 run-scoping
+entry node; deterministic, no LLM) -> conditional edge: a preset
+``deliverable`` routes "plan_requirements" (extract + schedule BEFORE any
+retrieval -- the benchmark/headless wiring) -> "research"; otherwise straight
+to "research" (the DeerFlow lead-agent subgraph, carrying
+``DrLedgerMiddleware`` -- the D7 interactive wiring, unchanged) ->
+conditional edge -> node "plan_coverage" (the D9 requirement extraction /
+coverage mapping pass) -> node "verify" (the D8 citation gate / provenance
+audit / adaptive vote pass) -> node "eligibility_gate" -> conditional edge ->
+node "research" (planned corrective retry) or node "render" -> END. See D5 in
+DECISIONS.md for the research-routing design caveat, D6 for the gate/loop
+policy this graph implements, D7 for the turn-scoped ``deliverable`` marker
+that decides ``route_after_research``, D8 for the verify node's topology, D9
+for the planning node's turn-scoped extraction + every-pass mapping (the
+corrective loop re-enters through "plan_coverage" -> "verify" too -- safe
+because both skip already-settled work), and D11 for the entry router / run
+scoping / planned-retry rulings.
 """
 
 from __future__ import annotations
@@ -25,9 +28,11 @@ from langgraph.graph import END, StateGraph
 from deerflow.agents.lead_agent.agent import _make_lead_agent
 from deerflow.config.app_config import get_app_config
 from dr_core.connectors.tools import DrConnectorToolsMiddleware
+from dr_core.graph.directive_middleware import DrResearchDirectiveMiddleware
 from dr_core.graph.gate import eligibility_gate
+from dr_core.graph.initialize import initialize_node, route_after_initialize
 from dr_core.graph.middleware import DrLedgerMiddleware
-from dr_core.graph.plan import plan_coverage_node
+from dr_core.graph.plan import plan_coverage_node, plan_requirements_node
 from dr_core.graph.profile_middleware import DrProfileToolMiddleware
 from dr_core.graph.render import render_node
 from dr_core.graph.state import DrOuterState
@@ -85,17 +90,38 @@ def make_dr_agent(config, app_config=None):
         # tool call -- profile enforcement should sit as close to execution
         # as this list lets it (S9-B), and it must see the Stage-C tools
         # already bound so it can filter/deny them by profile.
-        extra_middlewares=[DrLedgerMiddleware(), DrConnectorToolsMiddleware(), DrProfileToolMiddleware()],
+        # DrResearchDirectiveMiddleware (SPEC_evidence_routing_2026-07-10.md
+        # Stage 3) only reads dr_run/profile state and merges its directive
+        # straight into request.system_message -- it neither depends on nor
+        # affects tool-call wrapping order, so its position here is arbitrary
+        # relative to the other three; appended last (rather than first) so
+        # extra_middlewares[0] stays DrLedgerMiddleware, which existing tests
+        # (test_dr_gate.py, test_dr_graph_skeleton.py, test_plan_node.py,
+        # test_verify_node.py) assert on directly.
+        extra_middlewares=[
+            DrLedgerMiddleware(),
+            DrConnectorToolsMiddleware(),
+            DrProfileToolMiddleware(),
+            DrResearchDirectiveMiddleware(),
+        ],
     )
 
     graph = StateGraph(DrOuterState)
+    graph.add_node("initialize", initialize_node)
+    graph.add_node("plan_requirements", plan_requirements_node)
     graph.add_node("research", research_agent)
     graph.add_node("plan_coverage", plan_coverage_node)
     graph.add_node("verify", verify_node)
     graph.add_node("eligibility_gate", eligibility_gate)
     graph.add_node("render", render_node)
 
-    graph.set_entry_point("research")
+    # D11 item 4: initialize is the entry on EVERY invocation (run scoping),
+    # and hosts the entry decision -- a preset deliverable plans before any
+    # retrieval; the interactive path enters research-first exactly as D7/D9
+    # ruled.
+    graph.set_entry_point("initialize")
+    graph.add_conditional_edges("initialize", route_after_initialize, {"plan": "plan_requirements", "research": "research"})
+    graph.add_edge("plan_requirements", "research")
     # route_after_research's returned keys are unchanged ("gate" | END); the
     # wiring target for "gate" is now plan_coverage (D9), ahead of verify (D8).
     graph.add_conditional_edges("research", route_after_research, {"gate": "plan_coverage", END: END})

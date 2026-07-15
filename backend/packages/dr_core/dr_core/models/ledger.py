@@ -11,7 +11,7 @@ from __future__ import annotations
 from datetime import datetime
 from typing import TYPE_CHECKING
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 from dr_core.models.enums import (
     CitationStatus,
@@ -90,6 +90,14 @@ class Claim(BaseModel):
     refutation_notes: str | None = None
 
 
+#  SPEC_evidence_routing_2026-07-10.md, Interfaces: field NAMES and value sets are
+#  FROZEN. Plain str (not StrEnum) because invalid/missing values must COERCE to
+#  "any" (settled question 12 / test 5), which StrEnum's raise-on-invalid validation
+#  does not support.
+VALID_EVIDENCE_CLASSES = frozenset({"academic", "primary_data", "practitioner", "news", "any"})
+VALID_FRESHNESS_VALUES = frozenset({"foundational", "frontier", "any"})
+
+
 class Requirement(BaseModel):
     id: str
     kind: RequirementKind
@@ -99,6 +107,18 @@ class Requirement(BaseModel):
     must_cover: bool = False
     attempts: int = 0
     terminal_state: RequirementState | None = None
+    evidence_class: str = "any"
+    freshness: str = "any"
+
+    @field_validator("evidence_class", mode="before")
+    @classmethod
+    def _coerce_evidence_class(cls, v: object) -> str:
+        return v if v in VALID_EVIDENCE_CLASSES else "any"
+
+    @field_validator("freshness", mode="before")
+    @classmethod
+    def _coerce_freshness(cls, v: object) -> str:
+        return v if v in VALID_FRESHNESS_VALUES else "any"
 
 
 class CoverageMapping(BaseModel):

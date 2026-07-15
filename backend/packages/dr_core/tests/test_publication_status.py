@@ -90,6 +90,20 @@ def test_aggregate_all_abstain_not_verified():
     assert aggregate_verification_status(votes) == VerificationStatus.NOT_VERIFIED
 
 
+# ---- D11 item 1: SUPPORTED requires >=1 affirmative vote (zero-affirmative mixed
+# patterns below the refute kill threshold aggregate to NOT_VERIFIED, not SUPPORTED) --
+
+
+def test_aggregate_one_refute_two_abstain_zero_affirmative_not_verified():
+    votes = [vote(refuted=True), vote(abstain=True), vote(abstain=True)]
+    assert aggregate_verification_status(votes) == VerificationStatus.NOT_VERIFIED
+
+
+def test_aggregate_one_clean_two_abstain_supported():
+    votes = [vote(), vote(abstain=True), vote(abstain=True)]
+    assert aggregate_verification_status(votes) == VerificationStatus.SUPPORTED
+
+
 def test_aggregate_empty_votes_supported_vacuously():
     # No refutes (0 >= 2 is false) and the all-abstain check is vacuously false for an
     # empty list, mirroring dr.js's `valid.length && abstains === valid.length`.

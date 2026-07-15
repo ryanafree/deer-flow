@@ -217,13 +217,16 @@ def is_grounded(claim: Claim, materiality: Materiality, *, post_verify: bool = F
 @dataclass
 class ClaimEvidence:
     """Per-claim facts evidence_state needs beyond the mapping itself: whether it
-    counts as grounded in the CURRENT set, its source (subtopic diversity), and its
-    publication date (date_window freshness). Mirrors state.js's claimsById shape
-    ({source_ref, publication_date, grounded})."""
+    counts as grounded in the CURRENT set, its source (subtopic diversity), its
+    publication date (date_window freshness), and its resolved evidence class
+    (SPEC_evidence_routing_2026-07-10.md Stage 2 -- resolved by the caller via
+    dr_core.plan.evidence_class.resolve_evidence_class, never computed here).
+    Mirrors state.js's claimsById shape ({source_ref, publication_date, grounded})."""
 
     grounded: bool = True
     source_id: str | None = None
     publication_date: str | None = None
+    evidence_class: str = "any"
 
 
 def evidence_state(
@@ -241,6 +244,18 @@ def evidence_state(
     maps = [m for m in mappings_for_req if (ev := claims_by_id.get(m.claim_id)) is not None and ev.grounded is not False]
     directs = [m for m in maps if m.relation == CoverageRelation.DIRECT]
     any_evidence = any(m.relation in (CoverageRelation.DIRECT, CoverageRelation.PARTIAL) for m in maps)
+
+    # Evidence-class gate (SPEC_evidence_routing_2026-07-10.md Stage 2, test 7):
+    # a requirement with a specific evidence_class only counts DIRECT mappings
+    # whose claim resolved to that SAME class toward COVERED; wrong-class
+    # DIRECT evidence still counts toward any_evidence/PARTIAL (settled
+    # question 6 -- weak evidence, not zero evidence). requirement.evidence_class
+    # == "any" is a no-op filter, so that path is byte-for-byte the pre-Stage-2
+    # behavior (regression requirement, test 7).
+    if requirement.evidence_class == "any":
+        class_directs = directs
+    else:
+        class_directs = [m for m in directs if claims_by_id.get(m.claim_id, ClaimEvidence()).evidence_class == requirement.evidence_class]
 
     def partial_or() -> RequirementState:
         return RequirementState.PARTIAL if any_evidence else RequirementState.UNCOVERED
@@ -260,11 +275,11 @@ def evidence_state(
                 return True
             return all(any(o in e or e in o for e in els) for o in operands)
 
-        covered = any(relationship_covered(m) for m in directs)
+        covered = any(relationship_covered(m) for m in class_directs)
         return RequirementState.COVERED if covered else partial_or()
 
     if requirement.kind == RequirementKind.METRIC:
-        covered = any(len(m.elements_satisfied) > 0 for m in directs)
+        covered = any(len(m.elements_satisfied) > 0 for m in class_directs)
         return RequirementState.COVERED if covered else partial_or()
 
     if requirement.kind == RequirementKind.DATE_WINDOW:
@@ -273,22 +288,22 @@ def evidence_state(
         if not w_from:
             # No parsed window: freshness is unverifiable. Do not hang a must-cover
             # requirement open forever; treat direct evidence as covered.
-            return RequirementState.COVERED if directs else partial_or()
+            return RequirementState.COVERED if class_directs else partial_or()
         w_to = window.get("to")
-        in_window = [m for m in directs if (d := claims_by_id.get(m.claim_id, ClaimEvidence()).publication_date) and d >= w_from and (not w_to or d <= w_to)]
+        in_window = [m for m in class_directs if (d := claims_by_id.get(m.claim_id, ClaimEvidence()).publication_date) and d >= w_from and (not w_to or d <= w_to)]
         if len(in_window) >= min_recent_claims:
             return RequirementState.COVERED
-        return RequirementState.PARTIAL if directs else partial_or()
+        return RequirementState.PARTIAL if class_directs else partial_or()
 
     if requirement.kind == RequirementKind.SUBTOPIC:
-        srcs = {claims_by_id.get(m.claim_id, ClaimEvidence()).source_id for m in directs}
+        srcs = {claims_by_id.get(m.claim_id, ClaimEvidence()).source_id for m in class_directs}
         srcs.discard(None)
-        if len(directs) >= subtopic_min_claims and len(srcs) >= subtopic_min_sources:
+        if len(class_directs) >= subtopic_min_claims and len(srcs) >= subtopic_min_sources:
             return RequirementState.COVERED
         return partial_or()
 
     # entity (and default): a DIRECT claim answering the proposition about the entity.
-    return RequirementState.COVERED if len(directs) >= 1 else partial_or()
+    return RequirementState.COVERED if len(class_directs) >= 1 else partial_or()
 
 
 def terminal_state(
@@ -425,13 +440,20 @@ def is_single_clear(vote: Vote, risk_reasons: Sequence[str]) -> bool:
 
 
 def aggregate_verification_status(votes: Sequence[Vote]) -> VerificationStatus:
-    """Ports dr.js aggregateVerificationStatus: 3-complete-vote aggregation."""
+    """Ports dr.js aggregateVerificationStatus: 3-complete-vote aggregation, narrowed
+    per D11 item 1 (DECISIONS.md): SUPPORTED requires at least one affirmative
+    (non-refuted, non-abstain) vote among the valid votes. A zero-affirmative mixed
+    pattern below the refute kill threshold (e.g. one refute plus abstains) now
+    aggregates to NOT_VERIFIED instead of the dr.js verbatim else-branch SUPPORTED.
+    Intentional fork divergence -- see FORK_DELTA.md."""
     valid = [v for v in votes if v is not None]
     refutes = sum(1 for v in valid if v.refuted)
     abstains = sum(1 for v in valid if v.abstain)
     if refutes >= REFUTATIONS_REQUIRED:
         return VerificationStatus.KILLED_ON_REFUTE
     if valid and abstains == len(valid):
+        return VerificationStatus.NOT_VERIFIED
+    if valid and not any(not v.refuted and not v.abstain for v in valid):
         return VerificationStatus.NOT_VERIFIED
     return VerificationStatus.SUPPORTED
 

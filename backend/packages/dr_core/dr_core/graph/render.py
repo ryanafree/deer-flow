@@ -62,7 +62,13 @@ def render_node(state) -> dict:
     claims_by_ordinal: dict[int, Claim] = {}
     ineligible: list[tuple[str, Claim, str]] = []
     all_claims: list[Claim] = []
+    # D11 run scoping: prior-run claims (present at initialize's baseline
+    # snapshot) never render this run -- same filter the gate applied when it
+    # froze citation_ordinals, so gate and render still agree claim-for-claim.
+    baseline_claim_ids = set(dr_run.get("baseline_claim_ids") or [])
     for claim_id, payload in dr_claims.items():
+        if claim_id in baseline_claim_ids:
+            continue
         claim = Claim.model_validate(payload)
         all_claims.append(claim)
         ordinal = citation_ordinals.get(claim_id)

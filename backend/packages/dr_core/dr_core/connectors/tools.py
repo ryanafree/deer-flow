@@ -32,7 +32,7 @@ from typing import Any
 from langchain.agents.middleware import AgentMiddleware
 from langchain_core.tools import tool
 
-from dr_core.connectors import courtlistener_client, edgar_client, fred_client, wrds_client
+from dr_core.connectors import arxiv_client, courtlistener_client, edgar_client, fred_client, openalex_client, semantic_scholar_client, wrds_client
 from dr_core.connectors.tool_map import register_tool
 
 WRDS_TOOL_NAME = "wrds_query"
@@ -45,6 +45,27 @@ FRED_TOOL_NAME = "fred_series"
 FRED_SOURCE_CLASS = "official_stat"  # reuses fetch/structured.py's fetch_fred convention
 
 COURTLISTENER_TOOL_NAME = "courtlistener_search"
+
+ACADEMIC_SEARCH_TOOL_NAME = "academic_search"
+# Fallback order per MYTHOS_REVIEW_2026-07-11.md P0 "Repair academic
+# discovery": try Semantic Scholar (concurrency=1, Retry-After-aware) first,
+# then OpenAlex, then arXiv. connectors.yaml already declares
+# semantic_scholar <-> openalex as mutual fallbacks and arxiv -> openalex;
+# this realizes that declared chain in code instead of relying solely on the
+# third-party Semantic Scholar MCP server's own (unfixable) retry behavior.
+_ACADEMIC_SEARCH_CHAIN = (
+    ("semantic_scholar", lambda query, limit: semantic_scholar_client.search_papers(query, limit=limit)),
+    ("openalex", lambda query, limit: openalex_client.search_works(query, limit=limit)),
+    ("arxiv", lambda query, limit: arxiv_client.search_papers(query, limit=limit)),
+)
+_ACADEMIC_SEARCH_RECOVERABLE_ERRORS = (
+    semantic_scholar_client.SemanticScholarUnavailable,
+    semantic_scholar_client.SemanticScholarQueryError,
+    openalex_client.OpenAlexUnavailable,
+    openalex_client.OpenAlexQueryError,
+    arxiv_client.ArxivUnavailable,
+    arxiv_client.ArxivQueryError,
+)
 
 
 def _fail(error: str, **extra: Any) -> str:
@@ -290,13 +311,54 @@ def courtlistener_search(query: str, court: str | None = None, filed_after: str 
     return json.dumps(payload, default=str)
 
 
+@tool
+def academic_search(query: str, max_results: int = 5) -> str:
+    """Search academic literature (papers, preprints, citation-graph
+    metadata) for a topic. Tries Semantic Scholar first; if it is rate
+    limited past its bounded retries or otherwise unavailable, falls back to
+    OpenAlex, then to arXiv. Returns whichever source produced results
+    first -- check `source_system` in the response to know which one
+    actually served the query. EACH result carries its own `url_or_id` --
+    cite the SPECIFIC paper's `url_or_id` as record_claim's `source_id` when
+    asserting a claim about it, not this tool call as a whole.
+
+    Args:
+        query: free-text search (topic, author, keywords).
+        max_results: maximum number of papers to return (default 5).
+
+    Returns JSON with a `results` list, or `ok: false` if every source in
+    the fallback chain failed or returned nothing.
+    """
+    last_error: Exception | None = None
+    for source_system, search_fn in _ACADEMIC_SEARCH_CHAIN:
+        try:
+            results = search_fn(query, max_results)
+        except _ACADEMIC_SEARCH_RECOVERABLE_ERRORS as exc:
+            last_error = exc
+            continue
+        if results:
+            return json.dumps(
+                {
+                    "ok": True,
+                    "source_system": source_system,
+                    "query": query,
+                    "count": len(results),
+                    "results": results,
+                }
+            )
+    return _fail(
+        f"no academic results across the semantic_scholar/openalex/arxiv fallback chain (last error: {last_error})" if last_error else "no academic results across the semantic_scholar/openalex/arxiv fallback chain",
+        query=query,
+    )
+
+
 class DrConnectorToolsMiddleware(AgentMiddleware):
     """Contributes Stage-C typed structured-connector tools (WRDS, EDGAR,
-    FRED, CourtListener) to the bound tool set. No hooks -- the `tools`
-    class attribute alone is the entire extension point (mirrors
+    FRED, CourtListener, academic_search) to the bound tool set. No hooks --
+    the `tools` class attribute alone is the entire extension point (mirrors
     DrLedgerMiddleware.tools = [record_claim])."""
 
-    tools = [wrds_query, edgar_company_facts, fred_series, courtlistener_search]
+    tools = [wrds_query, edgar_company_facts, fred_series, courtlistener_search, academic_search]
 
 
 # Registered at import time, per tool_map.py's binding contract -- before any
@@ -305,3 +367,18 @@ register_tool(WRDS_TOOL_NAME, "wrds")
 register_tool(EDGAR_TOOL_NAME, "edgar")
 register_tool(FRED_TOOL_NAME, "fred")
 register_tool(COURTLISTENER_TOOL_NAME, "courtlistener")
+# academic_search is backed by all three connectors in its fallback chain --
+# registering each so DrProfileToolMiddleware's allowlist check passes for
+# any profile that permits at least one of them (matches every non-Legal
+# profile's tool_allowlist, which lists openalex and semantic_scholar).
+register_tool(ACADEMIC_SEARCH_TOOL_NAME, "semantic_scholar")
+register_tool(ACADEMIC_SEARCH_TOOL_NAME, "openalex")
+register_tool(ACADEMIC_SEARCH_TOOL_NAME, "arxiv")
+
+# academic_search's source-tool wiring (making its results citable Sources)
+# lives in dr_core/connectors/binding.py's ToolBindingRegistry, not the old
+# tool_map.py-adjacent SOURCE_TOOL_NAMES constant -- see binding.py's
+# `_STATIC_BINDINGS["academic_search"]` entry and middleware.py's structured
+# search parser, which reads this tool's payload-level `source_system` field
+# to attribute each call to whichever connector in the fallback chain
+# actually served it.

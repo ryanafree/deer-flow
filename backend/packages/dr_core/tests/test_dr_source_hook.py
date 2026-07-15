@@ -216,6 +216,93 @@ class TestStructuredToolExtraction:
         assert out.get("dr_sources") is None or out["dr_sources"] == {}
 
 
+def _prefixed_mcp_call(tool_name: str, tool_call_id: str = "call_mcp") -> AIMessage:
+    return AIMessage(
+        content="",
+        tool_calls=[{"name": tool_name, "args": {"query": "q"}, "id": tool_call_id, "type": "tool_call"}],
+    )
+
+
+class TestPrefixedMcpToolExtraction:
+    """D11 P0 (MYTHOS_REVIEW_2026-07-11.md): DeerFlow's MCP loader renames
+    every MCP server's tools to f"{server_name}_{original_name}"
+    (harness/mcp/tools.py:628, tool_name_prefix=True). Before the fix, the
+    hook's six-name switch never fired for these -- this pins that a
+    prefixed connector tool call now resolves through
+    dr_core.connectors.binding.get_default_registry() and mints a Source,
+    end to end through the real DrLedgerMiddleware hook (no registry
+    stubbing)."""
+
+    def test_semantic_scholar_prefixed_call_yields_a_source_at_academic_authority(self):
+        # semantic_scholar is a real Tier-1 mcp+rest connector in the
+        # vendored connectors.yaml (evidence_class: academic). DeerFlow's
+        # prefixing convention would bind its tools under names like
+        # "semantic_scholar_search_papers" -- the exact shape the review's
+        # root-cause finding cites.
+        payload = {"results": [{"url": "https://api.semanticscholar.org/paper/abc123", "title": "A Paper"}]}
+        messages = [
+            _prefixed_mcp_call("semantic_scholar_search_papers"),
+            ToolMessage(content=json.dumps(payload), tool_call_id="call_mcp", name="semantic_scholar_search_papers"),
+        ]
+
+        out = DrLedgerMiddleware().before_model({"messages": messages, "dr_run": {}}, None)
+
+        assert out is not None
+        sources = out["dr_sources"]
+        assert len(sources) == 1
+        record = next(iter(sources.values()))
+        assert record["url_or_id"] == "https://api.semanticscholar.org/paper/abc123"
+        assert record["title"] == "A Paper"
+        assert record["source_system"] == "semantic_scholar"
+        assert record["authority_tier"] == 1
+        assert out["dr_run"]["deliverable"] is True
+
+    def test_unresolvable_prefixed_name_is_ignored_not_guessed(self):
+        # A name that doesn't match any known connector prefix must be
+        # skipped entirely (fail closed), same as a non-source tool like bash.
+        messages = [
+            _prefixed_mcp_call("totally_unknown_server_do_thing"),
+            ToolMessage(content=json.dumps({"results": [{"url": "https://x.example.com"}]}), tool_call_id="call_mcp", name="totally_unknown_server_do_thing"),
+        ]
+
+        out = DrLedgerMiddleware().before_model({"messages": messages, "dr_run": {}}, None)
+
+        assert out is None
+
+
+def _academic_search_call(tool_call_id: str = "call_academic") -> AIMessage:
+    return AIMessage(
+        content="",
+        tool_calls=[{"name": "academic_search", "args": {"query": "q"}, "id": tool_call_id, "type": "tool_call"}],
+    )
+
+
+class TestAcademicSearchExtraction:
+    """academic_search (connectors/tools.py) is a Stage-C search tool backed
+    by a semantic_scholar -> openalex -> arxiv fallback chain: which
+    connector actually served a given call is only known from the payload's
+    own `source_system` field, not from the static binding -- the structured
+    parsers must prefer it."""
+
+    def test_payload_source_system_overrides_the_binding_default(self):
+        payload = {
+            "ok": True,
+            "source_system": "openalex",
+            "results": [{"url_or_id": "https://openalex.org/W123", "title": "A Work"}],
+        }
+        messages = [
+            _academic_search_call(),
+            ToolMessage(content=json.dumps(payload), tool_call_id="call_academic", name="academic_search"),
+        ]
+
+        out = DrLedgerMiddleware().before_model({"messages": messages, "dr_run": {}}, None)
+
+        assert out is not None
+        record = next(iter(out["dr_sources"].values()))
+        assert record["source_system"] == "openalex"
+        assert record["authority_tier"] == 1
+
+
 class TestNonSourceToolIgnored:
     def test_bash_tool_message_ignored(self):
         messages = [

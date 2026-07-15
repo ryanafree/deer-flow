@@ -101,14 +101,23 @@ connectors:
     tier: 0
     profiles: all
     access: mcp
-    endpoint: docling-mcp
+    # endpoint corrected 2026-07-11 per MYTHOS_REVIEW_2026-07-11.md P0 "Repair
+    # academic discovery": the PyPI package is docling-mcp, but that package
+    # does not export a console script named docling-mcp -- its only
+    # executable is docling-mcp-server. Verified locally against real uv/PyPI
+    # output captured in build-logs/q4-diag.log and bench-b1-run1.log ("An
+    # executable named `docling-mcp` is not provided by package
+    # `docling-mcp`. ... Use `uvx --from docling-mcp docling-mcp-server`
+    # instead."). extensions_config.json's docling entry now invokes
+    # `uvx --from docling-mcp docling-mcp-server` to match.
+    endpoint: docling-mcp-server
     rest_endpoint: null
     auth: none
     launcher: uvx
     probe_url: null
     durability: substrate
     rate_limit: "self-host, free; bounded by local CPU"
-    last_verified: 2026-06-23
+    last_verified: 2026-07-11
     fallback: jina_reader
 
   - name: jina_reader
@@ -142,6 +151,7 @@ connectors:
     auth: OPENALEX_API_KEY
     launcher: uvx
     probe_url: https://api.openalex.org/works?per-page=1
+    evidence_class: academic
     durability: stable-api
     rate_limit: "free key required since 2026-02-24; ~$1/day free allowance (≈unlimited at research scale)"
     throughput_note: "Community MCP wrappers predate the key change; confirm the wrapper forwards api_key. REST is the substrate."
@@ -158,6 +168,7 @@ connectors:
     auth: SEMANTIC_SCHOLAR_API_KEY
     launcher: uvx
     probe_url: https://api.semanticscholar.org/graph/v1/paper/search?query=test&limit=1
+    evidence_class: academic
     durability: stable-api
     rate_limit: "free; shared pool is slow, key raises the limit"
     last_verified: 2026-06-23
@@ -190,6 +201,7 @@ connectors:
     # UA required" rate_limit note below).
     probe_url: https://data.sec.gov/api/xbrl/companyconcept/CIK0000320193/us-gaap/Assets.json
     probe_auth: header:User-Agent
+    evidence_class: primary_data
     durability: substrate
     rate_limit: "10 req/s; descriptive User-Agent header mandatory or requests are blocked"
     throughput_note: "Primary-filing numbers come from XBRL companyfacts as structured records, not crawled pages"
@@ -201,14 +213,26 @@ connectors:
     tier: 1
     profiles: [financial]
     access: mcp+rest
-    endpoint: openbb-mcp-server
+    # endpoint corrected 2026-07-11 per MYTHOS_REVIEW_2026-07-11.md P0 "Repair
+    # academic discovery": the PyPI package is openbb-mcp-server, but that
+    # package's only console script is openbb-mcp (not openbb-mcp-server).
+    # Verified locally against real uv/PyPI output captured in
+    # build-logs/q4-diag.log and bench-b1-run1.log ("An executable named
+    # `openbb-mcp-server` is not provided by package `openbb-mcp-server`. ...
+    # Use `uvx --from openbb-mcp-server openbb-mcp` instead.").
+    endpoint: openbb-mcp
     rest_endpoint: https://data.openbb.co
     auth: OPENBB_PAT
     launcher: uvx
     probe_url: null
+    # Judgment call (Stage 2, S9): aggregates ~100 upstream structured-data
+    # providers behind one API -- treated as primary_data like its fallback
+    # sibling edgar, not practitioner (it is not itself a house-view/opinion
+    # source, it is a data-access layer over primary series).
+    evidence_class: primary_data
     durability: stable-api
     rate_limit: "aggregates ~100 providers; limits vary by underlying provider/key"
-    last_verified: 2026-06-23
+    last_verified: 2026-07-11
     fallback: edgar
 
   # ----------------------------------------------------------------------------
@@ -226,6 +250,7 @@ connectors:
     auth: COURTLISTENER_TOKEN
     launcher: http
     probe_url: https://www.courtlistener.com/api/rest/v4/
+    evidence_class: primary_data
     durability: stable-api
     rate_limit: "~125 req/day free; $10/mo or free EDU membership lifts it"
     throughput_note: "Eyecite gate fires once per cite; one citation-heavy run can spend a large share of the free cap. EDU membership is a hard Legal prerequisite."
@@ -242,6 +267,7 @@ connectors:
     auth: COURTLISTENER_TOKEN
     launcher: none
     probe_url: https://www.courtlistener.com/api/rest/v4/
+    evidence_class: primary_data
     durability: substrate
     rate_limit: "same account cap as the MCP; this is the substrate the MCP wraps"
     last_verified: 2026-06-23
@@ -258,6 +284,7 @@ connectors:
     launcher: http
     probe_url: https://api.govinfo.gov/collections
     probe_auth: query:api_key   # api.govinfo.gov wants the key in the query string
+    evidence_class: primary_data
     durability: stable-api
     rate_limit: "api.data.gov shared key; 1k req/hr default"
     last_verified: 2026-06-23
@@ -277,6 +304,7 @@ connectors:
     auth: NCBI_API_KEY
     launcher: uvx
     probe_url: https://eutils.ncbi.nlm.nih.gov/entrez/eutils/einfo.fcgi
+    evidence_class: academic
     durability: stable-api
     rate_limit: "3 req/s keyless; 10 req/s with free key. cyanheads server bundles Europe PMC + Unpaywall + MeSH"
     last_verified: 2026-06-23
@@ -296,6 +324,7 @@ connectors:
     auth: none
     launcher: uvx
     probe_url: http://export.arxiv.org/api/query?search_query=all:test&max_results=1
+    evidence_class: academic
     durability: stable-api
     rate_limit: "keyless; be polite (1 req/3s). Use blazickjp/arxiv-mcp-server, not 2725244134 (404)"
     last_verified: 2026-06-23
@@ -311,6 +340,10 @@ connectors:
     auth: HF_TOKEN
     launcher: http
     probe_url: https://huggingface.co/api/models?limit=1
+    # Judgment call (Stage 2, S9): Hugging Face's tool-relevant surface is the
+    # model/dataset/Space hub -- practitioner-published artifacts, not the
+    # (separately reachable via arxiv/openalex) papers describing them.
+    evidence_class: practitioner
     durability: stable-api
     rate_limit: "free; token optional (raises limits, unlocks gated repos)"
     last_verified: 2026-06-23
@@ -326,6 +359,9 @@ connectors:
     auth: GITHUB_PAT
     launcher: npx
     probe_url: https://api.github.com
+    # Judgment call (Stage 2, S9): repos/READMEs/issues are practitioner-authored
+    # engineering artifacts, not primary research data or academic literature.
+    evidence_class: practitioner
     durability: stable-api
     rate_limit: "60 req/hr unauthenticated; 5,000 req/hr with PAT"
     last_verified: 2026-06-23
@@ -347,6 +383,7 @@ connectors:
     auth: none
     launcher: none
     probe_url: https://www.federalregister.gov/api/v1/documents?per_page=1
+    evidence_class: primary_data
     durability: stable-api
     rate_limit: "free, keyless"
     last_verified: 2026-06-23
@@ -362,6 +399,7 @@ connectors:
     auth: DATA_GOV_API_KEY
     launcher: none
     probe_url: null
+    evidence_class: primary_data
     durability: stable-api
     rate_limit: "free api.data.gov key; 1k req/hr"
     last_verified: 2026-06-23
@@ -377,6 +415,7 @@ connectors:
     auth: DATA_GOV_API_KEY
     launcher: none
     probe_url: null
+    evidence_class: primary_data
     durability: stable-api
     rate_limit: "free api.data.gov key"
     last_verified: 2026-06-23
@@ -408,6 +447,7 @@ connectors:
     auth: none
     launcher: none
     probe_url: https://clinicaltrials.gov/api/v2/studies?pageSize=1
+    evidence_class: primary_data
     durability: stable-api
     rate_limit: "free, keyless (v2)"
     last_verified: 2026-06-23
@@ -423,6 +463,7 @@ connectors:
     auth: DATA_GOV_API_KEY
     launcher: none
     probe_url: null
+    evidence_class: primary_data
     durability: stable-api
     rate_limit: "free api.data.gov key; 300k+ foods"
     last_verified: 2026-06-23
@@ -438,6 +479,7 @@ connectors:
     auth: none
     launcher: none
     probe_url: https://world.openfoodfacts.org/api/v2/product/737628064502.json
+    evidence_class: primary_data
     durability: stable-api
     rate_limit: "free, keyless; branded/barcode products, Nutri-Score"
     last_verified: 2026-06-23
@@ -453,6 +495,7 @@ connectors:
     auth: none
     launcher: none
     probe_url: https://www.ebi.ac.uk/europepmc/webservices/rest/search?query=test&format=json&pageSize=1
+    evidence_class: academic
     durability: stable-api
     rate_limit: "free, keyless; OA full text, indexes bioRxiv/medRxiv"
     last_verified: 2026-06-23
@@ -469,6 +512,7 @@ connectors:
     auth: FRED_API_KEY
     launcher: none
     probe_url: null
+    evidence_class: primary_data
     durability: stable-api
     rate_limit: "free key; 800k+ series; 120 req/min"
     last_verified: 2026-06-23
@@ -484,6 +528,7 @@ connectors:
     auth: none
     launcher: none
     probe_url: https://api.worldbank.org/v2/country?format=json&per_page=1
+    evidence_class: primary_data
     durability: stable-api
     rate_limit: "free, keyless"
     last_verified: 2026-06-23
@@ -499,6 +544,7 @@ connectors:
     auth: none
     launcher: none
     probe_url: https://api.fiscaldata.treasury.gov/services/api/fiscal_service/v2/accounting/od/avg_interest_rates?page%5Bsize%5D=1
+    evidence_class: primary_data
     durability: stable-api
     rate_limit: "free, keyless"
     last_verified: 2026-06-23
@@ -514,6 +560,7 @@ connectors:
     auth: BLS_API_KEY
     launcher: none
     probe_url: null
+    evidence_class: primary_data
     durability: stable-api
     rate_limit: "free key; 500 req/day"
     last_verified: 2026-06-23
@@ -529,6 +576,7 @@ connectors:
     auth: BEA_API_KEY
     launcher: none
     probe_url: null
+    evidence_class: primary_data
     durability: stable-api
     rate_limit: "free key"
     last_verified: 2026-06-23
@@ -544,6 +592,7 @@ connectors:
     auth: none
     launcher: none
     probe_url: https://data.nber.org/
+    evidence_class: academic
     durability: stable-api
     rate_limit: "free, keyless; bulk TSV metadata/abstracts. RePEc/IDEAS reached via OpenAlex"
     last_verified: 2026-06-23
@@ -559,6 +608,10 @@ connectors:
     auth: none
     launcher: none
     probe_url: https://gamma-api.polymarket.com/markets?limit=1
+    # Judgment call (Stage 2, S9): live orderbook/price data from a
+    # prediction-market exchange -- a primary structured-data source, same
+    # bucket as fred/edgar, not a practitioner opinion or news write-up.
+    evidence_class: primary_data
     durability: stable-api
     rate_limit: "free, unauthenticated reads (Gamma/CLOB/Data). Partly covered by the last30days skill"
     last_verified: 2026-06-23
@@ -574,6 +627,7 @@ connectors:
     auth: none
     launcher: none
     probe_url: https://external-api.kalshi.com/trade-api/v2/markets?limit=1
+    evidence_class: primary_data
     durability: stable-api
     rate_limit: "free, unauthenticated market-data reads. Host changed May 2026"
     last_verified: 2026-06-23
@@ -589,6 +643,7 @@ connectors:
     # companion secret: WRDS_PASSWORD (not itself a registry field; probe.py's
     # sql branch looks it up by this fixed name alongside `auth`)
     launcher: none
+    evidence_class: primary_data
     durability: substrate
     rate_limit: "per WRDS account terms (institutional subscription, not a public API tier)"
     last_verified: 2026-07-08

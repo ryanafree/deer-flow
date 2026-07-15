@@ -35,7 +35,9 @@ import os
 import re
 import sys
 
-from dr_core.models import Claim, Conflict, PublicationStatus, claim_caveat, is_grounded, materiality_of, publication_status
+from dr_core.connectors.registry import load_connectors
+from dr_core.models import Claim, Conflict, CoverageMapping, PublicationStatus, Requirement, Source, claim_caveat, is_grounded, materiality_of, publication_status
+from dr_core.plan.evidence_class import resolve_evidence_class
 
 BANNED = [
     "this run",
@@ -157,6 +159,67 @@ def _strip_structural_lines(segment):
     return "\n".join(lines)
 
 
+def _load_model_jsonl(path, model_cls):
+    """Parse a JSONL file as ``model_cls`` instances, one per line. Returns None
+    if the file is absent or any line fails to validate -- same skip-the-check
+    contract as ``_load_claims``."""
+    if not os.path.exists(path):
+        return None
+    items = []
+    with open(path) as fh:
+        for raw in fh:
+            line = raw.strip()
+            if not line:
+                continue
+            try:
+                items.append(model_cls.model_validate(json.loads(line)))
+            except Exception:
+                return None
+    return items
+
+
+def _source_class_mismatch_findings(folder):
+    """PART 3 (Stage 3, SPEC_evidence_routing_2026-07-10.md): a deterministic,
+    ledger-level cross-check -- never a sentence-level scan of report.md, unlike
+    PART 2 -- flagging a requirement/claim/source triple where the requirement
+    names a specific evidence_class but the claim's cited source resolves to a
+    different one. WARNING only (settled question 9: this is a lint signal, not
+    a verify vote or hard gate); skipped entirely (returns []) unless
+    requirements.jsonl, coverage.jsonl, sources.jsonl, and claims.jsonl (keyed by
+    claim_id, not citation ordinal) all parse against the dr_core ledger schema."""
+    requirements = _load_model_jsonl(os.path.join(folder, "requirements.jsonl"), Requirement)
+    coverage = _load_model_jsonl(os.path.join(folder, "coverage.jsonl"), CoverageMapping)
+    sources = _load_model_jsonl(os.path.join(folder, "sources.jsonl"), Source)
+    claims = _load_model_jsonl(os.path.join(folder, "claims.jsonl"), Claim)
+    if requirements is None or coverage is None or sources is None or claims is None:
+        return []
+
+    requirements_by_id = {r.id: r for r in requirements}
+    sources_by_id = {s.id: s for s in sources}
+    claims_by_id = {c.claim_id: c for c in claims}
+    connectors_by_name = {c.name: c for c in load_connectors()}
+
+    findings = []
+    for mapping in coverage:
+        requirement = requirements_by_id.get(mapping.requirement_id)
+        if requirement is None or requirement.evidence_class == "any":
+            continue
+        claim = claims_by_id.get(mapping.claim_id)
+        if claim is None:
+            continue
+        source = sources_by_id.get(claim.source_id)
+        if source is None:
+            continue
+        resolved = resolve_evidence_class(source.source_system, source.url_or_id, connectors_by_name)
+        if resolved != requirement.evidence_class:
+            findings.append(
+                f"[source-class-mismatch] requirement {requirement.id} expects {requirement.evidence_class} "
+                f"evidence but claim {claim.claim_id} (via requirement mapping) cites a {resolved}-class "
+                f"source ({source.source_system}): {claim.text[:80]!r}"
+            )
+    return findings
+
+
 def _split_conclusion(body):
     """Sentences in the Conclusion section synthesize already-cited claims rather than
     asserting new ones, so PART 2 rule 1 (every factual sentence needs >=1 citation)
@@ -260,6 +323,11 @@ def main():
         hard, warn = _eligibility_findings(body, claims, conflicts)
         findings.extend(hard)
         warnings.extend(warn)
+
+    # ---- PART 3: source-class-mismatch (Stage 3, SPEC_evidence_routing_2026-07-10.md) ----
+    # WARNING only -- appended to `warnings`, never `findings`, so this new check
+    # cannot change `main()`'s exit code (settled question 9).
+    warnings.extend(_source_class_mismatch_findings(folder))
 
     for finding in findings:
         print(f"LINT: {finding}")

@@ -20,10 +20,11 @@ import json
 
 from dr_core.connectors import courtlistener_client, edgar_client, fred_client, wrds_client
 from dr_core.connectors import tools as tools_mod
+from dr_core.connectors.binding import get_default_registry
 from dr_core.connectors.registry import load_connectors
 from dr_core.connectors.tool_map import TOOL_TO_CONNECTORS
 from dr_core.graph.claim_tool import record_claim
-from dr_core.graph.middleware import SOURCE_TOOL_NAMES, DrLedgerMiddleware
+from dr_core.graph.middleware import DrLedgerMiddleware
 from dr_core.graph.profile_middleware import DrProfileToolMiddleware
 from dr_core.graph.state import merge_ledger
 from dr_core.models.enums import DataProvenance
@@ -44,7 +45,9 @@ class TestToolRegistration:
         assert tools_mod.WRDS_TOOL_NAME not in {"web_search", "web_fetch"}
 
     def test_wrds_query_is_a_source_bearing_tool(self):
-        assert "wrds_query" in SOURCE_TOOL_NAMES
+        # D11 P0: source-bearing-ness is now resolved through the
+        # connectors.binding registry, not a static name set.
+        assert get_default_registry().resolve("wrds_query") is not None
 
     def test_connector_tools_middleware_contributes_wrds_query(self):
         # Batch 2 (EDGAR/FRED/CourtListener) extends this list -- see
@@ -129,7 +132,7 @@ class TestEndToEndRealToolPlusMiddlewarePath:
     audit_provenance, all live code paths. Only wrds_client's DB boundary is
     mocked (the auth-blocked-case acceptance shape)."""
 
-    def test_data_ref_claim_from_wrds_reaches_matched_provenance_live(self, monkeypatch):
+    def test_data_ref_claim_from_wrds_stays_unaudited_no_value_in_record_live(self, monkeypatch):
         crsp = {"date": "2023-12-29", "prc": 192.53}
         compustat = {"fyear": 2023, "revt": 383285000000.0}
         _mock_wrds(monkeypatch, crsp=crsp, compustat=compustat)
@@ -169,10 +172,17 @@ class TestEndToEndRealToolPlusMiddlewarePath:
         claim = Claim(**claim_payload)
         assert claim.data_ref == {"period": "2023", "source_class": "primary_database"}
 
-        # 4. Real provenance audit derives MATCHED -- not a fixture Claim, the
-        # data_ref flowed from the real tool's output through the real
-        # record_claim path.
-        assert audit_provenance(claim) == DataProvenance.MATCHED
+        # 4. Real provenance audit -- not a fixture Claim, the data_ref flowed
+        # from the real tool's output through the real record_claim path.
+        # D11 item 3 (DECISIONS.md): MATCHED now also requires an affirmative
+        # value/unit match against the data_ref's own "value", but WRDS's
+        # data_ref (see the assertion above) conventionally carries only
+        # period/source_class, no "value" -- there is nothing to compare, so
+        # this stays UNAUDITED. Accepted cost of D11 item 3, not a regression:
+        # a data_ref claim with no comparable structured record value never
+        # reaches MATCHED (see test_verify_provenance.py's
+        # TestAuditProvenanceValueMatch::test_no_value_in_structured_record_stays_unaudited).
+        assert audit_provenance(claim) is None
 
     def test_mismatched_claimed_period_still_derives_mismatch_live(self, monkeypatch):
         """Same real path, but the model (mis-)asserts a different claimed_period
@@ -256,11 +266,13 @@ class TestBatch2ToolRegistration:
         assert {tools_mod.EDGAR_TOOL_NAME, tools_mod.FRED_TOOL_NAME, tools_mod.COURTLISTENER_TOOL_NAME}.isdisjoint({"web_search", "web_fetch"})
 
     def test_all_three_are_source_bearing_tools(self):
-        assert {"edgar_company_facts", "fred_series", "courtlistener_search"} <= SOURCE_TOOL_NAMES
+        registry = get_default_registry()
+        for name in ("edgar_company_facts", "fred_series", "courtlistener_search"):
+            assert registry.resolve(name) is not None
 
-    def test_connector_tools_middleware_contributes_all_four_tools(self):
+    def test_connector_tools_middleware_contributes_all_five_tools(self):
         names = {t.name for t in tools_mod.DrConnectorToolsMiddleware.tools}
-        assert names == {"wrds_query", "edgar_company_facts", "fred_series", "courtlistener_search"}
+        assert names == {"wrds_query", "edgar_company_facts", "fred_series", "courtlistener_search", "academic_search"}
 
 
 def _mock_edgar(monkeypatch, cik10="0000320193", company="Apple Inc.", fact=None, resolve_ok=True):
@@ -419,7 +431,7 @@ class TestEdgarFredEndToEndRealToolPlusMiddlewarePath:
     audit_provenance, live code paths, only the client's query boundary
     mocked."""
 
-    def test_edgar_data_ref_claim_reaches_matched_provenance_live(self, monkeypatch):
+    def test_edgar_data_ref_claim_stays_unaudited_no_value_in_record_live(self, monkeypatch):
         fact = {
             "cik10": "0000320193",
             "taxonomy": "us-gaap",
@@ -462,9 +474,13 @@ class TestEdgarFredEndToEndRealToolPlusMiddlewarePath:
         dr_claims = merge_ledger(None, record_out.update["dr_claims"])
         ((_, claim_payload),) = dr_claims.items()
         claim = Claim(**claim_payload)
-        assert audit_provenance(claim) == DataProvenance.MATCHED
+        # D11 item 3: EDGAR's data_ref (period/source_class only, no "value")
+        # has no comparable structured record value, so this stays UNAUDITED --
+        # accepted cost of D11 item 3, not a regression (see
+        # test_verify_provenance.py's TestAuditProvenanceValueMatch).
+        assert audit_provenance(claim) is None
 
-    def test_fred_data_ref_claim_reaches_matched_provenance_live(self, monkeypatch):
+    def test_fred_data_ref_claim_stays_unaudited_no_value_in_record_live(self, monkeypatch):
         result = {"series_id": "GDP", "start": "2023-01-01", "end": "2023-12-31", "observations": [{"date": "2023-10-01", "value": "27957.2"}]}
         _mock_fred(monkeypatch, result=result)
 
@@ -495,7 +511,11 @@ class TestEdgarFredEndToEndRealToolPlusMiddlewarePath:
         dr_claims = merge_ledger(None, record_out.update["dr_claims"])
         ((_, claim_payload),) = dr_claims.items()
         claim = Claim(**claim_payload)
-        assert audit_provenance(claim) == DataProvenance.MATCHED
+        # D11 item 3: FRED's data_ref (period/source_class only, no "value")
+        # has no comparable structured record value, so this stays UNAUDITED --
+        # accepted cost of D11 item 3, not a regression (see
+        # test_verify_provenance.py's TestAuditProvenanceValueMatch).
+        assert audit_provenance(claim) is None
 
 
 class TestCourtListenerSourceHookMintsOnePerResult:

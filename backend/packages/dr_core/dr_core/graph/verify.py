@@ -6,8 +6,9 @@ independently-tested `dr_core.verify` modules (`citation`, `provenance`, `select
 over the same ledger touches nothing new). For every remaining claim, runs the
 deterministic citation gate and provenance audit first (no vote budget consumed, D8
 ordering), then selects up to `MAX_VERIFY` claims (depth-keyed) for the adaptive 1-3
-vote protocol under a shared `MAX_VOTE_CALLS = 3*MAX_VERIFY` budget, then applies the
-post-verify provenance rescue. Every network call (citation lookup, source-evidence
+vote protocol under a shared `MAX_VOTE_CALLS = 3*MAX_VERIFY` budget. D11 item 3: there
+is no post-verify provenance rescue -- data_provenance is decided solely by the
+deterministic audit in step 2 below. Every network call (citation lookup, source-evidence
 fetch) has a hard timeout and degrades on failure rather than raising or stalling
 (D8 decision 6). Returns one full-claim payload per touched claim through
 `dr_claims` -- `merge_ledger`'s transition guards are the enforcement backstop for
@@ -24,7 +25,7 @@ from dr_core.models.derive import reopens_requirement
 from dr_core.models.enums import CitationStatus, CoverageRelation, VerificationStatus
 from dr_core.models.ledger import Claim, CoverageMapping, Requirement
 from dr_core.verify.citation import CITE_RE, decide_citation_status, lookup_citations
-from dr_core.verify.provenance import audit_provenance, rescue_unaudited_matched
+from dr_core.verify.provenance import audit_provenance
 from dr_core.verify.selection import max_verify_for_depth, select_verification_claim_ids
 from dr_core.verify.votes import verify_claim
 
@@ -110,7 +111,10 @@ async def verify_node(state) -> dict:
     dr_run: dict = state.get("dr_run") or {}
 
     claims: dict[str, Claim] = {claim_id: Claim.model_validate(payload) for claim_id, payload in dr_claims_raw.items()}
-    active: dict[str, Claim] = {claim_id: claim for claim_id, claim in claims.items() if not _is_terminal(claim)}
+    # D11 run scoping: prior-run claims are never eligible or rendered this
+    # run (gate/render baseline filter), so never spend votes on them either.
+    baseline_claim_ids = set(dr_run.get("baseline_claim_ids") or [])
+    active: dict[str, Claim] = {claim_id: claim for claim_id, claim in claims.items() if claim_id not in baseline_claim_ids and not _is_terminal(claim)}
 
     touched: dict[str, dict] = {}
 
@@ -184,16 +188,13 @@ async def verify_node(state) -> dict:
 
     await asyncio.gather(*(_verify_one(claim_id) for claim_id in selected_ids))
 
-    # 4. Post-verify provenance rescue: a data_ref claim that just landed SUPPORTED
-    # this pass with provenance still UNAUDITED advances to MATCHED (dr.js:2693).
-    for claim_id in selected_ids:
-        claim = active.get(claim_id)
-        if claim is None:
-            continue
-        rescued = rescue_unaudited_matched(claim)
-        if rescued is not None:
-            claim.data_provenance = rescued
-            _touch(claim)
+    # D11 item 3 (DECISIONS.md): the post-verify SUPPORTED+UNAUDITED -> MATCHED
+    # rescue (dr.js:2693) that used to run here is REMOVED. Text-only voters
+    # never compare values, so the rescue laundered a vote outcome into a
+    # provenance assertion the votes never made -- a D8 sub-clause reversal.
+    # A data_ref claim whose deterministic audit (step 2, above) could not
+    # affirmatively match or contradict its own asserted value now stays
+    # UNAUDITED permanently, regardless of verification outcome.
 
     result: dict = {"dr_run": {"verify_mode": "adaptive_1_3", "verify_usage": usage_totals}}
     if touched:

@@ -42,7 +42,13 @@ _INSTRUCTIONS = (
     '"text": "<the requirement, in your own words>", '
     '"entities": ["<optional entity/operand strings>"], '
     '"window": {"from": "<ISO date or null>", "to": "<ISO date or null>"} or null, '
-    '"must_cover": <bool -- true iff the question cannot be answered without this>}\n'
+    '"must_cover": <bool -- true iff the question cannot be answered without this>, '
+    '"evidence_class": "academic|primary_data|practitioner|news|any -- the kind of evidence a complete '
+    "answer needs (academic = peer-reviewed/working-paper literature, primary_data = official/structured "
+    "data series or filings, practitioner = industry/vendor analysis, news = journalism; use any if the "
+    "requirement doesn't call for a specific kind)\", "
+    '"freshness": "foundational|frontier|any -- whether the canonical/older literature or the most '
+    'current sources are what this requirement needs; use any if either works"}\n'
     f"Return at most {MAX_REQUIREMENTS_PER_TURN} requirements, ordered by importance."
 )
 
@@ -143,6 +149,12 @@ def _to_requirement(raw: object) -> Requirement | None:
             entities=entities,
             window=window,
             must_cover=bool(raw.get("must_cover", False)),
+            # Requirement's field_validators coerce a missing/invalid value to
+            # "any" (settled question 12 / test 5), so no validation is needed
+            # here beyond a plain .get -- a non-str raw value coerces too since
+            # the validator's membership check simply fails it into "any".
+            evidence_class=raw.get("evidence_class"),
+            freshness=raw.get("freshness"),
         )
     except ValidationError as exc:
         logger.warning("plan.extraction: dropping invalid requirement %r: %s", raw, exc)

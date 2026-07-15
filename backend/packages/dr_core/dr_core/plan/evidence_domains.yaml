@@ -1,0 +1,40 @@
+# evidence_domains.yaml -- SPEC_evidence_routing_2026-07-10.md Stage 2.
+#
+# Domain-pattern fallback mapping for sources with source_system == "web" (a
+# connector.evidence_class hit always wins first; this file is consulted only
+# when the source is a generic web/search/fetch result, never for a named
+# connector). Resolution is a host-SUFFIX match (a leading "*." or "." on a
+# pattern is stripped before matching, so "arxiv.org" also matches
+# "export.arxiv.org" and ".edu" matches any "*.edu" host) -- see
+# dr_core.plan.evidence_class.resolve_evidence_class. An unmatched host
+# resolves to the `default` class below. Seed list per the spec; DRAFT, not
+# frozen -- extend as false negatives turn up in real runs.
+
+classes:
+  academic:
+    - arxiv.org
+    - ssrn.com
+    - nber.org
+    - sciencedirect.com
+    - springer.com
+    - jstor.org
+    - tandfonline.com
+    - academic.oup.com
+    - .edu
+    - bis.org
+    - imf.org
+    - federalreserve.gov
+    - "*.frb.org"
+  primary_data:
+    - sec.gov
+    - bls.gov
+    - bea.gov
+    - treasury.gov
+    - fred.stlouisfed.org
+    - cboe.com
+  practitioner:
+    - aqr.com
+    - man.com
+    - twosigma.com
+
+default: news

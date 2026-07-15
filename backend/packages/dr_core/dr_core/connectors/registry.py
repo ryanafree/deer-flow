@@ -20,6 +20,11 @@ VALID_TIER = {0, 1, 2}
 VALID_ACCESS = {"mcp", "rest", "mcp+rest", "sql"}
 VALID_DURABILITY = {"substrate", "stable-api", "fragile-wrapper"}
 VALID_LAUNCHER = {"uvx", "npx", "http", "none"}
+# SPEC_evidence_routing_2026-07-10.md Stage 2: optional per-connector routing tag.
+# Four classes only (not "any" -- that value is a requirement-side wildcard, not a
+# connector fact); a connector without the field falls through to the domain-list /
+# default-news resolution precedence in dr_core.plan.evidence_class.
+VALID_EVIDENCE_CLASS = {"academic", "primary_data", "practitioner", "news"}
 
 REQUIRED_FIELDS = (
     "name",
@@ -64,6 +69,7 @@ class Connector:
     probe_url: str | None = None
     probe_auth: str | None = None
     throughput_note: str | None = None
+    evidence_class: str | None = None
 
     def used_by(self, profile: str) -> bool:
         """True if this connector is in scope for the given profile name."""
@@ -90,6 +96,8 @@ def _row_problems(row: dict) -> list[str]:
         problems.append(f"durability={row.get('durability')!r}")
     if row.get("launcher") not in VALID_LAUNCHER:
         problems.append(f"launcher={row.get('launcher')!r}")
+    if "evidence_class" in row and row["evidence_class"] not in VALID_EVIDENCE_CLASS:
+        problems.append(f"evidence_class={row.get('evidence_class')!r}")
     return problems
 
 
@@ -130,6 +138,7 @@ def load_connectors(path: str | Path | None = None) -> list[Connector]:
                 probe_url=row.get("probe_url"),
                 probe_auth=row.get("probe_auth"),
                 throughput_note=row.get("throughput_note"),
+                evidence_class=row.get("evidence_class"),
             )
         )
 

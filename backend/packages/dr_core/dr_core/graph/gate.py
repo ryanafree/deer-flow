@@ -31,15 +31,36 @@ from collections.abc import Sequence
 
 from langchain_core.messages import HumanMessage
 
+from dr_core.connectors.registry import Connector, by_name, load_connectors
 from dr_core.models import Claim, ClaimEvidence, StopReason, derived_materiality, evidence_state, is_grounded, publication_status
 from dr_core.models.eligibility import ineligibility_reason
 from dr_core.models.enums import PublicationStatus, RequirementState
 from dr_core.models.ledger import CoverageMapping, Requirement
+from dr_core.plan.evidence_class import resolve_evidence_class
+from dr_core.plan.schedule import format_schedule_lines, schedule_queries
 
 RETRY_CAP = 2  # D6-C: N=2 retries (3 research passes total).
 
+_CONNECTORS_BY_NAME: dict[str, Connector] | None = None
 
-def _corrective_message(dr_claims: dict, excluded: list[tuple[str, str]], eligible_ids: Sequence[str], uncovered_requirement_texts: Sequence[str] = ()) -> HumanMessage:
+
+def _connectors_by_name() -> dict[str, Connector]:
+    """Module-level cache -- connectors.yaml is static per process, and this
+    node runs on every gate pass (mirrors the profile-cache pattern in
+    dr_core.graph.profile_middleware.DrProfileToolMiddleware)."""
+    global _CONNECTORS_BY_NAME
+    if _CONNECTORS_BY_NAME is None:
+        _CONNECTORS_BY_NAME = by_name(load_connectors())
+    return _CONNECTORS_BY_NAME
+
+
+def _corrective_message(
+    dr_claims: dict,
+    excluded: list[tuple[str, str]],
+    eligible_ids: Sequence[str],
+    uncovered_requirements: Sequence[tuple[str, str]] = (),
+    schedule_lines: Sequence[str] = (),
+) -> HumanMessage:
     """Build the hidden corrective HumanMessage, mirroring
     ``runtime/goal.py::make_goal_continuation_message``'s hide_from_ui
     convention (goal.py:365-371): a HumanMessage marked invisible to the UI
@@ -50,6 +71,13 @@ def _corrective_message(dr_claims: dict, excluded: list[tuple[str, str]], eligib
     (an uncovered must-cover requirement) are independent triggers -- either,
     both, or neither may be true on a given retry, so each gets its own
     paragraph rather than one conflated message.
+
+    D11 item 4, wiring (ii): the retry is a PLANNED pass -- ``schedule_lines``
+    carries one scheduled item per uncovered must-cover requirement (query
+    text + profile-allowlisted tool hints), produced by the same
+    ``schedule_queries`` implementation the deliverable-preset entry path
+    uses. This subsumes Stage 2's class_tool_hints (test 8): a class-tagged
+    retry still names a concrete next tool, now alongside a concrete query.
     """
     lines = ["<dr_corrective>"]
     if not eligible_ids:
@@ -59,9 +87,12 @@ def _corrective_message(dr_claims: dict, excluded: list[tuple[str, str]], eligib
             examples = ", ".join(f"{claim_id} ({reason})" for claim_id, reason in excluded[:3])
             gap = f"no eligible claims recorded -- all {len(dr_claims)} recorded claim(s) are ineligible: {examples}."
         lines.append(f"Gap: {gap}")
-    if uncovered_requirement_texts:
-        req_lines = "\n".join(f"- {text}" for text in uncovered_requirement_texts)
-        lines.append(f"The following required item(s) have no direct supporting claim yet:\n{req_lines}")
+    if uncovered_requirements:
+        if schedule_lines:
+            req_lines = "\n".join(schedule_lines)
+        else:
+            req_lines = "\n".join(f"- {req_id}: {text}" for req_id, text in uncovered_requirements)
+        lines.append(f"The following required item(s) have no direct supporting claim yet; work each scheduled item:\n{req_lines}")
     lines.append("Search for sources and record each supported fact via the record_claim tool, citing a source_id from a web_search/web_fetch result.")
     lines.append("</dr_corrective>")
     return HumanMessage(
@@ -105,7 +136,14 @@ def eligibility_gate(state) -> dict:
     eligible_ids: list[str] = []
     excluded: list[tuple[str, str]] = []
     claims_by_id: dict[str, ClaimEvidence] = {}
+    # D11 run scoping: claims present at this run's initialize snapshot are
+    # prior-turn evidence -- never eligible, cited, or coverage-bearing this
+    # run (the review's historical-claim-contamination P0). render and verify
+    # apply the same filter so the three consumers cannot disagree.
+    baseline_claim_ids = set(dr_run.get("baseline_claim_ids") or [])
     for claim_id, payload in dr_claims.items():
+        if claim_id in baseline_claim_ids:
+            continue
         claim = Claim.model_validate(payload)
         mappings_for_claim = mappings_by_claim.get(claim_id, ())
         # Derivation lives in dr_core.models.eligibility (shared with the
@@ -129,6 +167,9 @@ def eligibility_gate(state) -> dict:
             grounded=is_grounded(claim, materiality),
             source_id=claim.source_id,
             publication_date=source.get("publication_date"),
+            # SPEC_evidence_routing_2026-07-10.md Stage 2: resolved once here,
+            # the single computation site evidence_state's class filter reads.
+            evidence_class=resolve_evidence_class(source.get("source_system", "web"), source.get("url_or_id"), _connectors_by_name()),
         )
 
     active_ids: list[str] = dr_run.get("active_requirement_ids") or []
@@ -141,7 +182,7 @@ def eligibility_gate(state) -> dict:
         must_cover_states.append((req_id, state_))
 
     any_uncovered = any(state_ == RequirementState.UNCOVERED for _, state_ in must_cover_states)
-    uncovered_texts = [requirements_by_id[req_id].text for req_id, state_ in must_cover_states if state_ == RequirementState.UNCOVERED]
+    uncovered_reqs = [(req_id, requirements_by_id[req_id].text) for req_id, state_ in must_cover_states if state_ == RequirementState.UNCOVERED]
 
     retries = dr_run.get("gate_retries", 0)
     prev_sig = dr_run.get("gate_ledger_sig")
@@ -169,11 +210,17 @@ def eligibility_gate(state) -> dict:
             "gate_decision": "render",
             "citation_ordinals": citation_ordinals,
             # D7/D9 reset: clears turn-scoped loop bookkeeping on PROCEED so a
-            # later research turn on this thread starts fresh.
+            # later research turn on this thread starts fresh. gate_retries is
+            # the one exception (S1): it resets to 0 only on a genuine
+            # ("ready") success -- a forced proceed via retries_exhausted or
+            # breaker_fired KEEPS the current retry count so
+            # completed_with_open_requirements is distinguishable from a
+            # never-retried run downstream (settled question 4).
             "deliverable": False,
-            "gate_retries": 0,
+            "gate_retries": 0 if ready else retries,
             "gate_ledger_sig": None,
             "active_requirement_ids": [],
+            "requirements_planned": False,
         }
         if must_cover_states:
             covered_count = sum(1 for _, state_ in must_cover_states if state_ == RequirementState.COVERED)
@@ -192,7 +239,15 @@ def eligibility_gate(state) -> dict:
         return {"dr_run": run_update}
 
     # RETRY: not ready, retries remain, breaker not fired.
-    corrective = _corrective_message(dr_claims, excluded, eligible_ids, uncovered_texts)
+    # D11 item 4, wiring (ii): the corrective retry is a planned pass --
+    # schedule the uncovered must-cover requirements through the same
+    # schedule_queries implementation the entry planning node uses. Profile
+    # resolution inside schedule_queries fails CLOSED to an empty allowlist
+    # (no tool hints offered) on an unknown/invalid profile name, same
+    # posture as DrProfileToolMiddleware.
+    uncovered_requirement_objs = [requirements_by_id[req_id] for req_id, _ in uncovered_reqs]
+    scheduled = schedule_queries(uncovered_requirement_objs, dr_run.get("profile") or "general", _connectors_by_name())
+    corrective = _corrective_message(dr_claims, excluded, eligible_ids, uncovered_reqs, format_schedule_lines(scheduled))
     return {
         "messages": [corrective],
         "dr_run": {

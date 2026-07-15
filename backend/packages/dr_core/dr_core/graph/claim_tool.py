@@ -122,7 +122,7 @@ def record_claim(
         # deterministic; referential integrity is unchanged.
         url_resolved = _source_id_for_url(source_id)
         if url_resolved not in dr_sources:
-            return _reject(tool_call_id, f"source {source_id!r} not found -- cite the exact url (or id) of a prior web_search/web_fetch result.")
+            return _reject(tool_call_id, f"source {source_id!r} not found -- cite the exact url_or_id of a prior source-bearing tool result (web_search/web_fetch or a connector tool).")
         source_id = url_resolved
 
     normalized_flags = _normalize_gate_flags(gate_flags)
