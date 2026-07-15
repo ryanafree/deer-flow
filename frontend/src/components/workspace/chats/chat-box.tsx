@@ -10,6 +10,7 @@ import {
   ResizablePanel,
   ResizablePanelGroup,
 } from "@/components/ui/resizable";
+import { useI18n } from "@/core/i18n/hooks";
 import { env } from "@/env";
 import { cn } from "@/lib/utils";
 
@@ -27,6 +28,7 @@ const ChatBox: React.FC<{ children: React.ReactNode; threadId: string }> = ({
   children,
   threadId,
 }) => {
+  const { t } = useI18n();
   const { thread } = useThread();
   const pathname = usePathname();
   const threadIdRef = useRef(threadId);
@@ -147,6 +149,7 @@ const ChatBox: React.FC<{ children: React.ReactNode; threadId: string }> = ({
             <div className="relative flex size-full justify-center">
               <div className="absolute top-1 right-1 z-30">
                 <Button
+                  aria-label={t.common.close}
                   size="icon-sm"
                   variant="ghost"
                   onClick={() => {

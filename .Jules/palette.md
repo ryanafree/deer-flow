@@ -1,0 +1,3 @@
+## 2024-03-24 - Icon Button Accessibility Pattern
+**Learning:** Found a systemic pattern where buttons utilizing `size="icon"` or `size="icon-sm"` from the design system frequently lacked `aria-label` attributes across different components (e.g., CodeBlock, ChatBox, AgentCard, CopyButton). The visual reliance on icons creates a gap for screen reader accessibility.
+**Action:** Always verify that `aria-label` is provided when using `size="icon"` or `size="icon-sm"` button variants. When reviewing PRs containing new icon-only buttons, enforce the inclusion of explicit aria-labels, utilizing `useI18n` for localization when applicable.

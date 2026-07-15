@@ -184,6 +184,7 @@ export function AgentCard({ agent }: AgentCardProps) {
           </Button>
           <div className="flex gap-1">
             <Button
+              aria-label={t.agents.delete}
               size="icon"
               variant="ghost"
               className="text-destructive hover:text-destructive h-8 w-8 shrink-0"
