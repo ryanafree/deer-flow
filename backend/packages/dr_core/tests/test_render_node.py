@@ -151,6 +151,56 @@ class TestBodyHygiene:
         c1 = next(json.loads(line) for line in claims_lines if json.loads(line)["claim_id"] == "c1")
         assert "—" in c1["text"]
 
+    def test_each_sentence_in_multi_sentence_claim_is_cited(self, tmp_path, capsys):
+        state = _happy_path_state(str(tmp_path))
+        state["dr_claims"] = {
+            "c1": _supported_claim(
+                "c1",
+                "The first finding is supported by the source. The second finding is also supported by the same source.",
+                "s1",
+            )
+        }
+        state["dr_run"]["citation_ordinals"] = {"c1": 1}
+
+        result = render_node(state)
+        run_dir = Path(result["dr_run"]["run_dir"])
+        report_md = (run_dir / "report.md").read_text()
+
+        assert report_md.count("[1]") >= 2
+        code = _run_lint(str(run_dir))
+        out = capsys.readouterr().out
+        assert code == 0, out
+
+    def test_eight_structured_numeric_claims_render_as_body_table(self, tmp_path, capsys):
+        state = _happy_path_state(str(tmp_path))
+        state["dr_claims"] = {}
+        state["dr_run"]["citation_ordinals"] = {}
+        for ordinal in range(1, 9):
+            claim_id = f"c{ordinal}"
+            claim = _supported_claim(
+                claim_id,
+                f"The measured spread was {ordinal}.25 index points on 2026-01-{ordinal:02d}.",
+                "s1",
+            )
+            claim["data_ref"] = {
+                "period": f"2026-01-{ordinal:02d}",
+                "source_class": "official_stat",
+                "value": ordinal + 0.25,
+                "unit": "index_points",
+            }
+            claim["data_provenance"] = "matched"
+            state["dr_claims"][claim_id] = claim
+            state["dr_run"]["citation_ordinals"][claim_id] = ordinal
+
+        result = render_node(state)
+        run_dir = Path(result["dr_run"]["run_dir"])
+        body = report_lint.body_of((run_dir / "report.md").read_text())
+
+        assert "| Period | Finding | Value | Evidence |" in body
+        code = _run_lint(str(run_dir))
+        out = capsys.readouterr().out
+        assert code == 0, out
+
 
 class TestCapHitPath:
     def _state(self, runs_dir):
@@ -277,6 +327,34 @@ class TestManifestAccounting:
         result = render_node(state)
         manifest = json.loads(Path(result["dr_run"]["run_dir"], "manifest.json").read_text())
         assert manifest["accounting"]["dollar_cost"] is None
+
+    def test_manifest_persists_benchmark_instrumentation(self, tmp_path):
+        state = _happy_path_state(str(tmp_path))
+        state["dr_run"].update(
+            {
+                "gate_retries": 2,
+                "tool_call_count": 4,
+                "tool_call_counts": {"web_search": 2, "record_claim": 2},
+                "first_pass_requirements_covered": 0,
+                "first_pass_requirements_must_cover": 1,
+                "first_pass_must_cover_states": {"req1": "uncovered"},
+                "requirements_covered": 1,
+                "requirements_must_cover": 1,
+                "must_cover_states": {"req1": "covered"},
+            }
+        )
+
+        result = render_node(state)
+        manifest = json.loads(Path(result["dr_run"]["run_dir"], "manifest.json").read_text())
+
+        assert manifest["tool_calls"] == {
+            "total": 4,
+            "by_name": {"record_claim": 2, "web_search": 2},
+        }
+        assert manifest["gate_retries"] == 2
+        assert manifest["coverage"]["first_pass"]["must_cover_states"] == {"req1": "uncovered"}
+        assert manifest["coverage"]["final"]["requirements_covered"] == 1
+        assert manifest["sources_by_evidence_class"] == {"news": 2}
 
 
 class TestOpenMustCoverUnsubstantiated:

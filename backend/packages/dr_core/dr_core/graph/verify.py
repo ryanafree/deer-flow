@@ -26,6 +26,7 @@ from dr_core.models.enums import CitationStatus, CoverageRelation, VerificationS
 from dr_core.models.ledger import Claim, CoverageMapping, Requirement
 from dr_core.verify.citation import CITE_RE, decide_citation_status, lookup_citations
 from dr_core.verify.provenance import audit_provenance
+from dr_core.verify.relation import review_support_relation
 from dr_core.verify.selection import max_verify_for_depth, select_verification_claim_ids
 from dr_core.verify.votes import verify_claim
 
@@ -181,6 +182,12 @@ async def verify_node(state) -> dict:
         source = dr_sources.get(claim.source_id)
         async with semaphore:
             evidence = await _evidence_for(source)
+            if claim.support is not None and claim.support.relation_reviewer is None:
+                relation, reviewer_note, relation_usage = await review_support_relation(claim, source, evidence)
+                _merge_usage(usage_totals, relation_usage)
+                if relation is not None:
+                    claim.support.relation_reviewer = relation
+                    claim.support.reviewer_note = reviewer_note
             record, usage = await verify_claim(claim, source, evidence, reserve_votes=_reserve, sole_must_cover_supporter=claim_id in sole_supporter_ids)
         _merge_usage(usage_totals, usage)
         claim.verification = record

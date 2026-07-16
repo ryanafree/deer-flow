@@ -62,6 +62,9 @@ class TestUncoveredMustCoverBounces:
         assert route_after_gate({"dr_run": dr_run}) == "research"
         corrective = result["messages"][0]
         assert "Name the current CEO of the company." in corrective.content
+        assert dr_run["first_pass_requirements_covered"] == 0
+        assert dr_run["first_pass_requirements_must_cover"] == 1
+        assert dr_run["first_pass_must_cover_states"] == {"req1": "uncovered"}
 
 
 class TestCoveredProceeds:

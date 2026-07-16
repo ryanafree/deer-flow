@@ -46,9 +46,8 @@ class TestEligibleClaimProceeds:
         assert "stop_reason" not in dr_run
         assert route_after_gate({"dr_run": dr_run}) == "render"
 
-    def test_proceed_branch_resets_turn_scoped_loop_bookkeeping(self):
-        """D7: PROCEED clears deliverable/gate_retries/gate_ledger_sig so a
-        later research turn on the same thread starts fresh."""
+    def test_proceed_branch_preserves_retry_count_and_clears_other_loop_bookkeeping(self):
+        """The terminal state preserves exact retries; initialize resets the next turn."""
         state = {
             "dr_claims": {"c1": _claim("c1", source_id="s1")},
             "dr_sources": {"s1": _source("s1")},
@@ -57,7 +56,7 @@ class TestEligibleClaimProceeds:
         result = eligibility_gate(state)
         dr_run = result["dr_run"]
         assert dr_run["deliverable"] is False
-        assert dr_run["gate_retries"] == 0
+        assert dr_run["gate_retries"] == 1
         assert dr_run["gate_ledger_sig"] is None
 
 

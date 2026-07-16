@@ -20,6 +20,7 @@ class _FakeModel:
         self._response = response
 
     async def ainvoke(self, messages):
+        self.messages = messages
         if isinstance(self._response, Exception):
             raise self._response
         return self._response
@@ -43,6 +44,17 @@ class TestUnmappedPairs:
         assert unmapped_pairs(["r1"], [], {}) == []
 
 
+def test_mapping_instructions_define_relation_by_requirement_kind():
+    instructions = mapping_mod._INSTRUCTIONS
+
+    assert "For a subtopic requirement" in instructions
+    assert "need not exhaust the whole subtopic" in instructions
+    assert "For a comparison requirement" in instructions
+    assert "For a metric requirement" in instructions
+    assert "For a date_window requirement" in instructions
+    assert "Tangential context" in instructions
+
+
 class TestMapCoverageKeyShape:
     async def test_mapping_key_is_requirement_colon_claim(self, monkeypatch):
         payload = [{"requirement_id": "r1", "claim_id": "c1", "relation": "direct", "elements_satisfied": ["x"], "relationship_stated": None}]
@@ -53,6 +65,49 @@ class TestMapCoverageKeyShape:
         result, usage = await map_coverage(requirements, claims, {})
         assert "r1:c1" in result
         assert result["r1:c1"]["relation"] == "direct"
+        assert usage["calls"] == 1
+
+    async def test_mapper_sees_quote_target_and_source_class(self, monkeypatch):
+        payload = [{"requirement_id": "r1", "claim_id": "c1", "relation": "direct"}]
+        model = _FakeModel(_response(payload))
+        monkeypatch.setattr(mapping_mod, "_get_plan_model", lambda: model)
+        requirements = {"r1": _requirement("r1")}
+        claims = {
+            "c1": Claim(
+                claim_id="c1",
+                text="claim c1",
+                importance=3,
+                source_id="s1",
+                target_requirement_ids=["r1"],
+                support={"quote": "exact supporting quote", "relation_extractor": "supports_directly"},
+            )
+        }
+        sources = {"s1": {"source_system": "semantic_scholar", "url_or_id": "https://api.semanticscholar.org/paper/1"}}
+
+        await map_coverage(requirements, claims, {}, sources=sources)
+        prompt = json.loads(model.messages[1].content)
+
+        assert prompt["claims"][0]["supporting_quote"] == "exact supporting quote"
+        assert prompt["claims"][0]["target_requirement_ids"] == ["r1"]
+        assert prompt["claims"][0]["source_evidence_class"] == "academic"
+
+    async def test_targeted_claim_is_only_sent_to_its_candidate_requirement(self, monkeypatch):
+        model = _FakeModel(_response([{"requirement_id": "r1", "claim_id": "c1", "relation": "direct"}]))
+        monkeypatch.setattr(mapping_mod, "_get_plan_model", lambda: model)
+        requirements = {"r1": _requirement("r1"), "r2": _requirement("r2")}
+        claims = {
+            "c1": Claim(
+                claim_id="c1",
+                text="claim c1",
+                importance=3,
+                source_id="s1",
+                target_requirement_ids=["r1"],
+            )
+        }
+
+        result, usage = await map_coverage(requirements, claims, {})
+
+        assert set(result) == {"r1:c1"}
         assert usage["calls"] == 1
 
     async def test_no_unmapped_pairs_skips_the_model_call(self, monkeypatch):

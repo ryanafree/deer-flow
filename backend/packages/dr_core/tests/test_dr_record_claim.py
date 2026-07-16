@@ -17,7 +17,11 @@ SOURCE_ID = "src1"
 
 
 def _state(dr_claims: dict | None = None) -> dict:
-    return {"dr_sources": {SOURCE_ID: {"id": SOURCE_ID, "url_or_id": "https://example.com"}}, "dr_claims": dr_claims or {}}
+    return {
+        "dr_sources": {SOURCE_ID: {"id": SOURCE_ID, "url_or_id": "https://example.com"}},
+        "dr_claims": dr_claims or {},
+        "dr_run": {"active_requirement_ids": ["req1"]},
+    }
 
 
 def _record(**overrides) -> dict:
@@ -68,6 +72,16 @@ class TestValidClaim:
         message = out.update["messages"][0]
         assert message.tool_call_id == "tc1"
         assert claim_id in message.content
+
+    def test_active_requirement_target_is_preserved(self):
+        out = _record(target_requirement_ids=["req1"])
+        ((_, payload),) = out.update["dr_claims"].items()
+        assert payload["target_requirement_ids"] == ["req1"]
+
+    def test_unknown_requirement_target_is_rejected(self):
+        out = _record(target_requirement_ids=["stale-req"])
+        assert "dr_claims" not in out.update
+        assert "unknown or inactive" in out.update["messages"][0].content
 
     def test_dump_reloads_via_claim_model(self):
         out = _record()

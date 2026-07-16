@@ -378,10 +378,19 @@ Additional providers also live here (`brave`, `browserless`, `crawl4ai`, `ddg_se
 - **Lazy initialization**: Tools loaded on first use via `get_cached_mcp_tools()`
 - **Cache invalidation**: Detects config file changes via mtime comparison
 - **Transports**: stdio (command-based), SSE, HTTP
+- **Configured stdio working directory**: `McpServerConfig.cwd` is forwarded into `MultiServerMCPClient` during initial discovery as well as persistent-session execution. This isolates servers whose settings loaders inspect the process working directory.
 - **OAuth (HTTP/SSE)**: Supports token endpoint flows (`client_credentials`, `refresh_token`) with automatic token refresh + Authorization header injection
 - **Stdio file outputs**: Persistent stdio sessions are scoped by `user_id:thread_id`. For stdio transports only, DeerFlow pins the subprocess default `cwd` to the thread workspace and `TMPDIR`/`TMP`/`TEMP` to `workspace/.mcp/tmp/`, unless the operator explicitly configured `cwd` or temp env values. SSE/HTTP transports skip this filesystem prep entirely.
 - **Stdio path translation**: MCP-returned local file references are not copied. If a `ResourceLink` or conservative free-text path resolves to an existing file inside the thread's mounted user-data tree, it is translated deterministically to `/mnt/user-data/...`; paths outside that tree remain unchanged.
 - **Runtime updates**: Gateway API saves to extensions_config.json; the Gateway-embedded runtime detects changes via mtime
+
+### dr_core benchmark assurance additions
+
+- `verify/relation.py` independently reviews claim-to-quote support before high-materiality claims can ground; failures leave the reviewer relation unset and fail closed.
+- `record_claim` accepts validated `target_requirement_ids`, and coverage mapping sees those candidate links together with the exact quote and deterministic source evidence class.
+- `structured/vix_fomc.py` is the deterministic B2 contract: FRED `VIXCLS` and `VXVCLS`, spread `VIXCLS - VXVCLS`, FOMC-date or nearest-prior-common alignment, latest-common current comparison, matched structured provenance, and explicit unavailable rendering.
+- `render/body.py` cites every factual sentence in a multi-sentence ledger claim. Eight or more structured numeric findings render as a Markdown body table so the report-lint numeric-density contract remains satisfied.
+- Benchmark manifests persist exact tool-call totals/by-name, first-pass and final must-cover states, gate retries, and source-class aggregates. `benchmarks/run_benchmark.py` reads those persisted fields for its summary.
 
 ### Skills System (`packages/harness/deerflow/skills/`)
 

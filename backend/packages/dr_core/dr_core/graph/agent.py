@@ -37,6 +37,7 @@ from dr_core.graph.profile_middleware import DrProfileToolMiddleware
 from dr_core.graph.render import render_node
 from dr_core.graph.state import DrOuterState
 from dr_core.graph.verify import verify_node
+from dr_core.structured.vix_fomc import prepare_vix_fomc_node
 
 
 def route_after_research(state) -> str:
@@ -109,6 +110,7 @@ def make_dr_agent(config, app_config=None):
     graph = StateGraph(DrOuterState)
     graph.add_node("initialize", initialize_node)
     graph.add_node("plan_requirements", plan_requirements_node)
+    graph.add_node("prepare_structured_data", prepare_vix_fomc_node)
     graph.add_node("research", research_agent)
     graph.add_node("plan_coverage", plan_coverage_node)
     graph.add_node("verify", verify_node)
@@ -121,7 +123,8 @@ def make_dr_agent(config, app_config=None):
     # ruled.
     graph.set_entry_point("initialize")
     graph.add_conditional_edges("initialize", route_after_initialize, {"plan": "plan_requirements", "research": "research"})
-    graph.add_edge("plan_requirements", "research")
+    graph.add_edge("plan_requirements", "prepare_structured_data")
+    graph.add_edge("prepare_structured_data", "research")
     # route_after_research's returned keys are unchanged ("gate" | END); the
     # wiring target for "gate" is now plan_coverage (D9), ahead of verify (D8).
     graph.add_conditional_edges("research", route_after_research, {"gate": "plan_coverage", END: END})

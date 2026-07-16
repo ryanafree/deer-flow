@@ -13,7 +13,7 @@ import copy
 
 import pytest
 from dr_core.graph.state import merge_ledger
-from dr_core.models import CitationStatus, Claim, DataProvenance, VerificationRecord, VerificationStatus
+from dr_core.models import CitationStatus, Claim, DataProvenance, SupportRecord, SupportRelation, VerificationRecord, VerificationStatus
 
 
 def _claim(claim_id: str = "c1", *, status: VerificationStatus = VerificationStatus.PENDING, **overrides) -> dict:
@@ -58,6 +58,27 @@ class TestMergeLedgerVerificationTransition:
         new = {"c1": _claim("c1", status=VerificationStatus.PENDING)}
         with pytest.raises(ValueError):
             merge_ledger(existing, new)
+
+
+class TestMergeLedgerSupportReview:
+    def test_missing_reviewer_can_advance_once(self):
+        support = SupportRecord(quote="the sky is blue", relation_extractor=SupportRelation.SUPPORTS_DIRECTLY)
+        reviewed = support.model_copy(update={"relation_reviewer": SupportRelation.SUPPORTS_DIRECTLY, "reviewer_note": "Exact match."})
+
+        merged = merge_ledger({"c1": _claim(support=support)}, {"c1": _claim(support=reviewed)})
+
+        assert merged["c1"]["support"]["relation_reviewer"] == "supports_directly"
+
+    def test_completed_reviewer_cannot_be_rewritten(self):
+        first = SupportRecord(
+            quote="the sky is blue",
+            relation_extractor=SupportRelation.SUPPORTS_DIRECTLY,
+            relation_reviewer=SupportRelation.SUPPORTS_DIRECTLY,
+        )
+        changed = first.model_copy(update={"relation_reviewer": SupportRelation.CONTEXT_ONLY})
+
+        with pytest.raises(ValueError, match="divergent support review"):
+            merge_ledger({"c1": _claim(support=first)}, {"c1": _claim(support=changed)})
 
 
 class TestMergeLedgerIdempotent:

@@ -314,7 +314,13 @@ class TestEdgarCompanyFactsTool:
         assert out["source_system"] == "edgar"
         assert out["source_class"] == "primary_filing"
         assert out["url_or_id"] == "https://data.sec.gov/api/xbrl/companyconcept/CIK0000320193/us-gaap/Revenues.json#end=2023-09-30&accn=0000320193-23-000106"
-        assert out["data_ref"] == {"period": "2023-09-30", "source_class": "primary_filing"}
+        assert out["data_ref"] == {
+            "period": "2023-09-30",
+            "source_class": "primary_filing",
+            "value": 383285000000,
+            "unit": "USD",
+            "concept": "Revenues",
+        }
         assert out["value"] == 383285000000
 
     def test_no_matching_fact_yields_ok_false(self, monkeypatch):
@@ -363,7 +369,7 @@ class TestFredSeriesTool:
         assert out["source_class"] == "official_stat"
         assert out["url_or_id"] == "https://api.stlouisfed.org/fred/series/observations?series_id=GDP&observation_start=2023-01-01&observation_end=2023-12-31&file_type=json"
         assert "api_key" not in out["url_or_id"]
-        assert out["data_ref"] == {"period": "2023-10-01", "source_class": "official_stat"}
+        assert out["data_ref"] == {"period": "2023-10-01", "source_class": "official_stat", "series_id": "GDP"}
         assert out["latest_observation"] == {"date": "2023-10-01", "value": "27957.2"}
 
     def test_no_observations_yields_ok_false(self, monkeypatch):
@@ -431,7 +437,7 @@ class TestEdgarFredEndToEndRealToolPlusMiddlewarePath:
     audit_provenance, live code paths, only the client's query boundary
     mocked."""
 
-    def test_edgar_data_ref_claim_stays_unaudited_no_value_in_record_live(self, monkeypatch):
+    def test_edgar_data_ref_claim_matches_value_in_record_live(self, monkeypatch):
         fact = {
             "cik10": "0000320193",
             "taxonomy": "us-gaap",
@@ -474,11 +480,7 @@ class TestEdgarFredEndToEndRealToolPlusMiddlewarePath:
         dr_claims = merge_ledger(None, record_out.update["dr_claims"])
         ((_, claim_payload),) = dr_claims.items()
         claim = Claim(**claim_payload)
-        # D11 item 3: EDGAR's data_ref (period/source_class only, no "value")
-        # has no comparable structured record value, so this stays UNAUDITED --
-        # accepted cost of D11 item 3, not a regression (see
-        # test_verify_provenance.py's TestAuditProvenanceValueMatch).
-        assert audit_provenance(claim) is None
+        assert audit_provenance(claim).value == "matched"
 
     def test_fred_data_ref_claim_stays_unaudited_no_value_in_record_live(self, monkeypatch):
         result = {"series_id": "GDP", "start": "2023-01-01", "end": "2023-12-31", "observations": [{"date": "2023-10-01", "value": "27957.2"}]}
@@ -511,10 +513,9 @@ class TestEdgarFredEndToEndRealToolPlusMiddlewarePath:
         dr_claims = merge_ledger(None, record_out.update["dr_claims"])
         ((_, claim_payload),) = dr_claims.items()
         claim = Claim(**claim_payload)
-        # D11 item 3: FRED's data_ref (period/source_class only, no "value")
-        # has no comparable structured record value, so this stays UNAUDITED --
-        # accepted cost of D11 item 3, not a regression (see
-        # test_verify_provenance.py's TestAuditProvenanceValueMatch).
+        # Generic FRED values need series-unit metadata before scale-aware
+        # comparison (e.g. raw GDP is reported in billions). The B2 derived
+        # VIX contract stores explicit index-point values separately.
         assert audit_provenance(claim) is None
 
 

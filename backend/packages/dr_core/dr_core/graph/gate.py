@@ -186,6 +186,13 @@ def eligibility_gate(state) -> dict:
 
     retries = dr_run.get("gate_retries", 0)
     prev_sig = dr_run.get("gate_ledger_sig")
+    first_pass_update = {}
+    if retries == 0 and dr_run.get("first_pass_must_cover_states") is None:
+        first_pass_update = {
+            "first_pass_requirements_covered": sum(1 for _, state_ in must_cover_states if state_ == RequirementState.COVERED),
+            "first_pass_requirements_must_cover": len(must_cover_states),
+            "first_pass_must_cover_states": {req_id: state_.value for req_id, state_ in must_cover_states},
+        }
 
     # D9: the breaker signature includes every ACTIVE must-cover requirement's
     # current evidence_state -- a retry that adds coverage without adding
@@ -210,18 +217,17 @@ def eligibility_gate(state) -> dict:
             "gate_decision": "render",
             "citation_ordinals": citation_ordinals,
             # D7/D9 reset: clears turn-scoped loop bookkeeping on PROCEED so a
-            # later research turn on this thread starts fresh. gate_retries is
-            # the one exception (S1): it resets to 0 only on a genuine
-            # ("ready") success -- a forced proceed via retries_exhausted or
-            # breaker_fired KEEPS the current retry count so
-            # completed_with_open_requirements is distinguishable from a
-            # never-retried run downstream (settled question 4).
+            # later research turn on this thread starts fresh. initialize_node
+            # owns the next-turn reset; this terminal state keeps the exact
+            # retry count even after a later pass becomes ready so benchmark
+            # instrumentation can prove that the forced retry actually ran.
             "deliverable": False,
-            "gate_retries": 0 if ready else retries,
+            "gate_retries": retries,
             "gate_ledger_sig": None,
             "active_requirement_ids": [],
             "requirements_planned": False,
         }
+        run_update.update(first_pass_update)
         if must_cover_states:
             covered_count = sum(1 for _, state_ in must_cover_states if state_ == RequirementState.COVERED)
             run_update["requirements_covered"] = covered_count
@@ -254,5 +260,6 @@ def eligibility_gate(state) -> dict:
             "gate_retries": retries + 1,
             "gate_ledger_sig": sig,
             "gate_decision": "research",
+            **first_pass_update,
         },
     }

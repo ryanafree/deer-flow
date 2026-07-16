@@ -28,6 +28,7 @@ from dr_core.models.ledger import Claim, CoverageMapping, Requirement, Source
 
 _URL_HOST_RE = re.compile(r"^https?://([^/]+)")
 _DASH_RE = re.compile(r"[–—]")  # en dash, em dash
+_SENTENCE_SPLIT_RE = re.compile(r"(?<!\b[A-Za-z]\.)(?<=[.!?])\s+")
 
 
 def _sanitize_dashes(text: str) -> str:
@@ -67,17 +68,55 @@ def _claim_sentence(
     so it is always the "first citation"); not_verified claims render attributed
     ("According to <source>, ...") per the D6-D render policy."""
     status = derive_status(claim, mappings_for_claim, requirements_by_id)
-    text = _clean(claim.text).rstrip(".") or "(no claim text recorded)"
-    if status == PublicationStatus.NOT_VERIFIED:
-        label = _source_label(source)
-        body = text[0].lower() + text[1:] if len(text) > 1 else text.lower()
-        return f"According to {label}, {body} [{ordinal}]."
-    sentence = f"{text} [{ordinal}]."
-    if status == PublicationStatus.CONTESTED:
-        caveat = claim_caveat(claim)
-        if caveat:
-            sentence = f"{text} [{ordinal}] ({caveat})."
-    return sentence
+    text = _clean(claim.text) or "(no claim text recorded)"
+    parts = [part.strip().rstrip(".") for part in _SENTENCE_SPLIT_RE.split(text) if part.strip()]
+    rendered: list[str] = []
+    for index, part in enumerate(parts):
+        if status == PublicationStatus.NOT_VERIFIED:
+            label = _source_label(source)
+            body = part[0].lower() + part[1:] if len(part) > 1 else part.lower()
+            rendered.append(f"According to {label}, {body} [{ordinal}].")
+            continue
+        sentence = f"{part} [{ordinal}]."
+        if status == PublicationStatus.CONTESTED and index == 0:
+            caveat = claim_caveat(claim)
+            if caveat:
+                sentence = f"{part} [{ordinal}] ({caveat})."
+        rendered.append(sentence)
+    return " ".join(rendered)
+
+
+def _table_cell(value: object) -> str:
+    return _clean(str(value)).replace("|", "\\|")
+
+
+def _structured_findings_table(claims_by_ordinal: Mapping[int, Claim]) -> tuple[list[str], set[int]]:
+    """Render dense structured evidence as a readable body table.
+
+    Eight numeric claims trigger report_lint's table requirement. Keeping the
+    threshold here aligned with the linter prevents deterministic data runs from
+    degrading into dozens of one-line paragraphs.
+    """
+    structured = [
+        (ordinal, claim)
+        for ordinal, claim in sorted(claims_by_ordinal.items())
+        if claim.data_ref and re.search(r"\d", claim.text or "")
+    ]
+    if len(structured) < 8:
+        return [], set()
+
+    lines = ["| Period | Finding | Value | Evidence |", "|---|---|---:|---:|"]
+    for ordinal, claim in structured:
+        data_ref = claim.data_ref or {}
+        lines.append(
+            "| {period} | {finding} | {value} | [{ordinal}] |".format(
+                period=_table_cell(data_ref.get("period") or "-"),
+                finding=_table_cell(claim.text),
+                value=_table_cell(data_ref.get("value") if data_ref.get("value") is not None else "-"),
+                ordinal=ordinal,
+            )
+        )
+    return lines, {ordinal for ordinal, _ in structured}
 
 
 def _title(dr_run: Mapping) -> str:
@@ -183,7 +222,13 @@ def generate_body(
     if claims_by_ordinal:
         lines.append("## Findings")
         lines.append("")
+        table_lines, table_ordinals = _structured_findings_table(claims_by_ordinal)
+        if table_lines:
+            lines.extend(table_lines)
+            lines.append("")
         for ordinal in sorted(claims_by_ordinal):
+            if ordinal in table_ordinals:
+                continue
             claim = claims_by_ordinal[ordinal]
             source = sources.get(claim.source_id)
             lines.append(_claim_sentence(ordinal, claim, source, mappings_by_claim.get(claim.claim_id, ()), requirements_by_id))

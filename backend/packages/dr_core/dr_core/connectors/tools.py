@@ -205,7 +205,13 @@ def edgar_company_facts(ticker_or_cik: str, concept: str, period: str) -> str:
         "unit": fact["unit"],
         "form": fact["form"],
         "filed": fact["filed"],
-        "data_ref": {"period": fact["end"], "source_class": EDGAR_SOURCE_CLASS},
+        "data_ref": {
+            "period": fact["end"],
+            "source_class": EDGAR_SOURCE_CLASS,
+            "value": fact["value"],
+            "unit": fact["unit"],
+            "concept": concept,
+        },
     }
     return json.dumps(payload, default=str)
 
@@ -250,7 +256,11 @@ def fred_series(series_id: str, period: str) -> str:
         "series_id": series_id,
         "observations": observations,
         "latest_observation": latest,
-        "data_ref": {"period": latest["date"], "source_class": FRED_SOURCE_CLASS},
+        "data_ref": {
+            "period": latest["date"],
+            "source_class": FRED_SOURCE_CLASS,
+            "series_id": series_id,
+        },
     }
     return json.dumps(payload, default=str)
 

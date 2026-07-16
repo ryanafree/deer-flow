@@ -151,11 +151,7 @@ class DrProfileToolMiddleware(AgentMiddleware):
 
     def _filter_tools(self, request: ModelRequest) -> ModelRequest:
         allowlist = self._allowlist(request.state)
-        kept = [
-            t
-            for t in request.tools
-            if (getattr(t, "name", None) or "") != SUBAGENT_DISPATCH_TOOL_NAME and self._is_allowed(getattr(t, "name", None) or "", allowlist)
-        ]
+        kept = [t for t in request.tools if (getattr(t, "name", None) or "") != SUBAGENT_DISPATCH_TOOL_NAME and self._is_allowed(getattr(t, "name", None) or "", allowlist)]
         if len(kept) == len(request.tools):
             return request
         return request.override(tools=kept)

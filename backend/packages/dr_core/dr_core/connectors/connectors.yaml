@@ -109,7 +109,9 @@ connectors:
     # executable named `docling-mcp` is not provided by package
     # `docling-mcp`. ... Use `uvx --from docling-mcp docling-mcp-server`
     # instead."). extensions_config.json's docling entry now invokes
-    # `uvx --from docling-mcp docling-mcp-server` to match.
+    # `uvx --from docling-mcp docling-mcp-server --transport stdio` to match
+    # DeerFlow's declared stdio transport. The executable otherwise defaults
+    # to streamable-http and never completes the stdio handshake.
     endpoint: docling-mcp-server
     rest_endpoint: null
     auth: none
@@ -117,7 +119,7 @@ connectors:
     probe_url: null
     durability: substrate
     rate_limit: "self-host, free; bounded by local CPU"
-    last_verified: 2026-07-11
+    last_verified: 2026-07-15
     fallback: jina_reader
 
   - name: jina_reader
@@ -219,7 +221,9 @@ connectors:
     # Verified locally against real uv/PyPI output captured in
     # build-logs/q4-diag.log and bench-b1-run1.log ("An executable named
     # `openbb-mcp-server` is not provided by package `openbb-mcp-server`. ...
-    # Use `uvx --from openbb-mcp-server openbb-mcp` instead.").
+    # Use `uvx --from openbb-mcp-server openbb-mcp` instead."). The executable
+    # defaults to streamable-http, so extensions_config.json must also pass
+    # `--transport stdio` for DeerFlow's stdio declaration.
     endpoint: openbb-mcp
     rest_endpoint: https://data.openbb.co
     auth: OPENBB_PAT
@@ -232,7 +236,7 @@ connectors:
     evidence_class: primary_data
     durability: stable-api
     rate_limit: "aggregates ~100 providers; limits vary by underlying provider/key"
-    last_verified: 2026-07-11
+    last_verified: 2026-07-15
     fallback: edgar
 
   # ----------------------------------------------------------------------------

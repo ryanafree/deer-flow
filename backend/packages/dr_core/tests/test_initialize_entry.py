@@ -103,7 +103,7 @@ class TestScheduleQueries:
 class TestPlanRequirementsNode:
     @pytest.mark.asyncio
     async def test_extracts_schedules_and_injects_directive(self, monkeypatch):
-        async def _fake_extract(question):
+        async def _fake_extract(question, *, current_date=None):
             assert question == "Q?"
             return [_req("r1", evidence_class="any")], {"input_tokens": 1, "output_tokens": 1, "cache_read_tokens": 0, "cache_creation_tokens": 0, "calls": 1}
 
@@ -138,10 +138,10 @@ class TestPlanRequirementsNode:
 class TestPlanCoverageSkipsWhenPlanned:
     @pytest.mark.asyncio
     async def test_no_reextraction_after_entry_planning(self, monkeypatch):
-        async def _fail_extract(question):
+        async def _fail_extract(question, *, current_date=None):
             raise AssertionError("must not re-extract after entry planning")
 
-        async def _fake_map(active_requirements, claims, coverage):
+        async def _fake_map(active_requirements, claims, coverage, *, sources=None):
             return {}, {"input_tokens": 0, "output_tokens": 0, "cache_read_tokens": 0, "cache_creation_tokens": 0, "calls": 0}
 
         monkeypatch.setattr("dr_core.graph.plan.extract_requirements", _fail_extract)

@@ -267,7 +267,10 @@ class TestPrefixedMcpToolExtraction:
 
         out = DrLedgerMiddleware().before_model({"messages": messages, "dr_run": {}}, None)
 
-        assert out is None
+        assert out is not None
+        assert "dr_sources" not in out
+        assert out["dr_run"]["tool_call_count"] == 1
+        assert out["dr_run"]["tool_call_counts"] == {"totally_unknown_server_do_thing": 1}
 
 
 def _academic_search_call(tool_call_id: str = "call_academic") -> AIMessage:
@@ -304,7 +307,7 @@ class TestAcademicSearchExtraction:
 
 
 class TestNonSourceToolIgnored:
-    def test_bash_tool_message_ignored(self):
+    def test_bash_tool_message_counted_but_not_treated_as_source(self):
         messages = [
             AIMessage(content="", tool_calls=[{"name": "bash", "args": {"command": "ls"}, "id": "call_bash", "type": "tool_call"}]),
             ToolMessage(content="file1\nfile2", tool_call_id="call_bash", name="bash"),
@@ -312,7 +315,36 @@ class TestNonSourceToolIgnored:
 
         out = DrLedgerMiddleware().before_model({"messages": messages, "dr_run": {}}, None)
 
-        assert out is None
+        assert out is not None
+        assert "dr_sources" not in out
+        assert "deliverable" not in out["dr_run"]
+        assert out["dr_run"]["tool_call_count"] == 1
+        assert out["dr_run"]["tool_call_counts"] == {"bash": 1}
+
+    def test_tool_call_counts_are_idempotent(self):
+        messages = [
+            AIMessage(content="", tool_calls=[{"name": "bash", "args": {}, "id": "call_bash", "type": "tool_call"}]),
+            ToolMessage(content="ok", tool_call_id="call_bash", name="bash"),
+        ]
+        middleware = DrLedgerMiddleware()
+        first = middleware.before_model({"messages": messages, "dr_run": {}}, None)
+        second = middleware.before_model({"messages": messages, "dr_run": first["dr_run"]}, None)
+
+        assert first["dr_run"]["tool_call_count"] == 1
+        assert second is None
+
+    def test_tool_call_count_adds_to_prior_deterministic_connector_calls(self):
+        messages = [ToolMessage(content="ok", tool_call_id="call_bash", name="bash")]
+        out = DrLedgerMiddleware().before_model(
+            {
+                "messages": messages,
+                "dr_run": {"tool_call_count": 2, "tool_call_counts": {"fred_series": 2}},
+            },
+            None,
+        )
+
+        assert out["dr_run"]["tool_call_count"] == 3
+        assert out["dr_run"]["tool_call_counts"] == {"bash": 1, "fred_series": 2}
 
 
 class TestIdempotency:

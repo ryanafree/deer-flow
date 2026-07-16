@@ -8,11 +8,12 @@ import json
 from types import SimpleNamespace
 
 from dr_core.graph.agent import make_dr_agent
+from dr_core.graph.gate import eligibility_gate
 from dr_core.graph.middleware import DrLedgerMiddleware
 from dr_core.graph.state import merge_ledger
 from dr_core.graph.verify import verify_node
-from dr_core.models.enums import CitationStatus, VerificationStatus
-from dr_core.models.ledger import Claim
+from dr_core.models.enums import CitationStatus, SupportRelation, VerificationStatus
+from dr_core.models.ledger import Claim, SupportRecord
 from dr_core.verify import votes as votes_mod
 from langchain.agents import AgentState
 from langgraph.graph import END, StateGraph
@@ -99,6 +100,60 @@ class TestVerifyNodeVotesAndMergesLegally:
         assert result2.get("dr_claims", {}) == {}  # complete claim was filtered out of `active` entirely
         merged2 = merge_ledger(merged, result2.get("dr_claims"))
         assert merged2 == merged  # no-op, and merge_ledger did not raise
+
+    async def test_relation_review_unblocks_direct_must_cover_grounding(self, monkeypatch):
+        monkeypatch.setattr(votes_mod, "_get_vote_model", lambda: _FakeModel())
+        monkeypatch.setattr("dr_core.graph.verify._fetch_evidence", lambda url: _return_excerpt())
+
+        async def _review(claim, source, evidence):
+            return (
+                SupportRelation.SUPPORTS_DIRECTLY,
+                "The quote states the claim.",
+                {
+                    "input_tokens": 4,
+                    "output_tokens": 2,
+                    "cache_read_tokens": 0,
+                    "cache_creation_tokens": 0,
+                    "calls": 1,
+                },
+            )
+
+        monkeypatch.setattr("dr_core.graph.verify.review_support_relation", _review)
+        support = SupportRecord(
+            quote="the study reports significantly lower volatility",
+            relation_extractor=SupportRelation.SUPPORTS_DIRECTLY,
+        )
+        dr_claims = {"c1": _claim(text="The study reports lower volatility.", support=support)}
+        requirements = {
+            "req1": {
+                "id": "req1",
+                "kind": "entity",
+                "text": "State the study's volatility result.",
+                "must_cover": True,
+            }
+        }
+        coverage = {
+            "req1:c1": {
+                "requirement_id": "req1",
+                "claim_id": "c1",
+                "relation": "direct",
+            }
+        }
+        state = {
+            "dr_claims": dr_claims,
+            "dr_sources": {"s1": _source()},
+            "dr_requirements": requirements,
+            "dr_coverage": coverage,
+            "dr_run": {"depth": "quick", "active_requirement_ids": ["req1"], "gate_retries": 0},
+        }
+
+        verified = await verify_node(state)
+        merged = merge_ledger(dr_claims, verified["dr_claims"])
+        gate = eligibility_gate({**state, "dr_claims": merged})
+
+        assert merged["c1"]["support"]["relation_reviewer"] == "supports_directly"
+        assert gate["dr_run"]["requirements_covered"] == 1
+        assert gate["dr_run"]["gate_decision"] == "render"
 
 
 async def _return_excerpt():

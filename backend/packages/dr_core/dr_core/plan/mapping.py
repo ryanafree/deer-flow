@@ -18,8 +18,10 @@ from collections.abc import Mapping, Sequence
 
 from langchain_core.messages import HumanMessage, SystemMessage
 
+from dr_core.connectors.registry import by_name, load_connectors
 from dr_core.models.enums import CoverageRelation
 from dr_core.models.ledger import Claim, CoverageMapping, Requirement
+from dr_core.plan.evidence_class import resolve_evidence_class
 
 logger = logging.getLogger(__name__)
 
@@ -27,7 +29,18 @@ _INSTRUCTIONS = (
     "You are a coverage-mapping assistant for a research-assurance pipeline. You are given a list of "
     "REQUIREMENTS (explicit asks a complete answer must satisfy) and a list of CLAIMS (facts recorded "
     "so far). For EVERY (requirement, claim) pair listed under PAIRS, decide how much that claim "
-    "contributes toward answering that requirement.\n\n"
+    "contributes toward answering that requirement. A target_requirement_id is the extractor's candidate link, not proof; confirm it independently. "
+    "Classify the relation according to the requirement kind:\n"
+    "- For a subtopic requirement, use direct when the claim is a concrete supported finding squarely about that subtopic. "
+    "One claim need not exhaust the whole subtopic; the coverage gate aggregates multiple direct findings.\n"
+    "- For a comparison requirement, use direct only when the claim states a relationship between the compared entities, "
+    "and set relationship_stated=true.\n"
+    "- For a metric requirement, use direct only when the claim supplies the requested metric, date or period, and value.\n"
+    "- For a date_window requirement, use direct only when the claim is dated within or explicitly addresses the requested window.\n"
+    "- For an entity or deliverable requirement, use direct when the claim supplies a concrete supported finding that squarely "
+    "advances the named entity or requested deliverable.\n"
+    "Tangential context or generic topical overlap is partial; unrelated material is none. A claim's quote must support the claim, "
+    "but the quote need not restate the broader requirement verbatim.\n\n"
     "Respond with ONLY a JSON array (no prose, no markdown fences), one element per pair, shaped exactly:\n"
     '{"requirement_id": "<id>", "claim_id": "<id>", "relation": "direct|partial|none", '
     '"elements_satisfied": ["<optional short strings naming which parts of the requirement this claim answers>"], '
@@ -81,14 +94,29 @@ def _format_requirement(requirement: Requirement) -> dict:
     return {"id": requirement.id, "kind": requirement.kind.value, "text": requirement.text, "entities": requirement.entities}
 
 
-def _format_claim(claim: Claim) -> dict:
-    return {"id": claim.claim_id, "text": claim.text}
+def _format_claim(claim: Claim, sources: Mapping[str, dict], connectors_by_name: Mapping[str, object]) -> dict:
+    source = sources.get(claim.source_id) or {}
+    return {
+        "id": claim.claim_id,
+        "text": claim.text,
+        "supporting_quote": claim.support.quote if claim.support else None,
+        "target_requirement_ids": claim.target_requirement_ids,
+        "source_id": claim.source_id,
+        "source_system": source.get("source_system"),
+        "source_evidence_class": resolve_evidence_class(source.get("source_system", "web"), source.get("url_or_id"), connectors_by_name),
+    }
 
 
-def _build_prompt(requirements: Sequence[Requirement], claims: Sequence[Claim], pairs: Sequence[tuple[str, str]]) -> str:
+def _build_prompt(
+    requirements: Sequence[Requirement],
+    claims: Sequence[Claim],
+    pairs: Sequence[tuple[str, str]],
+    sources: Mapping[str, dict],
+) -> str:
+    connectors_by_name = by_name(load_connectors())
     payload = {
         "requirements": [_format_requirement(r) for r in requirements],
-        "claims": [_format_claim(c) for c in claims],
+        "claims": [_format_claim(c, sources, connectors_by_name) for c in claims],
         "pairs": [{"requirement_id": req_id, "claim_id": claim_id} for req_id, claim_id in pairs],
     }
     return json.dumps(payload, sort_keys=True)
@@ -114,9 +142,16 @@ async def map_coverage(
     active_requirements: Mapping[str, Requirement],
     claims: Mapping[str, Claim],
     existing_coverage: Mapping[str, dict],
+    *,
+    sources: Mapping[str, dict] | None = None,
 ) -> tuple[dict[str, dict], dict[str, int]]:
-    """Map every unmapped (ACTIVE requirement, claim) pair via a single
-    structured or-mid call. Returns ``(new_coverage, usage)``, where
+    """Map requirement-targeted pairs in bounded per-requirement calls.
+
+    Claims that carry ``target_requirement_ids`` are evaluated only against
+    those candidate requirements; claims recorded before a plan existed keep
+    the legacy active-requirements cross product. Each requirement is sent in
+    a separate model call so unrelated topics cannot drown out its evidence.
+    Returns ``(new_coverage, usage)``, where
     ``new_coverage`` is keyed ``f"{requirement_id}:{claim_id}"``. A
     model-call failure or unparseable response degrades to no new mappings;
     an individual result naming an id outside this pass's own
@@ -124,55 +159,73 @@ async def map_coverage(
     logged (referential integrity) rather than written."""
     usage = _empty_usage()
     pairs = unmapped_pairs(list(active_requirements.keys()), list(claims.keys()), existing_coverage)
+    pairs = [
+        (req_id, claim_id)
+        for req_id, claim_id in pairs
+        if not claims[claim_id].target_requirement_ids or req_id in claims[claim_id].target_requirement_ids
+    ]
     if not pairs:
         return {}, usage
 
     pair_set = set(pairs)
-    try:
-        model = _get_plan_model()
-        response = await model.ainvoke(
-            [
-                SystemMessage(content=_INSTRUCTIONS),
-                HumanMessage(content=_build_prompt(list(active_requirements.values()), list(claims.values()), pairs)),
-            ]
-        )
-    except Exception as exc:
-        logger.warning("plan.mapping: model call failed, degrading to no new mappings: %s", exc)
-        return {}, usage
-
-    _accumulate_usage(usage, response)
-    content = response.content if isinstance(response.content, str) else str(response.content)
-    parsed = _parse_json_array(content)
-    if parsed is None:
-        logger.warning("plan.mapping: unparseable model output, degrading to no new mappings")
-        return {}, usage
-
     result: dict[str, dict] = {}
-    for raw in parsed:
-        if not isinstance(raw, dict):
+    model = _get_plan_model()
+    for requirement_id in active_requirements:
+        batch_pairs = [pair for pair in pairs if pair[0] == requirement_id]
+        if not batch_pairs:
             continue
-        req_id = raw.get("requirement_id")
-        claim_id = raw.get("claim_id")
-        if (req_id, claim_id) not in pair_set:
-            logger.warning("plan.mapping: dropping mapping for unrequested/unknown pair (%r, %r)", req_id, claim_id)
-            continue
+        batch_claims = [claims[claim_id] for _, claim_id in batch_pairs]
         try:
-            relation = CoverageRelation(raw.get("relation"))
-        except ValueError:
-            logger.warning("plan.mapping: dropping mapping with invalid relation %r for pair (%s, %s)", raw.get("relation"), req_id, claim_id)
+            response = await model.ainvoke(
+                [
+                    SystemMessage(content=_INSTRUCTIONS),
+                    HumanMessage(
+                        content=_build_prompt(
+                            [active_requirements[requirement_id]],
+                            batch_claims,
+                            batch_pairs,
+                            sources or {},
+                        )
+                    ),
+                ]
+            )
+        except Exception as exc:
+            logger.warning("plan.mapping: model call failed for requirement %s, degrading that batch to no new mappings: %s", requirement_id, exc)
             continue
-        elements = raw.get("elements_satisfied")
-        if not isinstance(elements, list) or not all(isinstance(e, str) for e in elements):
-            elements = []
-        relationship_stated = raw.get("relationship_stated")
-        if not isinstance(relationship_stated, bool):
-            relationship_stated = None
-        mapping = CoverageMapping(
-            requirement_id=req_id,
-            claim_id=claim_id,
-            relation=relation,
-            elements_satisfied=elements,
-            relationship_stated=relationship_stated,
-        )
-        result[f"{req_id}:{claim_id}"] = mapping.model_dump(mode="json")
+
+        _accumulate_usage(usage, response)
+        content = response.content if isinstance(response.content, str) else str(response.content)
+        parsed = _parse_json_array(content)
+        if parsed is None:
+            logger.warning("plan.mapping: unparseable model output for requirement %s, degrading that batch to no new mappings", requirement_id)
+            continue
+
+        batch_pair_set = set(batch_pairs)
+        for raw in parsed:
+            if not isinstance(raw, dict):
+                continue
+            req_id = raw.get("requirement_id")
+            claim_id = raw.get("claim_id")
+            if (req_id, claim_id) not in batch_pair_set or (req_id, claim_id) not in pair_set:
+                logger.warning("plan.mapping: dropping mapping for unrequested/unknown pair (%r, %r)", req_id, claim_id)
+                continue
+            try:
+                relation = CoverageRelation(raw.get("relation"))
+            except ValueError:
+                logger.warning("plan.mapping: dropping mapping with invalid relation %r for pair (%s, %s)", raw.get("relation"), req_id, claim_id)
+                continue
+            elements = raw.get("elements_satisfied")
+            if not isinstance(elements, list) or not all(isinstance(e, str) for e in elements):
+                elements = []
+            relationship_stated = raw.get("relationship_stated")
+            if not isinstance(relationship_stated, bool):
+                relationship_stated = None
+            mapping = CoverageMapping(
+                requirement_id=req_id,
+                claim_id=claim_id,
+                relation=relation,
+                elements_satisfied=elements,
+                relationship_stated=relationship_stated,
+            )
+            result[f"{req_id}:{claim_id}"] = mapping.model_dump(mode="json")
     return result, usage

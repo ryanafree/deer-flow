@@ -21,6 +21,7 @@ import hashlib
 import json
 import logging
 import os
+from datetime import date
 
 from langchain_core.messages import AnyMessage, HumanMessage, SystemMessage
 from pydantic import ValidationError
@@ -161,7 +162,7 @@ def _to_requirement(raw: object) -> Requirement | None:
         return None
 
 
-async def extract_requirements(question: str) -> tuple[list[Requirement], dict[str, int]]:
+async def extract_requirements(question: str, *, current_date: date | None = None) -> tuple[list[Requirement], dict[str, int]]:
     """Extract up to ``MAX_REQUIREMENTS_PER_TURN`` requirements from
     ``question`` via a structured or-mid call. Returns ``(requirements,
     usage)``. A model-call failure or a response that is not a parseable
@@ -174,7 +175,7 @@ async def extract_requirements(question: str) -> tuple[list[Requirement], dict[s
         response = await model.ainvoke(
             [
                 SystemMessage(content=_INSTRUCTIONS),
-                HumanMessage(content=f"Research question:\n{question}"),
+                HumanMessage(content=(f"Current date: {(current_date or date.today()).isoformat()}. Resolve relative terms such as present, current, and today against this date.\nResearch question:\n{question}")),
             ]
         )
     except Exception as exc:

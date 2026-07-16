@@ -19,10 +19,13 @@ drift out of sync.
 from __future__ import annotations
 
 import os
+from collections import Counter
 
 from dr_core.accounting import build_accounting
+from dr_core.connectors.registry import by_name, load_connectors
 from dr_core.models.eligibility import ineligibility_reason
 from dr_core.models.ledger import Claim, CoverageMapping, Requirement, Source
+from dr_core.plan.evidence_class import resolve_evidence_class
 from dr_core.profiles import ProfileError, load_profile
 from dr_core.render.body import generate_body
 from dr_core.render.render_report import render as render_html
@@ -94,6 +97,18 @@ def render_node(state) -> dict:
     )
     eligible_claims = [claims_by_ordinal[n] for n in sorted(claims_by_ordinal)]
 
+    if dr_run.get("b2_contract_required"):
+        b2_status = dr_run.get("b2_data_status")
+        if b2_status not in {"complete", "unavailable"}:
+            raise ValueError("B2 render blocked: deterministic VIX/FOMC data contract has no terminal status")
+        if b2_status == "complete":
+            has_paired_numeric_claim = any(claim.data_ref and set(claim.data_ref.get("series_ids") or []) == {"VIXCLS", "VXVCLS"} and claim.data_ref.get("period") and claim.data_ref.get("value") is not None for claim in eligible_claims)
+            if not has_paired_numeric_claim:
+                raise ValueError("B2 render blocked: no eligible dated numeric VIXCLS/VXVCLS claim")
+        else:
+            reason = dr_run.get("b2_unavailable_reason") or "the paired primary-data calculation did not complete"
+            body = f"## Primary data unavailable\n\nThe requested VIXCLS/VXVCLS calculation is unavailable: {reason}.\n\n{body}"
+
     runs_dir = _resolve_runs_dir(dr_run)
     os.makedirs(runs_dir, exist_ok=True)
 
@@ -111,6 +126,17 @@ def render_node(state) -> dict:
 
     accounting = build_accounting(state.get("messages"), dr_run, profile_tiers=model_tiers)
 
+    baseline_source_ids = set(dr_run.get("baseline_source_ids") or [])
+    connectors_by_name = by_name(load_connectors())
+    sources_by_evidence_class = Counter(resolve_evidence_class(source.source_system, source.url_or_id, connectors_by_name) for source_id, source in sources_by_id.items() if source_id not in baseline_source_ids)
+
+    def _coverage_snapshot(prefix: str = "") -> dict:
+        return {
+            "requirements_covered": dr_run.get(f"{prefix}requirements_covered", 0),
+            "requirements_must_cover": dr_run.get(f"{prefix}requirements_must_cover", 0),
+            "must_cover_states": dr_run.get(f"{prefix}must_cover_states") or {},
+        }
+
     manifest_in = {
         "loop": {
             "conflicts_open": 0,
@@ -121,6 +147,16 @@ def render_node(state) -> dict:
         "depth": dr_run.get("depth", "quick"),
         "profile": profile,
         "accounting": accounting,
+        "tool_calls": {
+            "total": dr_run.get("tool_call_count", 0),
+            "by_name": dict(sorted((dr_run.get("tool_call_counts") or {}).items())),
+        },
+        "gate_retries": dr_run.get("gate_retries", 0),
+        "coverage": {
+            "first_pass": _coverage_snapshot("first_pass_"),
+            "final": _coverage_snapshot(),
+        },
+        "sources_by_evidence_class": dict(sorted(sources_by_evidence_class.items())),
     }
     if dr_run.get("stop_reason"):
         manifest_in["stop_reason"] = dr_run["stop_reason"]

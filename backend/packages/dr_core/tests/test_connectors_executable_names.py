@@ -51,13 +51,38 @@ class TestExtensionsConfigJsonLaunchesTheRealExecutable:
         servers = self._load()["mcpServers"]
         docling = servers["docling"]
         assert docling["command"] == "uvx"
-        assert docling["args"] == ["--from", "docling-mcp", "docling-mcp-server"]
+        assert docling["args"] == [
+            "--from",
+            "docling-mcp",
+            "docling-mcp-server",
+            "--transport",
+            "stdio",
+        ]
 
     def test_openbb_invokes_uvx_from_openbb_mcp_server_openbb_mcp(self):
         servers = self._load()["mcpServers"]
         openbb = servers["openbb"]
         assert openbb["command"] == "uvx"
-        assert openbb["args"] == ["--from", "openbb-mcp-server", "openbb-mcp"]
+        assert openbb["args"] == [
+            "--from",
+            "openbb-mcp-server",
+            "openbb-mcp",
+            "--transport",
+            "stdio",
+        ]
+
+    def test_stdio_servers_explicitly_select_stdio_transport(self):
+        """Both packages default to HTTP despite DeerFlow declaring stdio."""
+        servers = self._load()["mcpServers"]
+        for name in ("docling", "openbb"):
+            server = servers[name]
+            assert server["type"] == "stdio"
+            assert server["args"][-2:] == ["--transport", "stdio"]
+
+    def test_docling_uses_neutral_working_directory(self):
+        """Docling rejects unrelated keys in DeerFlow's backend .env file."""
+        docling = self._load()["mcpServers"]["docling"]
+        assert docling["cwd"] == "/tmp"
 
     def test_docling_and_openbb_args_are_not_the_old_bare_broken_form(self):
         """Regression guard: a bare single-element args list (the pre-fix

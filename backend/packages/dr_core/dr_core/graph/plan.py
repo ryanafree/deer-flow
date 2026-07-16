@@ -14,6 +14,8 @@ this turn's ACTIVE requirements, via ``dr_core.plan.mapping.map_coverage``.
 
 from __future__ import annotations
 
+from datetime import date
+
 from langchain_core.messages import HumanMessage
 
 from dr_core.models.ledger import Claim, Requirement
@@ -37,7 +39,10 @@ def _schedule_directive_message(lines: list[str]) -> HumanMessage:
     content = "\n".join(
         [
             "<dr_research_plan>",
-            "Work each scheduled item below. For every item, search with the named tool (or web_search if none is named), then record each supported fact via the record_claim tool, citing a source_id from the result.",
+            "Work each scheduled item below. For every item, search with the named tool "
+            "(or web_search if none is named), then record each supported fact via the "
+            "record_claim tool. Cite a source_id from the result and pass that item's "
+            "requirement id in target_requirement_ids.",
             *lines,
             "</dr_research_plan>",
         ]
@@ -61,7 +66,10 @@ async def plan_requirements_node(state) -> dict:
     question = dr_run.get("question") or latest_real_user_question(state.get("messages") or [])
     requirements: list[Requirement] = []
     if question:
-        requirements, extract_usage = await extract_requirements(question)
+        requirements, extract_usage = await extract_requirements(
+            question,
+            current_date=date.fromisoformat(dr_run["current_date"]) if dr_run.get("current_date") else None,
+        )
         _merge_usage(usage, extract_usage)
 
     # entry_plan_usage, not plan_usage: plan_coverage_node writes plan_usage
@@ -100,7 +108,10 @@ async def plan_coverage_node(state) -> dict:
         question = latest_real_user_question(state.get("messages") or [])
         active_ids: list[str] = []
         if question:
-            requirements, extract_usage = await extract_requirements(question)
+            requirements, extract_usage = await extract_requirements(
+                question,
+                current_date=date.fromisoformat(dr_run["current_date"]) if dr_run.get("current_date") else None,
+            )
             _merge_usage(usage, extract_usage)
             new_requirements = {requirement.id: requirement.model_dump(mode="json") for requirement in requirements}
             active_ids = [requirement.id for requirement in requirements]
@@ -116,7 +127,7 @@ async def plan_coverage_node(state) -> dict:
     baseline_claim_ids = set(dr_run.get("baseline_claim_ids") or [])
     claims: dict[str, Claim] = {claim_id: Claim.model_validate(payload) for claim_id, payload in dr_claims.items() if claim_id not in baseline_claim_ids}
 
-    new_coverage, mapping_usage = await map_coverage(active_requirements, claims, dr_coverage)
+    new_coverage, mapping_usage = await map_coverage(active_requirements, claims, dr_coverage, sources=state.get("dr_sources") or {})
     _merge_usage(usage, mapping_usage)
 
     run_update["plan_usage"] = usage

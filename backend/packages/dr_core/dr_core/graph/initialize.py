@@ -27,6 +27,9 @@ otherwise the D7/D9 interactive topology is entered unchanged
 from __future__ import annotations
 
 import uuid
+from datetime import date
+
+from langchain_core.messages import ToolMessage
 
 from dr_core.plan.extraction import latest_real_user_question
 
@@ -44,6 +47,11 @@ _TURN_SCOPED_RESETS: dict = {
     "requirements_covered": None,
     "requirements_must_cover": None,
     "must_cover_states": None,
+    "first_pass_requirements_covered": None,
+    "first_pass_requirements_must_cover": None,
+    "first_pass_must_cover_states": None,
+    "tool_call_count": 0,
+    "tool_call_counts": {},
 }
 
 
@@ -55,10 +63,12 @@ def initialize_node(state, config=None) -> dict:
 
     run_update = dict(_TURN_SCOPED_RESETS)
     run_update["research_run_id"] = uuid.uuid4().hex
+    run_update["current_date"] = date.today().isoformat()
     run_update["deliverable"] = deliverable
     run_update["question"] = latest_real_user_question(state.get("messages") or [])
     run_update["baseline_claim_ids"] = sorted((state.get("dr_claims") or {}).keys())
     run_update["baseline_source_ids"] = sorted((state.get("dr_sources") or {}).keys())
+    run_update["_counted_tool_call_ids"] = sorted(str(message.tool_call_id) for message in (state.get("messages") or []) if isinstance(message, ToolMessage) and message.tool_call_id)
     return {"dr_run": run_update}
 
 

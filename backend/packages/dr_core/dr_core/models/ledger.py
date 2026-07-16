@@ -46,6 +46,7 @@ class SupportRecord(BaseModel):
     quote: str
     relation_extractor: SupportRelation
     relation_reviewer: SupportRelation | None = None  # None = reviewer unavailable
+    reviewer_note: str | None = None
     inference_note: str | None = None
     qualifier: str | None = None
 
@@ -81,6 +82,7 @@ class Claim(BaseModel):
     angle_idx: int | None = None
     importance: int = Field(ge=1, le=5)
     source_id: str
+    target_requirement_ids: list[str] = Field(default_factory=list)
     support: SupportRecord | None = None
     data_ref: dict | None = None
     data_provenance: DataProvenance = DataProvenance.UNAUDITED

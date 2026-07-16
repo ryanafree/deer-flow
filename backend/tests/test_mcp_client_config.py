@@ -51,6 +51,14 @@ def test_build_server_params_stdio_requires_command():
         build_server_params("broken-stdio", config)
 
 
+def test_build_server_params_stdio_passes_cwd():
+    config = McpServerConfig(type="stdio", command="server", cwd="/tmp/mcp-isolated")
+
+    params = build_server_params("isolated-stdio", config)
+
+    assert params["cwd"] == "/tmp/mcp-isolated"
+
+
 @pytest.mark.parametrize("transport", ["sse", "http"])
 def test_build_server_params_http_like_success(transport: str):
     config = McpServerConfig(

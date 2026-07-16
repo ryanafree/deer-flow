@@ -303,6 +303,7 @@ MCP servers and skill states in a single file:
       "type": "stdio",
       "command": "npx",
       "args": ["-y", "@modelcontextprotocol/server-github"],
+      "cwd": "/tmp",
       "env": {"GITHUB_TOKEN": "$GITHUB_TOKEN"}
     },
     "secure-http": {
@@ -323,6 +324,10 @@ MCP servers and skill states in a single file:
   }
 }
 ```
+
+For stdio servers, `cwd` is forwarded during both tool discovery and persistent-session execution. Use it when a server's own settings loader would otherwise ingest DeerFlow's working-directory files.
+
+The fork's `dr_agent` also contains a deterministic structured-data contract for VIX term-structure questions around FOMC dates. It binds FRED `VIXCLS` and `VXVCLS`, computes `VIXCLS - VXVCLS` on the announcement date or nearest prior common observation, records matched numeric provenance, and blocks ordinary rendering unless the paired calculation completes or is explicitly reported unavailable.
 
 ### Environment Variables
 

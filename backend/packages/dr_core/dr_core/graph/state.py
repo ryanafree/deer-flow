@@ -24,7 +24,7 @@ from dr_core.models.derive import (
     assert_verification_transition_allowed,
 )
 from dr_core.models.enums import CitationStatus, DataProvenance
-from dr_core.models.ledger import VerificationRecord
+from dr_core.models.ledger import SupportRecord, VerificationRecord
 
 _MISSING = object()
 
@@ -80,6 +80,17 @@ def _merge_record(record_id: str, old: dict, new: dict) -> dict:
             new_status = VerificationRecord.model_validate(new_val).status
             if old_status != new_status:
                 assert_verification_transition_allowed(old_status, new_status)
+            merged[key] = new_val
+            continue
+        if key == "support" and isinstance(old_val, dict) and isinstance(new_val, dict):
+            old_support = SupportRecord.model_validate(old_val)
+            new_support = SupportRecord.model_validate(new_val)
+            if old_support.quote != new_support.quote or old_support.relation_extractor != new_support.relation_extractor:
+                raise ValueError(f"divergent support assertion for id {record_id!r}")
+            if old_support.relation_reviewer is not None and old_support.relation_reviewer != new_support.relation_reviewer:
+                raise ValueError(f"divergent support review for id {record_id!r}")
+            if old_support.reviewer_note is not None and old_support.reviewer_note != new_support.reviewer_note:
+                raise ValueError(f"divergent support review note for id {record_id!r}")
             merged[key] = new_val
             continue
         if key == "citation_status":

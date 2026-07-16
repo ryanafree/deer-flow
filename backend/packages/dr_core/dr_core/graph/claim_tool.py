@@ -88,6 +88,7 @@ def record_claim(
     state: Annotated[dict, InjectedState],
     gate_flags: list[str] | None = None,
     data_ref: dict | None = None,
+    target_requirement_ids: list[str] | None = None,
 ) -> Command:
     """Record a factual claim asserted from a previously retrieved source.
 
@@ -111,6 +112,9 @@ def record_claim(
             wrds_query), pass that tool's returned `data_ref` object VERBATIM.
             This is what lets the provenance audit verify the claim against
             the data's actual retrieved period. Omit for ordinary web claims.
+        target_requirement_ids: Requirement ids from the active research plan
+            that this claim is intended to answer. Unknown or stale ids are
+            rejected; omit only when no requirement plan is active.
     """
     dr_sources = state.get("dr_sources") or {}
     if source_id not in dr_sources:
@@ -130,12 +134,19 @@ def record_claim(
         known = ", ".join(f.value for f in GateFlag)
         return _reject(tool_call_id, f"unknown gate_flags in {gate_flags!r} -- use one of: {known}.")
 
+    targets = sorted(set(target_requirement_ids or []))
+    active_requirement_ids = set((state.get("dr_run") or {}).get("active_requirement_ids") or [])
+    unknown_targets = [req_id for req_id in targets if req_id not in active_requirement_ids]
+    if unknown_targets:
+        return _reject(tool_call_id, f"unknown or inactive target_requirement_ids: {', '.join(unknown_targets)}")
+
     try:
         claim = Claim(
             claim_id=_claim_id(text, source_id),
             text=text,
             importance=importance,
             source_id=source_id,
+            target_requirement_ids=targets,
             support=SupportRecord(quote=quote, relation_extractor=SupportRelation.SUPPORTS_DIRECTLY),
             gate_flags=normalized_flags,
             data_ref=data_ref,

@@ -41,6 +41,7 @@ from dr_core.models import Source
 
 _DEFAULT_AUTHORITY_TIER = 3
 _SOURCED_MSG_IDS_KEY = "_sourced_msg_ids"
+_COUNTED_TOOL_CALL_IDS_KEY = "_counted_tool_call_ids"
 
 
 def _tool_call_args_by_id(messages: list[AnyMessage]) -> dict[str, dict[str, Any]]:
@@ -258,19 +259,28 @@ class DrLedgerMiddleware(AgentMiddleware):
         messages = state["messages"]
         dr_run = state.get("dr_run") or {}
         processed_ids: set[str] = set(dr_run.get(_SOURCED_MSG_IDS_KEY) or [])
+        counted_ids: set[str] = set(dr_run.get(_COUNTED_TOOL_CALL_IDS_KEY) or [])
+        tool_call_counts = dict(dr_run.get("tool_call_counts") or {})
         known_source_ids: set[str] = set((state.get("dr_sources") or {}).keys())
         call_args_by_id = _tool_call_args_by_id(messages)
         registry = get_default_registry()
 
         new_sources: dict[str, dict] = {}
         newly_processed: list[str] = []
+        newly_counted: list[str] = []
         for message in messages:
-            if not isinstance(message, ToolMessage) or not message.name:
+            if not isinstance(message, ToolMessage):
+                continue
+            tool_call_id = str(message.tool_call_id)
+            if tool_call_id not in counted_ids:
+                tool_name = message.name or "unknown"
+                tool_call_counts[tool_name] = tool_call_counts.get(tool_name, 0) + 1
+                newly_counted.append(tool_call_id)
+            if not message.name:
                 continue
             binding = registry.resolve(message.name)
             if binding is None:
                 continue
-            tool_call_id = str(message.tool_call_id)
             if tool_call_id in processed_ids:
                 continue
 
@@ -284,18 +294,21 @@ class DrLedgerMiddleware(AgentMiddleware):
                 new_sources[source_id] = record
             newly_processed.append(tool_call_id)
 
-        if not newly_processed:
+        if not newly_processed and not newly_counted:
             return None
 
         # D7: a scan that processed any source-bearing ToolMessage this turn
         # is research intent -- mark the turn deliverable even if zero
         # sources parsed, so route_after_research gates it.
-        update: dict[str, Any] = {
-            "dr_run": {
-                _SOURCED_MSG_IDS_KEY: sorted(processed_ids | set(newly_processed)),
-                "deliverable": True,
-            }
+        run_update: dict[str, Any] = {
+            _COUNTED_TOOL_CALL_IDS_KEY: sorted(counted_ids | set(newly_counted)),
+            "tool_call_count": int(dr_run.get("tool_call_count") or 0) + len(newly_counted),
+            "tool_call_counts": dict(sorted(tool_call_counts.items())),
         }
+        if newly_processed:
+            run_update[_SOURCED_MSG_IDS_KEY] = sorted(processed_ids | set(newly_processed))
+            run_update["deliverable"] = True
+        update: dict[str, Any] = {"dr_run": run_update}
         if new_sources:
             update["dr_sources"] = new_sources
         return update
