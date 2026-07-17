@@ -1,0 +1,3 @@
+## 2024-07-17 - Missing ARIA Labels on Icon-only Utility Buttons
+**Learning:** In this UI architecture, the `Button` component when used with `size="icon"` or `size="icon-sm"` does not inherently enforce the presence of an `aria-label`. Since it only wraps the icon children without any visible text, it creates significant accessibility gaps for screen reader users where buttons just say "button".
+**Action:** Always verify that every instance of `<Button size="icon">` and `<Button size="icon-sm">` across the components codebase includes an explicit `aria-label` or `aria-labelledby` attribute describing its function, even if wrapped in a Tooltip component.

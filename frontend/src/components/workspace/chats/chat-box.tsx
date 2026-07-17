@@ -147,6 +147,7 @@ const ChatBox: React.FC<{ children: React.ReactNode; threadId: string }> = ({
             <div className="relative flex size-full justify-center">
               <div className="absolute top-1 right-1 z-30">
                 <Button
+                  aria-label="Close"
                   size="icon-sm"
                   variant="ghost"
                   onClick={() => {
