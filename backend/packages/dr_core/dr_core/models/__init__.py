@@ -48,10 +48,12 @@ from dr_core.models.ledger import (
     Conflict,
     CoverageMapping,
     Requirement,
+    Snapshot,
     Source,
     SupportRecord,
     VerificationRecord,
     Vote,
+    compute_snapshot_id,
 )
 
 __all__ = [
@@ -74,10 +76,12 @@ __all__ = [
     "Conflict",
     "CoverageMapping",
     "Requirement",
+    "Snapshot",
     "Source",
     "SupportRecord",
     "VerificationRecord",
     "Vote",
+    "compute_snapshot_id",
     # pure functions / small value types
     "ClaimEvidence",
     "StopBase",

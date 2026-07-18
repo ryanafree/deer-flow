@@ -101,7 +101,34 @@ def _merge_record(record_id: str, old: dict, new: dict) -> dict:
             assert_provenance_transition_allowed(DataProvenance(old_val), DataProvenance(new_val))
             merged[key] = new_val
             continue
+        if key == "snapshots" and isinstance(old_val, list) and isinstance(new_val, list):
+            merged[key] = _merge_snapshots(record_id, old_val, new_val)
+            continue
         raise ValueError(f"divergent write to field {key!r} for id {record_id!r}: {old_val!r} != {new_val!r}")
+    return merged
+
+
+def _merge_snapshots(record_id: str, old: list[dict], new: list[dict]) -> list[dict]:
+    """Append-only union merge for ``Source.snapshots`` (D13 -- DECISIONS.md,
+    Option 1 of the 2026-07-18 options memo). Existing snapshots are kept
+    in place; a ``new`` entry whose ``snapshot_id`` is not already present is
+    appended in encounter order (search snippets and later fetched/structured
+    payloads coexist, per the memo). A ``snapshot_id`` that DOES already
+    exist with IDENTICAL content is an idempotent no-op (safe re-application,
+    same guarantee ``merge_ledger`` gives every other field); with DIFFERENT
+    content it RAISES -- the id is a deterministic content hash, so a
+    collision with divergent content signals a data-integrity bug, not a
+    legitimate update."""
+    merged = list(old)
+    by_id = {snap["snapshot_id"]: snap for snap in old}
+    for snap in new:
+        snap_id = snap["snapshot_id"]
+        existing = by_id.get(snap_id)
+        if existing is None:
+            merged.append(snap)
+            by_id[snap_id] = snap
+        elif existing != snap:
+            raise ValueError(f"divergent snapshot content for id {snap_id!r} on source {record_id!r}")
     return merged
 
 

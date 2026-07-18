@@ -28,7 +28,7 @@ from langgraph.runtime import Runtime
 from dr_core.connectors.binding import ResultShape, ToolBinding, get_default_registry, mcp_generic_url_and_title, parse_mcp_generic_records
 from dr_core.graph.claim_tool import record_claim
 from dr_core.graph.state import DrAgentState
-from dr_core.models import Source
+from dr_core.models import Snapshot, Source, compute_snapshot_id
 
 # Which tool names are source-bearing, and how to parse each one's payload,
 # is resolved entirely through dr_core.connectors.binding.ToolBindingRegistry
@@ -113,7 +113,24 @@ def _source_from_web_fetch(content: str, url: str | None, retrieved_at: str) -> 
     return {record["id"]: record}
 
 
-def _source_from_structured_tool(content: str, retrieved_at: str, *, source_system: str, authority_tier: int) -> dict[str, dict]:
+def _structured_snapshot(source_id: str, tool_call_id: str, data_ref: dict, retrieved_at: str) -> dict:
+    """Build a D13 Snapshot capturing a structured connector tool's own
+    `data_ref` fragment (WRDS/EDGAR/FRED tools.py's contract) at the moment
+    it was retrieved -- the ground truth `record_claim`'s model-supplied
+    `data_ref` argument is checked against (claim_tool.py), per the memo's
+    secondary boundary 1."""
+    normalized = json.dumps(data_ref, sort_keys=True, default=str)
+    snapshot = Snapshot(
+        snapshot_id=compute_snapshot_id(source_id, tool_call_id, normalized),
+        source_id=source_id,
+        tool_call_id=tool_call_id,
+        data_ref=data_ref,
+        retrieved_at=retrieved_at,
+    )
+    return snapshot.model_dump(mode="json")
+
+
+def _source_from_structured_tool(content: str, retrieved_at: str, *, source_system: str, authority_tier: int, tool_call_id: str) -> dict[str, dict]:
     """Generic parser for Stage-C structured connector tools: reads a
     `url_or_id` (+ optional `title`) straight from the tool's own JSON
     payload -- no tool-call-args lookup needed, the payload is
@@ -122,7 +139,12 @@ def _source_from_structured_tool(content: str, retrieved_at: str, *, source_syst
     _source_from_web_fetch's error-string skip. Every Stage-C payload also
     self-reports its own `source_system`; that wins over the binding's
     default when present (the default only covers tools -- like
-    academic_search -- whose actual connector varies per call)."""
+    academic_search -- whose actual connector varies per call).
+
+    D13: when the payload carries a `data_ref` (WRDS/EDGAR/FRED single-fact
+    lookups), it is captured as the Source's first Snapshot -- the
+    structured-record capture that makes `record_claim`'s data_ref argument
+    checkable against a value the model cannot alter after the fact."""
     try:
         payload = json.loads(content)
     except (TypeError, ValueError):
@@ -133,8 +155,9 @@ def _source_from_structured_tool(content: str, retrieved_at: str, *, source_syst
     if not isinstance(url_or_id, str) or not url_or_id:
         return {}
     payload_source_system = payload.get("source_system")
+    source_id = _source_id(url_or_id)
     source = Source(
-        id=_source_id(url_or_id),
+        id=source_id,
         url_or_id=url_or_id,
         source_system=payload_source_system if isinstance(payload_source_system, str) and payload_source_system else source_system,
         title=payload.get("title"),
@@ -142,6 +165,9 @@ def _source_from_structured_tool(content: str, retrieved_at: str, *, source_syst
         retrieved_at=retrieved_at,
     )
     record = source.model_dump(mode="json")
+    data_ref = payload.get("data_ref")
+    if isinstance(data_ref, dict):
+        record["snapshots"] = [_structured_snapshot(source_id, tool_call_id, data_ref, retrieved_at)]
     return {record["id"]: record}
 
 
@@ -221,7 +247,7 @@ def _extract_for_binding(binding: ToolBinding, content: str, retrieved_at: str, 
         url = call_args_by_id.get(tool_call_id, {}).get("url")
         return _source_from_web_fetch(content, url, retrieved_at)
     if binding.result_shape is ResultShape.STRUCTURED_SINGLE:
-        return _source_from_structured_tool(content, retrieved_at, source_system=binding.source_system, authority_tier=binding.authority_tier)
+        return _source_from_structured_tool(content, retrieved_at, source_system=binding.source_system, authority_tier=binding.authority_tier, tool_call_id=tool_call_id)
     if binding.result_shape is ResultShape.STRUCTURED_SEARCH:
         return _sources_from_structured_search_tool(content, retrieved_at, source_system=binding.source_system, authority_tier=binding.authority_tier)
     return _sources_from_mcp_generic(content, retrieved_at, source_system=binding.source_system, authority_tier=binding.authority_tier)

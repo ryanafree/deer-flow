@@ -201,6 +201,64 @@ class TestDataRef:
         assert claim.data_ref == data_ref
 
 
+class TestDataRefSnapshotQuoteMatch:
+    """D13 (DECISIONS.md): when the source has a retained structured
+    snapshot (graph/middleware.py's D13 capture), a submitted data_ref must
+    quote-match it -- the structured-claim analog of verbatim quote
+    membership. Sources with no snapshots (the _state()/TestDataRef fixtures
+    above) are unaffected -- nothing to check against, same as pre-D13."""
+
+    def _snapshot_state(self, data_ref: dict) -> dict:
+        return {
+            "dr_sources": {
+                SOURCE_ID: {
+                    "id": SOURCE_ID,
+                    "url_or_id": "wrds://crsp-compustat/AAPL/2023",
+                    "snapshots": [{"snapshot_id": "snap1", "source_id": SOURCE_ID, "tool_call_id": "call1", "data_ref": data_ref, "retrieved_at": "2026-07-18T00:00:00Z"}],
+                }
+            },
+            "dr_claims": {},
+            "dr_run": {"active_requirement_ids": []},
+        }
+
+    def test_verbatim_data_ref_matching_snapshot_is_accepted(self):
+        data_ref = {"period": "2023", "source_class": "primary_database"}
+        out = _record(data_ref=data_ref, state=self._snapshot_state(data_ref))
+        assert "dr_claims" in out.update
+        ((_, payload),) = out.update["dr_claims"].items()
+        assert payload["data_ref"] == data_ref
+
+    def test_data_ref_with_added_claimed_period_is_accepted(self):
+        # claimed_period is the one field the model is allowed to add
+        # (verify/provenance.py: the period the CLAIM asserts, not
+        # tool-retrieved data).
+        snapshot_data_ref = {"period": "2023", "source_class": "primary_database"}
+        submitted = {**snapshot_data_ref, "claimed_period": "2024"}
+        out = _record(data_ref=submitted, state=self._snapshot_state(snapshot_data_ref))
+        assert "dr_claims" in out.update
+        ((_, payload),) = out.update["dr_claims"].items()
+        assert payload["data_ref"] == submitted
+
+    def test_tampered_value_is_rejected_with_no_write(self):
+        snapshot_data_ref = {"period": "2023", "source_class": "primary_database", "value": 100.0, "unit": "USD"}
+        tampered = {**snapshot_data_ref, "value": 999.0}
+        out = _record(data_ref=tampered, state=self._snapshot_state(snapshot_data_ref))
+        assert "dr_claims" not in out.update
+        assert "does not match" in out.update["messages"][0].content
+
+    def test_fabricated_data_ref_for_source_with_no_snapshot_content_is_rejected(self):
+        # The retained snapshot has data_ref=None (shouldn't normally happen
+        # for a structured source, but guards the empty-known_data_refs path
+        # distinctly from "no snapshots at all").
+        state = {
+            "dr_sources": {SOURCE_ID: {"id": SOURCE_ID, "url_or_id": "x", "snapshots": [{"snapshot_id": "snap1", "source_id": SOURCE_ID, "tool_call_id": "call1", "data_ref": None, "retrieved_at": "2026-07-18T00:00:00Z"}]}},
+            "dr_claims": {},
+            "dr_run": {"active_requirement_ids": []},
+        }
+        out = _record(data_ref={"period": "2023"}, state=state)
+        assert "dr_claims" in out.update  # no comparable snapshot data_ref -> nothing to check, pass-through
+
+
 class TestGateFlags:
     def test_valid_hyphenated_flag_is_normalized_and_lands(self):
         out = _record(gate_flags=["vendor-reported"])

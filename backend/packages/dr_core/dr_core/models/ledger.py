@@ -8,6 +8,7 @@ FUNCTIONS in derive.py, never fields here ("DERIVED ONLY, never a stored field")
 
 from __future__ import annotations
 
+import hashlib
 from datetime import datetime
 from typing import TYPE_CHECKING
 
@@ -29,6 +30,43 @@ if TYPE_CHECKING:
     from dr_core.models.enums import Materiality
 
 
+class Snapshot(BaseModel):
+    """Immutable, append-only record of a structured payload actually
+    retrieved for a ``Source`` (D13 -- DECISIONS.md, ratifying Option 1 of
+    ``build-logs/fable-options-memo-claim-grounding-snapshots-2026-07-18.md``).
+
+    ``snapshot_id`` is deterministic -- ``compute_snapshot_id(source_id,
+    tool_call_id, normalized_content)`` -- so the SAME sighting re-processed
+    (e.g. a replayed graph step) merges idempotently; a DIFFERENT payload
+    minted under an id already seen is a data-integrity error and RAISES in
+    ``graph/state.py``'s merge rule (D13's "divergent content under the same
+    ID raises"), never silently overwritten.
+
+    ``data_ref`` is the structured connector tool's own payload fragment
+    (WRDS/EDGAR/FRED ``tools.py``'s ``data_ref``, verbatim) -- the ground
+    truth ``record_claim``'s model-supplied ``data_ref`` argument is checked
+    against (``graph/claim_tool.py``), so a claim's structured grounding is
+    verified against a value the model cannot alter after the fact, closing
+    the memo's secondary boundary 1 (structured connector JSON retained as a
+    snapshot; new ``record_claim`` calls must quote-match it).
+    """
+
+    snapshot_id: str
+    source_id: str
+    tool_call_id: str
+    data_ref: dict | None = None
+    retrieved_at: datetime
+
+
+def compute_snapshot_id(source_id: str, tool_call_id: str, normalized_content: str) -> str:
+    """Deterministic snapshot id (D13): ``hash(source_id, tool_call_id,
+    normalized_content)``. ``normalized_content`` is whatever the snapshot's
+    own normalization produces -- for a structured snapshot,
+    ``graph/middleware.py`` passes ``json.dumps(data_ref, sort_keys=True,
+    default=str)``."""
+    return hashlib.sha256(f"{source_id}|{tool_call_id}|{normalized_content}".encode()).hexdigest()[:16]
+
+
 class Source(BaseModel):
     id: str
     url_or_id: str
@@ -37,6 +75,7 @@ class Source(BaseModel):
     authority_tier: int = Field(ge=1, le=4)
     publication_date: str | None = None
     retrieved_at: datetime
+    snapshots: list[Snapshot] = Field(default_factory=list)
 
 
 class SupportRecord(BaseModel):

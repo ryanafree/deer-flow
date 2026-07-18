@@ -140,6 +140,26 @@ def record_claim(
     if unknown_targets:
         return _reject(tool_call_id, f"unknown or inactive target_requirement_ids: {', '.join(unknown_targets)}")
 
+    if data_ref is not None:
+        # D13 (DECISIONS.md): the memo's secondary boundary 1 -- a structured
+        # claim's data_ref must "quote-match" a retained Source snapshot, the
+        # structured-claim analog of verbatim quote membership. Only enforced
+        # when the source actually HAS a captured snapshot (structured
+        # connector tools like wrds_query/edgar_company_facts/fred_series --
+        # see graph/middleware.py's _source_from_structured_tool); a source
+        # with no snapshots (e.g. a plain web source) has no ground truth to
+        # check against, so data_ref there is unchanged pass-through, same as
+        # before D13. `claimed_period` is the one field the model is allowed
+        # to ADD (verify/provenance.py: "the period the claim text asserts
+        # the value is FOR" -- not tool-retrieved data); every other key must
+        # match the snapshot's own data_ref exactly.
+        known_snapshots = dr_sources.get(source_id, {}).get("snapshots") or []
+        known_data_refs = [snap.get("data_ref") for snap in known_snapshots if snap.get("data_ref") is not None]
+        if known_data_refs:
+            submitted_base = {k: v for k, v in data_ref.items() if k != "claimed_period"}
+            if submitted_base not in known_data_refs:
+                return _reject(tool_call_id, f"data_ref for source {source_id!r} does not match any retained structured snapshot -- pass the tool's data_ref VERBATIM (only 'claimed_period' may be added).")
+
     try:
         claim = Claim(
             claim_id=_claim_id(text, source_id),

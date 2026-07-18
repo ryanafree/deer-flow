@@ -194,6 +194,39 @@ class TestStructuredToolExtraction:
         assert record["authority_tier"] == 1
         assert record["title"] == "WRDS CRSP/Compustat AAPL 2023"
 
+    def test_wrds_payload_with_data_ref_captures_a_structured_snapshot(self):
+        # D13 (DECISIONS.md): a data_ref-bearing structured payload gets its
+        # data_ref captured as the Source's first Snapshot, keyed to this
+        # tool_call_id -- the "structured-record capture" the ratified
+        # options memo calls for.
+        data_ref = {"period": "2023", "source_class": "primary_database"}
+        payload = {"ok": True, "source_system": "wrds", "url_or_id": "wrds://crsp-compustat/AAPL/2023", "title": "WRDS CRSP/Compustat AAPL 2023", "data_ref": data_ref}
+        messages = [
+            _wrds_query_call("call_wrds_snap"),
+            ToolMessage(content=json.dumps(payload), tool_call_id="call_wrds_snap", name="wrds_query"),
+        ]
+
+        out = DrLedgerMiddleware().before_model({"messages": messages, "dr_run": {}}, None)
+
+        record = next(iter(out["dr_sources"].values()))
+        assert len(record["snapshots"]) == 1
+        snapshot = record["snapshots"][0]
+        assert snapshot["source_id"] == record["id"]
+        assert snapshot["tool_call_id"] == "call_wrds_snap"
+        assert snapshot["data_ref"] == data_ref
+
+    def test_wrds_payload_without_data_ref_yields_no_snapshot(self):
+        payload = {"ok": True, "source_system": "wrds", "url_or_id": "wrds://crsp-compustat/AAPL/2023", "title": "WRDS CRSP/Compustat AAPL 2023"}
+        messages = [
+            _wrds_query_call(),
+            ToolMessage(content=json.dumps(payload), tool_call_id="call_wrds", name="wrds_query"),
+        ]
+
+        out = DrLedgerMiddleware().before_model({"messages": messages, "dr_run": {}}, None)
+
+        record = next(iter(out["dr_sources"].values()))
+        assert record["snapshots"] == []
+
     def test_wrds_failure_payload_yields_no_source(self):
         payload = {"ok": False, "error": "WRDS unavailable"}
         messages = [
