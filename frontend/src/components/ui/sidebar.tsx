@@ -271,6 +271,7 @@ function SidebarTrigger({
         onClick?.(event);
         toggleSidebar();
       }}
+      aria-label="Toggle Sidebar"
       {...props}
     >
       {open ? <PanelLeftCloseIcon /> : <PanelLeftOpenIcon />}
