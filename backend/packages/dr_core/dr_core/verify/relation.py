@@ -27,9 +27,13 @@ _SHAPE = '{"relation":"supports_directly|supports_inferentially|qualifies|contex
 
 
 def _get_relation_model():
+    """``DR_RELATION_REVIEW_MODEL`` overrides which model reviews support
+    relations; absent that, this falls back to the verify-tier default owned
+    by ``dr_core.models.tiers``."""
     from deerflow.models import create_chat_model
+    from dr_core.models import tiers
 
-    return create_chat_model(os.environ.get("DR_RELATION_REVIEW_MODEL", os.environ.get("DR_VERIFY_MODEL", "claude-verify")))
+    return create_chat_model(os.environ.get("DR_RELATION_REVIEW_MODEL") or tiers.verify_model_name())
 
 
 def _usage(response) -> dict[str, int]:

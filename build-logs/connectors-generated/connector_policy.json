@@ -1,0 +1,167 @@
+{
+  "tavily": {
+    "timeout_s": 15,
+    "retries": 1,
+    "breaker_threshold": 3
+  },
+  "searxng": {
+    "timeout_s": 10,
+    "retries": 0,
+    "breaker_threshold": 1
+  },
+  "crawl4ai": {
+    "timeout_s": 20,
+    "retries": 2,
+    "breaker_threshold": 3
+  },
+  "docling": {
+    "timeout_s": 20,
+    "retries": 2,
+    "breaker_threshold": 3
+  },
+  "jina_reader": {
+    "timeout_s": 15,
+    "retries": 1,
+    "breaker_threshold": 3
+  },
+  "openalex": {
+    "timeout_s": 15,
+    "retries": 1,
+    "breaker_threshold": 3
+  },
+  "semantic_scholar": {
+    "timeout_s": 15,
+    "retries": 1,
+    "breaker_threshold": 3
+  },
+  "edgar": {
+    "timeout_s": 20,
+    "retries": 2,
+    "breaker_threshold": 3
+  },
+  "openbb": {
+    "timeout_s": 15,
+    "retries": 1,
+    "breaker_threshold": 3
+  },
+  "courtlistener": {
+    "timeout_s": 15,
+    "retries": 1,
+    "breaker_threshold": 3
+  },
+  "courtlistener_rest": {
+    "timeout_s": 20,
+    "retries": 2,
+    "breaker_threshold": 3
+  },
+  "govinfo": {
+    "timeout_s": 15,
+    "retries": 1,
+    "breaker_threshold": 3
+  },
+  "pubmed": {
+    "timeout_s": 15,
+    "retries": 1,
+    "breaker_threshold": 3
+  },
+  "arxiv": {
+    "timeout_s": 15,
+    "retries": 1,
+    "breaker_threshold": 3
+  },
+  "huggingface": {
+    "timeout_s": 15,
+    "retries": 1,
+    "breaker_threshold": 3
+  },
+  "github": {
+    "timeout_s": 15,
+    "retries": 1,
+    "breaker_threshold": 3
+  },
+  "federal_register": {
+    "timeout_s": 15,
+    "retries": 1,
+    "breaker_threshold": 3
+  },
+  "regulations_gov": {
+    "timeout_s": 15,
+    "retries": 1,
+    "breaker_threshold": 3
+  },
+  "congress_gov": {
+    "timeout_s": 15,
+    "retries": 1,
+    "breaker_threshold": 3
+  },
+  "openstates": {
+    "timeout_s": 15,
+    "retries": 1,
+    "breaker_threshold": 3
+  },
+  "clinicaltrials_gov": {
+    "timeout_s": 15,
+    "retries": 1,
+    "breaker_threshold": 3
+  },
+  "usda_fdc": {
+    "timeout_s": 15,
+    "retries": 1,
+    "breaker_threshold": 3
+  },
+  "open_food_facts": {
+    "timeout_s": 15,
+    "retries": 1,
+    "breaker_threshold": 3
+  },
+  "europe_pmc": {
+    "timeout_s": 15,
+    "retries": 1,
+    "breaker_threshold": 3
+  },
+  "fred": {
+    "timeout_s": 15,
+    "retries": 1,
+    "breaker_threshold": 3
+  },
+  "world_bank": {
+    "timeout_s": 15,
+    "retries": 1,
+    "breaker_threshold": 3
+  },
+  "treasury_fiscaldata": {
+    "timeout_s": 15,
+    "retries": 1,
+    "breaker_threshold": 3
+  },
+  "bls": {
+    "timeout_s": 15,
+    "retries": 1,
+    "breaker_threshold": 3
+  },
+  "bea": {
+    "timeout_s": 15,
+    "retries": 1,
+    "breaker_threshold": 3
+  },
+  "nber_tsv": {
+    "timeout_s": 15,
+    "retries": 1,
+    "breaker_threshold": 3
+  },
+  "polymarket": {
+    "timeout_s": 15,
+    "retries": 1,
+    "breaker_threshold": 3
+  },
+  "kalshi": {
+    "timeout_s": 15,
+    "retries": 1,
+    "breaker_threshold": 3
+  },
+  "wrds": {
+    "timeout_s": 20,
+    "retries": 2,
+    "breaker_threshold": 3
+  }
+}

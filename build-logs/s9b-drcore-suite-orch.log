@@ -1,0 +1,16 @@
+......................sss............................................... [ 13%]
+........................................................................ [ 27%]
+........................................................................ [ 40%]
+........................................................................ [ 54%]
+........................................................................ [ 67%]
+........................................................................ [ 81%]
+........................................................................ [ 94%]
+............................                                             [100%]
+=============================== warnings summary ===============================
+.venv/lib/python3.12/site-packages/langgraph/cache/base/__init__.py:8
+  /Users/ryanfree/Documents/Projects/deerflow-dr/deer-flow/backend/.venv/lib/python3.12/site-packages/langgraph/cache/base/__init__.py:8: LangChainPendingDeprecationWarning: The default value of `allowed_objects` will change in a future version. Pass an explicit value (e.g., allowed_objects='messages' or allowed_objects='core') to suppress this warning.
+    from langgraph.checkpoint.serde.jsonplus import JsonPlusSerializer
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+529 passed, 3 skipped, 1 warning in 23.48s
+exit=0

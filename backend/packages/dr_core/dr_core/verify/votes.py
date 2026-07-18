@@ -37,7 +37,6 @@ auditability. Evidence-present votes are unaffected.
 from __future__ import annotations
 
 import json
-import os
 from collections.abc import Awaitable, Callable
 
 from langchain_core.messages import HumanMessage, SystemMessage
@@ -150,13 +149,14 @@ def _get_vote_model():
     ``claude -p --model sonnet`` via ``ChatClaudeCLI``), replacing the
     OpenRouter ``or-sonnet`` default -- a bounded live throughput probe (8
     concurrent verify-vote-shaped calls, 0 failures, ~10s wall clock vs ~47s
-    naive-sequential) showed the shim holds up under real vote load. Set
-    ``DR_VERIFY_MODEL=or-sonnet`` (or any other configured model name) to
-    fall back to the OpenRouter path explicitly.
+    naive-sequential) showed the shim holds up under real vote load. Model
+    name resolution (including the OpenRouter fallback override) lives in
+    ``dr_core.models.tiers``, the sole owner of the verify-tier env knob.
     """
     from deerflow.models import create_chat_model
+    from dr_core.models import tiers
 
-    return create_chat_model(os.environ.get("DR_VERIFY_MODEL", "claude-verify"))
+    return create_chat_model(tiers.verify_model_name())
 
 
 def _format_evidence(claim: Claim, source: dict | None, evidence_excerpt: str | None) -> str:

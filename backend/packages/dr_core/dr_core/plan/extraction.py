@@ -20,7 +20,6 @@ from __future__ import annotations
 import hashlib
 import json
 import logging
-import os
 from datetime import date
 
 from langchain_core.messages import AnyMessage, HumanMessage, SystemMessage
@@ -72,10 +71,13 @@ def _accumulate_usage(usage: dict[str, int], response) -> None:
 
 def _get_plan_model():
     """Module-level injectable factory -- tests monkeypatch this name
-    directly, mirroring ``dr_core.verify.votes._get_vote_model``."""
+    directly, mirroring ``dr_core.verify.votes._get_vote_model``. Model name
+    resolution lives in ``dr_core.models.tiers`` (the sole owner of the
+    plan-tier env knob)."""
     from deerflow.models import create_chat_model
+    from dr_core.models import tiers
 
-    return create_chat_model(os.environ.get("DR_PLAN_MODEL", "or-mid"))
+    return create_chat_model(tiers.plan_model_name())
 
 
 def _requirement_id(text: str, kind: str) -> str:

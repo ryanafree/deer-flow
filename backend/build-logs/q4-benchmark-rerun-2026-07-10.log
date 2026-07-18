@@ -1,0 +1,155 @@
+/Users/ryanfree/Documents/Projects/deerflow-dr/deer-flow/backend/.venv/lib/python3.12/site-packages/langgraph/checkpoint/serde/encrypted.py:5: LangChainPendingDeprecationWarning: The default value of `allowed_objects` will change in a future version. Pass an explicit value (e.g., allowed_objects='messages' or allowed_objects='core') to suppress this warning.
+  from langgraph.checkpoint.serde.jsonplus import JsonPlusSerializer
+Thinking mode is enabled but model 'or-mid' does not support it; fallback to non-thinking mode.
+An executable named `docling-mcp` is not provided by package `docling-mcp`.
+The following executables are available:
+- docling-mcp-server
+
+Use `uvx --from docling-mcp docling-mcp-server` instead.
+
+Skipping MCP server 'docling' after tool discovery failed: unhandled errors in a TaskGroup (1 sub-exception)
+  + Exception Group Traceback (most recent call last):
+  |   File "/Users/ryanfree/Documents/Projects/deerflow-dr/deer-flow/backend/build-logs/../packages/harness/deerflow/mcp/tools.py", line 636, in load_server_tools
+  |     return await client.get_tools(server_name=server_name)
+  |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  |   File "/Users/ryanfree/Documents/Projects/deerflow-dr/deer-flow/backend/.venv/lib/python3.12/site-packages/langchain_mcp_adapters/client.py", line 174, in get_tools
+  |     return await load_mcp_tools(
+  |            ^^^^^^^^^^^^^^^^^^^^^
+  |   File "/Users/ryanfree/Documents/Projects/deerflow-dr/deer-flow/backend/.venv/lib/python3.12/site-packages/langchain_mcp_adapters/tools.py", line 478, in load_mcp_tools
+  |     async with create_session(
+  |                ^^^^^^^^^^^^^^^
+  |   File "/Users/ryanfree/.local/share/uv/python/cpython-3.12.13-macos-aarch64-none/lib/python3.12/contextlib.py", line 231, in __aexit__
+  |     await self.gen.athrow(value)
+  |   File "/Users/ryanfree/Documents/Projects/deerflow-dr/deer-flow/backend/.venv/lib/python3.12/site-packages/langchain_mcp_adapters/sessions.py", line 457, in create_session
+  |     async with _create_stdio_session(**params) as session:
+  |                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  |   File "/Users/ryanfree/.local/share/uv/python/cpython-3.12.13-macos-aarch64-none/lib/python3.12/contextlib.py", line 231, in __aexit__
+  |     await self.gen.athrow(value)
+  |   File "/Users/ryanfree/Documents/Projects/deerflow-dr/deer-flow/backend/.venv/lib/python3.12/site-packages/langchain_mcp_adapters/sessions.py", line 269, in _create_stdio_session
+  |     stdio_client(server_params) as (read, write),
+  |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  |   File "/Users/ryanfree/.local/share/uv/python/cpython-3.12.13-macos-aarch64-none/lib/python3.12/contextlib.py", line 231, in __aexit__
+  |     await self.gen.athrow(value)
+  |   File "/Users/ryanfree/Documents/Projects/deerflow-dr/deer-flow/backend/.venv/lib/python3.12/site-packages/mcp/client/stdio/__init__.py", line 183, in stdio_client
+  |     anyio.create_task_group() as tg,
+  |     ^^^^^^^^^^^^^^^^^^^^^^^^^
+  |   File "/Users/ryanfree/Documents/Projects/deerflow-dr/deer-flow/backend/.venv/lib/python3.12/site-packages/anyio/_backends/_asyncio.py", line 799, in __aexit__
+  |     raise BaseExceptionGroup(
+  | ExceptionGroup: unhandled errors in a TaskGroup (1 sub-exception)
+  +-+---------------- 1 ----------------
+    | Exception Group Traceback (most recent call last):
+    |   File "/Users/ryanfree/Documents/Projects/deerflow-dr/deer-flow/backend/.venv/lib/python3.12/site-packages/mcp/client/stdio/__init__.py", line 189, in stdio_client
+    |     yield read_stream, write_stream
+    |   File "/Users/ryanfree/Documents/Projects/deerflow-dr/deer-flow/backend/.venv/lib/python3.12/site-packages/langchain_mcp_adapters/sessions.py", line 270, in _create_stdio_session
+    |     ClientSession(read, write, **(session_kwargs or {})) as session,
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |   File "/Users/ryanfree/Documents/Projects/deerflow-dr/deer-flow/backend/.venv/lib/python3.12/site-packages/mcp/shared/session.py", line 238, in __aexit__
+    |     return await self._task_group.__aexit__(exc_type, exc_val, exc_tb)
+    |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |   File "/Users/ryanfree/Documents/Projects/deerflow-dr/deer-flow/backend/.venv/lib/python3.12/site-packages/anyio/_backends/_asyncio.py", line 799, in __aexit__
+    |     raise BaseExceptionGroup(
+    | ExceptionGroup: unhandled errors in a TaskGroup (1 sub-exception)
+    +-+---------------- 1 ----------------
+      | Traceback (most recent call last):
+      |   File "/Users/ryanfree/Documents/Projects/deerflow-dr/deer-flow/backend/.venv/lib/python3.12/site-packages/langchain_mcp_adapters/sessions.py", line 272, in _create_stdio_session
+      |     yield session
+      |   File "/Users/ryanfree/Documents/Projects/deerflow-dr/deer-flow/backend/.venv/lib/python3.12/site-packages/langchain_mcp_adapters/sessions.py", line 458, in create_session
+      |     yield session
+      |   File "/Users/ryanfree/Documents/Projects/deerflow-dr/deer-flow/backend/.venv/lib/python3.12/site-packages/langchain_mcp_adapters/tools.py", line 481, in load_mcp_tools
+      |     await tool_session.initialize()
+      |   File "/Users/ryanfree/Documents/Projects/deerflow-dr/deer-flow/backend/.venv/lib/python3.12/site-packages/mcp/client/session.py", line 171, in initialize
+      |     result = await self.send_request(
+      |              ^^^^^^^^^^^^^^^^^^^^^^^^
+      |   File "/Users/ryanfree/Documents/Projects/deerflow-dr/deer-flow/backend/.venv/lib/python3.12/site-packages/mcp/shared/session.py", line 306, in send_request
+      |     raise McpError(response_or_error.error)
+      | mcp.shared.exceptions.McpError: Connection closed
+      +------------------------------------
+An executable named `openbb-mcp-server` is not provided by package `openbb-mcp-server`.
+The following executables are available:
+- openbb-mcp
+
+Use `uvx --from openbb-mcp-server openbb-mcp` instead.
+
+Skipping MCP server 'openbb' after tool discovery failed: unhandled errors in a TaskGroup (1 sub-exception)
+  + Exception Group Traceback (most recent call last):
+  |   File "/Users/ryanfree/Documents/Projects/deerflow-dr/deer-flow/backend/build-logs/../packages/harness/deerflow/mcp/tools.py", line 636, in load_server_tools
+  |     return await client.get_tools(server_name=server_name)
+  |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  |   File "/Users/ryanfree/Documents/Projects/deerflow-dr/deer-flow/backend/.venv/lib/python3.12/site-packages/langchain_mcp_adapters/client.py", line 174, in get_tools
+  |     return await load_mcp_tools(
+  |            ^^^^^^^^^^^^^^^^^^^^^
+  |   File "/Users/ryanfree/Documents/Projects/deerflow-dr/deer-flow/backend/.venv/lib/python3.12/site-packages/langchain_mcp_adapters/tools.py", line 478, in load_mcp_tools
+  |     async with create_session(
+  |                ^^^^^^^^^^^^^^^
+  |   File "/Users/ryanfree/.local/share/uv/python/cpython-3.12.13-macos-aarch64-none/lib/python3.12/contextlib.py", line 231, in __aexit__
+  |     await self.gen.athrow(value)
+  |   File "/Users/ryanfree/Documents/Projects/deerflow-dr/deer-flow/backend/.venv/lib/python3.12/site-packages/langchain_mcp_adapters/sessions.py", line 457, in create_session
+  |     async with _create_stdio_session(**params) as session:
+  |                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  |   File "/Users/ryanfree/.local/share/uv/python/cpython-3.12.13-macos-aarch64-none/lib/python3.12/contextlib.py", line 231, in __aexit__
+  |     await self.gen.athrow(value)
+  |   File "/Users/ryanfree/Documents/Projects/deerflow-dr/deer-flow/backend/.venv/lib/python3.12/site-packages/langchain_mcp_adapters/sessions.py", line 269, in _create_stdio_session
+  |     stdio_client(server_params) as (read, write),
+  |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  |   File "/Users/ryanfree/.local/share/uv/python/cpython-3.12.13-macos-aarch64-none/lib/python3.12/contextlib.py", line 231, in __aexit__
+  |     await self.gen.athrow(value)
+  |   File "/Users/ryanfree/Documents/Projects/deerflow-dr/deer-flow/backend/.venv/lib/python3.12/site-packages/mcp/client/stdio/__init__.py", line 183, in stdio_client
+  |     anyio.create_task_group() as tg,
+  |     ^^^^^^^^^^^^^^^^^^^^^^^^^
+  |   File "/Users/ryanfree/Documents/Projects/deerflow-dr/deer-flow/backend/.venv/lib/python3.12/site-packages/anyio/_backends/_asyncio.py", line 799, in __aexit__
+  |     raise BaseExceptionGroup(
+  | ExceptionGroup: unhandled errors in a TaskGroup (1 sub-exception)
+  +-+---------------- 1 ----------------
+    | Exception Group Traceback (most recent call last):
+    |   File "/Users/ryanfree/Documents/Projects/deerflow-dr/deer-flow/backend/.venv/lib/python3.12/site-packages/mcp/client/stdio/__init__.py", line 189, in stdio_client
+    |     yield read_stream, write_stream
+    |   File "/Users/ryanfree/Documents/Projects/deerflow-dr/deer-flow/backend/.venv/lib/python3.12/site-packages/langchain_mcp_adapters/sessions.py", line 270, in _create_stdio_session
+    |     ClientSession(read, write, **(session_kwargs or {})) as session,
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |   File "/Users/ryanfree/Documents/Projects/deerflow-dr/deer-flow/backend/.venv/lib/python3.12/site-packages/mcp/shared/session.py", line 238, in __aexit__
+    |     return await self._task_group.__aexit__(exc_type, exc_val, exc_tb)
+    |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |   File "/Users/ryanfree/Documents/Projects/deerflow-dr/deer-flow/backend/.venv/lib/python3.12/site-packages/anyio/_backends/_asyncio.py", line 799, in __aexit__
+    |     raise BaseExceptionGroup(
+    | ExceptionGroup: unhandled errors in a TaskGroup (1 sub-exception)
+    +-+---------------- 1 ----------------
+      | Traceback (most recent call last):
+      |   File "/Users/ryanfree/Documents/Projects/deerflow-dr/deer-flow/backend/.venv/lib/python3.12/site-packages/langchain_mcp_adapters/sessions.py", line 272, in _create_stdio_session
+      |     yield session
+      |   File "/Users/ryanfree/Documents/Projects/deerflow-dr/deer-flow/backend/.venv/lib/python3.12/site-packages/langchain_mcp_adapters/sessions.py", line 458, in create_session
+      |     yield session
+      |   File "/Users/ryanfree/Documents/Projects/deerflow-dr/deer-flow/backend/.venv/lib/python3.12/site-packages/langchain_mcp_adapters/tools.py", line 481, in load_mcp_tools
+      |     await tool_session.initialize()
+      |   File "/Users/ryanfree/Documents/Projects/deerflow-dr/deer-flow/backend/.venv/lib/python3.12/site-packages/mcp/client/session.py", line 171, in initialize
+      |     result = await self.send_request(
+      |              ^^^^^^^^^^^^^^^^^^^^^^^^
+      |   File "/Users/ryanfree/Documents/Projects/deerflow-dr/deer-flow/backend/.venv/lib/python3.12/site-packages/mcp/shared/session.py", line 306, in send_request
+      |     raise McpError(response_or_error.error)
+      | mcp.shared.exceptions.McpError: Connection closed
+      +------------------------------------
+{"timestamp": "2026-07-10T13:04:08.058521+00:00", "level": "INFO", "logger": "semantic_scholar_mcp.instruction_loader", "message": "Loaded all tool instructions", "module": "logging", "function": "_log", "line": 164, "taskName": null, "total_tools": 24}
+{"timestamp": "2026-07-10T13:04:08.090051+00:00", "level": "INFO", "logger": "semantic_scholar_mcp.server", "message": "Successfully loaded .env file from /Users/ryanfree/Documents/Projects/deerflow-dr/deer-flow/backend/.env", "module": "logging", "function": "_log", "line": 164, "taskName": "Task-1"}
+{"timestamp": "2026-07-10T13:04:08.091370+00:00", "level": "INFO", "logger": "semantic_scholar_mcp.agent", "message": "ResearchAgent initialized", "module": "agent", "function": "__init__", "line": 56, "taskName": "Task-1"}
+{"timestamp": "2026-07-10T13:04:08.091396+00:00", "level": "DEBUG", "logger": "semantic_scholar_mcp.agent", "message": "Project registry loaded (in-memory only for Phase 2)", "module": "agent", "function": "_load_registered_projects", "line": 70, "taskName": "Task-1"}
+{"timestamp": "2026-07-10T13:04:08.091423+00:00", "level": "INFO", "logger": "semantic_scholar_mcp.server", "message": "Semantic Scholar MCP server initialized", "module": "logging", "function": "_log", "line": 164, "taskName": "Task-1", "version": "0.1.0", "environment": "development", "debug_mcp_mode": false, "log_level": "DEBUG", "performance_metrics_enabled": false}
+{"timestamp": "2026-07-10T13:04:08.092814+00:00", "level": "DEBUG", "logger": "asyncio", "message": "Using selector: KqueueSelector", "module": "selector_events", "function": "__init__", "line": 64, "taskName": null}
+{"timestamp": "2026-07-10T13:04:08.094888+00:00", "level": "DEBUG", "logger": "mcp.server.lowlevel.server", "message": "Received message: root=InitializedNotification(method='notifications/initialized', params=None, jsonrpc='2.0')", "module": "server", "function": "run", "line": 682, "taskName": "mcp.server.fastmcp.server.FastMCP.run_stdio_async"}
+{"timestamp": "2026-07-10T13:04:08.095135+00:00", "level": "DEBUG", "logger": "mcp.server.lowlevel.server", "message": "Received message: <mcp.shared.session.RequestResponder object at 0x10de1aed0>", "module": "server", "function": "run", "line": 682, "taskName": "mcp.server.fastmcp.server.FastMCP.run_stdio_async"}
+{"timestamp": "2026-07-10T13:04:08.095198+00:00", "level": "INFO", "logger": "mcp.server.lowlevel.server", "message": "Processing request of type ListToolsRequest", "module": "server", "function": "_handle_request", "line": 733, "taskName": "mcp.server.lowlevel.server.Server._handle_message"}
+{"timestamp": "2026-07-10T13:04:08.095216+00:00", "level": "DEBUG", "logger": "mcp.server.lowlevel.server", "message": "Dispatching request of type ListToolsRequest", "module": "server", "function": "_handle_request", "line": 736, "taskName": "mcp.server.lowlevel.server.Server._handle_message"}
+{"timestamp": "2026-07-10T13:04:08.095524+00:00", "level": "DEBUG", "logger": "mcp.server.lowlevel.server", "message": "Response sent", "module": "server", "function": "_handle_request", "line": 817, "taskName": "mcp.server.lowlevel.server.Server._handle_message"}
+Tavily MCP server running on stdio
+{
+  "new_run_folders": [
+    "2026-07-10-081337-financial-untitled-research-question"
+  ],
+  "run_dir": "/Users/ryanfree/Documents/Projects/deerflow-dr/runs/2026-07-10-081337-financial-untitled-research-question",
+  "gate_decision": "render",
+  "stop_reason": "completed_with_open_requirements",
+  "gate_retries": 0,
+  "n_sources": 60,
+  "n_claims": 22,
+  "n_requirements": 8,
+  "requirements_covered": null,
+  "requirements_must_cover": null
+}

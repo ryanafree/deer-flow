@@ -26,9 +26,10 @@ MODEL_TIER_IDS = {
     "or-mid": "openai/gpt-4o-mini",
     "or-sonnet": "anthropic/claude-sonnet-5",
     "claude-top": "claude-top",
-    # q.5 (2026-07-10): DR_VERIFY_MODEL default, subscription `claude -p` shim.
-    # Reuses the claude-top pricing row (marginal API cost $0) -- or-sonnet
-    # stays mapped above for the explicit OpenRouter fallback.
+    # q.5 (2026-07-10): the verify tier's default (see dr_core.models.tiers),
+    # subscription `claude -p` shim. Reuses the claude-top pricing row
+    # (marginal API cost $0) -- or-sonnet stays mapped above for the
+    # explicit OpenRouter fallback.
     "claude-verify": "claude-top",
 }
 

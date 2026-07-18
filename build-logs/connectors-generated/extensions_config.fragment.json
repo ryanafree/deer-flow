@@ -1,0 +1,165 @@
+{
+  "mcpServers": {
+    "tavily": {
+      "enabled": false,
+      "description": "tavily (unstructured, tier 0) -- from connectors.yaml",
+      "type": "stdio",
+      "command": "npx",
+      "args": [
+        "TODO-package-spec-for-tavily",
+        "# endpoint hint: tavily-mcp"
+      ],
+      "env": {
+        "TAVILY_API_KEY": "$TAVILY_API_KEY"
+      }
+    },
+    "searxng": {
+      "enabled": false,
+      "description": "searxng (unstructured, tier 0) -- from connectors.yaml",
+      "type": "stdio",
+      "command": "uvx",
+      "args": [
+        "TODO-package-spec-for-searxng",
+        "# endpoint hint: SEARXNG_URL"
+      ],
+      "env": {
+        "SEARXNG_URL": "$SEARXNG_URL"
+      }
+    },
+    "crawl4ai": {
+      "enabled": false,
+      "description": "crawl4ai (unstructured, tier 0) -- from connectors.yaml",
+      "type": "stdio",
+      "command": "uvx",
+      "args": [
+        "TODO-package-spec-for-crawl4ai",
+        "# endpoint hint: crawl4ai-sse"
+      ]
+    },
+    "docling": {
+      "enabled": false,
+      "description": "docling (unstructured, tier 0) -- from connectors.yaml",
+      "type": "stdio",
+      "command": "uvx",
+      "args": [
+        "TODO-package-spec-for-docling",
+        "# endpoint hint: docling-mcp"
+      ]
+    },
+    "openalex": {
+      "enabled": false,
+      "description": "openalex (graph, tier 1) -- from connectors.yaml",
+      "type": "stdio",
+      "command": "uvx",
+      "args": [
+        "TODO-package-spec-for-openalex",
+        "# endpoint hint: openalex-mcp"
+      ],
+      "env": {
+        "OPENALEX_API_KEY": "$OPENALEX_API_KEY"
+      }
+    },
+    "semantic_scholar": {
+      "enabled": false,
+      "description": "semantic_scholar (graph, tier 1) -- from connectors.yaml",
+      "type": "stdio",
+      "command": "uvx",
+      "args": [
+        "TODO-package-spec-for-semantic_scholar",
+        "# endpoint hint: semantic-scholar-mcp"
+      ],
+      "env": {
+        "SEMANTIC_SCHOLAR_API_KEY": "$SEMANTIC_SCHOLAR_API_KEY"
+      }
+    },
+    "edgar": {
+      "enabled": false,
+      "description": "edgar (structured, tier 1) -- from connectors.yaml",
+      "type": "stdio",
+      "command": "uvx",
+      "args": [
+        "TODO-package-spec-for-edgar",
+        "# endpoint hint: secedgar-mcp"
+      ],
+      "env": {
+        "SEC_EDGAR_USER_AGENT": "$SEC_EDGAR_USER_AGENT"
+      }
+    },
+    "openbb": {
+      "enabled": false,
+      "description": "openbb (structured, tier 1) -- from connectors.yaml",
+      "type": "stdio",
+      "command": "uvx",
+      "args": [
+        "TODO-package-spec-for-openbb",
+        "# endpoint hint: openbb-mcp-server"
+      ],
+      "env": {
+        "OPENBB_PAT": "$OPENBB_PAT"
+      }
+    },
+    "courtlistener": {
+      "enabled": false,
+      "description": "courtlistener (graph, tier 1) -- from connectors.yaml",
+      "type": "http",
+      "url": "https://mcp.courtlistener.com",
+      "env": {
+        "COURTLISTENER_TOKEN": "$COURTLISTENER_TOKEN"
+      }
+    },
+    "govinfo": {
+      "enabled": false,
+      "description": "govinfo (unstructured, tier 1) -- from connectors.yaml",
+      "type": "http",
+      "url": "https://api.govinfo.gov/mcp",
+      "env": {
+        "DATA_GOV_API_KEY": "$DATA_GOV_API_KEY"
+      }
+    },
+    "pubmed": {
+      "enabled": false,
+      "description": "pubmed (graph, tier 1) -- from connectors.yaml",
+      "type": "stdio",
+      "command": "uvx",
+      "args": [
+        "TODO-package-spec-for-pubmed",
+        "# endpoint hint: pubmed-mcp-server"
+      ],
+      "env": {
+        "NCBI_API_KEY": "$NCBI_API_KEY"
+      }
+    },
+    "arxiv": {
+      "enabled": false,
+      "description": "arxiv (graph, tier 1) -- from connectors.yaml",
+      "type": "stdio",
+      "command": "uvx",
+      "args": [
+        "TODO-package-spec-for-arxiv",
+        "# endpoint hint: arxiv-mcp-server"
+      ]
+    },
+    "huggingface": {
+      "enabled": false,
+      "description": "huggingface (graph, tier 1) -- from connectors.yaml",
+      "type": "http",
+      "url": "https://hf.co/mcp",
+      "env": {
+        "HF_TOKEN": "$HF_TOKEN"
+      }
+    },
+    "github": {
+      "enabled": false,
+      "description": "github (graph, tier 1) -- from connectors.yaml",
+      "type": "stdio",
+      "command": "npx",
+      "args": [
+        "TODO-package-spec-for-github",
+        "# endpoint hint: github-mcp-server"
+      ],
+      "env": {
+        "GITHUB_PAT": "$GITHUB_PAT"
+      }
+    }
+  }
+}

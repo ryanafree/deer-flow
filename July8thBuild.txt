@@ -1,0 +1,1835 @@
+ ▐▛███▜▌   Claude Code v2.1.202
+▝▜█████▛▘  Fable 5 · Claude Max
+  ▘▘ ▝▝    ~/Documents/Projects/deerflow-dr/deer-flow
+
+ ▎ Fable 5 is back.
+ ▎ Until July 7, you can use up to 50% of your plan's weekly usage limit on Fable 5. If you hit your limit, you can continue on Fable 5 with usage credits. Fable 5 draws down usage faster than Opus 4.8. Learn more
+
+❯ /model                                                                        
+  ⎿  Set model to Fable 5 and saved as your default for new sessions
+
+❯ You are a senior SWE. You code like Karpathy. You have seen it all and know   
+  how to spot issues in code before it is even deployed. Please review the      
+  current status of the deerflow deep research project, spot any bugs or        
+  unaddressed issues. Outline fixes for everything and map out, step by step,   
+  how a lesser mmodel can take this to the finish line from here, bug free and  
+  ready for release.                                                            
+
+⏺ I'll review the deerflow-dr project. Let me start by reading its state files,
+  then dig into the code itself.
+
+  Read 9 files, listed 2 directories, ran 2 shell commands (ctrl+o to expand)
+  ⎿  Loaded ../CLAUDE.md
+  ⎿  Loaded ../AGENTS.md
+  ⎿  Loaded CLAUDE.md
+  ⎿  Loaded AGENTS.md
+
+⏺ Let me read the claim tool and the decision/validation docs, then fan out
+  subagent reviewers over the larger ported modules.
+
+  Read 3 files, ran 1 shell command (ctrl+o to expand)
+
+⏺ 3 background agents launched (↓ to manage)
+   ├ @models-review
+   ├ @assets-review
+   └ @wiring-audit
+
+  Searched for 2 patterns, read 1 file (ctrl+o to expand)
+
+⏺ The agent results will arrive automatically. Meanwhile, let me check the Phase
+  1 asset inventory against what actually landed — the handoff lists a citation
+  gate (CourtListener/Eyecite) and vintage rules among the ports.
+  Searched for 1 pattern, ran 1 shell command (ctrl+o to expand)
+
+⏺ The three reviewers are still running — their reports will come back to me
+  automatically, and I'll post the consolidated review and the step-by-step
+  finish-line plan as soon as they land. So far, from my own read of the graph
+  layer and ledgers, the headline items are:
+
+  1. The render node is still the walking-skeleton stub — the deterministic body
+  generator, write_run wiring, and the "Unsubstantiated" section (D6-D) never
+  landed; the ledger ends at "Dispatching the render worker."
+  2. The corrective-loop escape: a research turn that searches but records zero
+  claims routes to END ungated (the logged deliverable-marker gap), and once
+  dr_claims persists in thread state, every later ordinary chat turn on that
+  thread routes back through gate → render.
+  3. The adversarial verification pass (the 2-vote refutation protocol) hasn't
+  been ported at all, so every claim renders as attributed not_verified.
+  4. Nothing is committed — the entire dr_core package plus the two core edits
+  are uncommitted working-tree state on the fork.
+
+  Full write-up with fixes and the handoff plan coming once the module reviews
+  return.
+
+
+⏺ Teammate @models-review finished
+
+⏺ I've asked the models reviewer to deliver its report. Waiting on all three
+  reviewers' findings before writing the consolidated review.
+
+› Message from models-review (ctrl+o to expand)
+
+⏺ The models-layer review is in — key items: the citation/provenance ladder
+  advance will crash merge_ledger the moment a verify pass lands (latent
+  blocker), and the ChatClaudeCLI neutral-cwd action item was never implemented.
+  Still waiting on the assets review and the wiring audit before I write the
+  consolidated report.
+
+
+⏺ Teammate @models-review finished
+
+⏺ That's just the models reviewer confirming it's done. Still waiting on the
+  assets review and wiring audit reports.
+
+
+⏺ Teammate @wiring-audit finished
+
+⏺ Prompted the wiring auditor for its report. One more (assets review) still
+  outstanding.
+
+
+⏺ Teammate @assets-review finished
+
+⏺ Prompted both remaining reviewers. Waiting for their reports to land.
+
+› Message from wiring-audit (ctrl+o to expand)
+
+⏺ The wiring audit is in — dr_agent is API-only (UI hardcodes lead_agent),
+  stream_subgraphs still defaults off, nested-interrupt resume would misroute
+  (checkpoint_ns always ""), make test doesn't collect the dr_core suite, and
+  title/goal features are silently inert on dr_agent runs. One report left
+  (assets review), then I'll write the consolidated review and handoff plan.
+
+
+⏺ Teammate @wiring-audit finished
+
+⏺ Just the wiring auditor's completion ping. Still waiting on the assets review
+  report.
+
+› Message from assets-review (ctrl+o to expand)
+
+⏺ All three reviews are in. Let me load the handoff-contract skill since the
+  deliverable includes a cold-start execution plan for another model, then write
+  the consolidated review and plan to the project root.
+
+⏺ Skill(handoff-contract)
+  ⎿  Successfully loaded skill
+
+⏺ Now I'll write the consolidated review and finish-line plan to the project
+  root.
+
+⏺ Write(~/Documents/Projects/deerflow-dr/REVIEW_FINISH_PLAN_2026-07-06.md)
+  ⎿  Wrote 358 lines to ../REVIEW_FINISH_PLAN_2026-07-06.md
+       1 # deerflow-dr — Consolidated Review + Finish-Line Plan (2026-07-
+       2 
+          the executor session
+         ERFLOW_BUILD.md` first
+         he tail of
+       6 `BUILD_LEDGER.md`, then this file. This file adds: a verified de
+       7 and an ordered execution plan. Review method: direct read of the
+       8 layer + ledgers, plus three parallel subagent reviews (models la
+       9 render/run/lint/eval/fetch assets; gateway wiring), findings ver
+      10 running the suite (227 passed at review
+     … +570 lines (ctrl+o to expand)
+
+  Ran 1 shell command (ctrl+o to expand)
+⏺ Full review + finish-line plan, written to the deerflow-dr project root
+
+  › [file]~/Documents/Projects/deerflow-dr/REVIEW_FINISH_PLAN_2026-07-0 (21.2KB)
+          .md
+
+⏺ Review complete. The full write-up is at
+  deerflow-dr/REVIEW_FINISH_PLAN_2026-07-06.md (handoff-contract format,
+  validated). Here is the TLDR.
+
+  Where the project actually stands. Phases 0 and 1 are done and solid. Phase 2
+  is roughly 70% built: the outer graph, strict reducers, source extraction,
+  record_claim, and the eligibility gate all landed and the 227-test suite is
+  green. But the ledger ends mid-flight: the render node is still the
+  walking-skeleton stub, so there is no report path at all yet. And nothing is
+  committed to git; the entire dr_core package and both core edits are
+  uncommitted working-tree state.
+
+  The six release blockers. (1) The missing render node. (2) A three-way leak in
+  the corrective loop: a zero-claim research turn escapes to END ungated, and
+  because dr_claims persists in thread state, every later chat turn on a
+  research thread re-routes through gate and render; retry bookkeeping is also
+  never reset. (3) Every rendered report is corrupted today by an
+  appendix-marker mismatch between write_run and render_report (the writer's
+  appendix leaks into the narrative body; reproduced by execution, not just
+  reading). (4) The verification layer, the harness's actual differentiator,
+  doesn't exist yet, and both Phase 4 seeded traps are unpassable without it.
+  (5) A latent run-killer: the reducer raises on any
+  citation_status/data_provenance advance, so the first legal transition from
+  the future verify pass crashes the graph; the D2-mandated transition tables
+  were never written. (6) structured.py only catches HTTPError, so a timeout or
+  DNS failure raises straight through, violating decision 6.
+
+  Notable majors. dr_agent is unreachable from the UI (frontend hardcodes
+  lead_agent); stream_subgraphs still defaults off so dr runs stream zero
+  tokens; nested-interrupt resume misroutes because the gateway hard-codes
+  checkpoint_ns="" (which breaks ask_clarification under dr_agent); make test
+  never collects the dr_core suite; ChatClaudeCLI never got its neutral-cwd fix
+  (a measured 40% cost premium) and parses subprocess JSON unguarded; and
+  title/goal features are silently inert for dr_agent runs.
+
+  The path to done. Part II of the doc is a 13-step ordered plan (S0 through
+  S12) sized for a Sonnet-class executor: commit the baseline first, then a
+  mechanical bug-fix batch, then the ladder guards, then the render node (Part
+  III is a verified contract sheet for it, including the load-bearing invariant
+  that claims.jsonl must contain exactly the eligible claims in citation-ordinal
+  order), then the turn-scoping fix, wiring, a live end-to-end Phase 2 gate,
+  and finally the verify layer, requirement coverage, Phase 3, and acceptance.
+  Two steps are flagged as needing Fable consults before code (the
+  deliverable-marker policy and the verify-node topology); everything else is
+  executable directly from the document with acceptance commands per step.
+
+
+⏺ Teammate @assets-review finished
+
+⏺ That's just the assets reviewer's completion ping; its report was already
+  received and folded into the review. All three subagent reviews are
+  incorporated, the deliverable is written at
+  deerflow-dr/REVIEW_FINISH_PLAN_2026-07-06.md, and the task is complete.
+  Nothing further is pending.
+
+※ recap: You asked for a full review of the deerflow-dr build. Done: six release blockers found and a 13-step finish plan written to REVIEW_FINISH_PLAN_2026-07-06.md. Next action: commit the uncommitted baseline (plan step S0). (disable recaps in /config)
+
+❯ Please proceed to implement as much of the plan as possible, use /orchestrate 
+  and/or /tiered-models as you deem appropriate.                                
+  ⎿  5 skills available
+
+⏺ I'll load the orchestrate protocol and run the plan with Sonnet workers and
+  verifier gates.
+
+⏺ Skill(orchestrate)
+  ⎿  Successfully loaded skill
+
+  Committed c35291ba (ctrl+o to expand)
+
+⏺ 2 background agents launched (↓ to manage)
+   ├ @s1-bugfix (sonnet-worker)
+   └ @s2-guards (sonnet-worker)
+
+⏺ Update(~/Documents/Projects/deerflow-dr/DECISIONS.md)
+  ⎿  Added 26 lines
+      209  - **First step:** implement record_claim (C1) + unit tests, wi
+           red via DrLedgerMiddleware.tools, prove on one
+      210    real run a model-asserted claim lands in dr_claims through m
+           erge_ledger. THEN gate readiness + route_after_gate
+      211    + corrective message; THEN render = write_run + render_repor
+           t; LAST the cap-hit "Unsubstantiated" section.
+      212 +                                                              
+      213 +---                                                           
+      214 +                                                              
+      215 +## D7 — 2026-07-07 — Turn-scoped deliverable routing + loop-bo
+          +okkeeping reset                                               
+      216 +**Question:** D5 left the "deliverable" trigger as "dr_claims 
+          +OR a dr_run marker" without defining the                      
+      217 +marker. Three confirmed leaks (REVIEW_FINISH_PLAN B2): (a) a z
+          +ero-claim search turn escapes to END                          
+      218 +ungated, making the gate's no-claims corrective unreachable; (
+          +b) dr_claims persists in thread state, so                     
+      219 +after one research turn every later chat turn re-routes gate→r
+          +ender; (c) gate_retries/gate_ledger_sig                       
+      220 +never reset, so a second research question starts with a spent
+          + retry budget.                                                
+      221 +**Ruling (made at the Fable seat during the 2026-07-07 executi
+          +on session):**                                                
+      222 +- **Marker:** `dr_run["deliverable"]=True` is set by (i) DrLed
+          +gerMiddleware when its C2 scan processes                      
+      223 +  any source-bearing ToolMessage this turn (attempting search 
+          += research intent, even if zero sources                       
+      224 +  parse), and (ii) record_claim's success Command (a recorded 
+          +claim is definitionally a deliverable).                       
+      225 +- **Routing:** `route_after_research` routes to the gate iff `
+          +dr_run.get("deliverable")` OR                                 
+      226 +  `dr_run.get("gate_decision")=="research"` (mid-corrective-lo
+          +op re-entry). It no longer keys on                            
+      227 +  dr_claims at all — persistent claims from prior turns must n
+          +ot drag chat turns into the gate.                             
+      228 +- **Reset:** the gate's PROCEED branch clears the loop state i
+          +n the same dr_run update it already                           
+      229 +  writes: `deliverable=False, gate_retries=0, gate_ledger_sig=
+          +None` (merge_run is last-writer-wins, so                      
+      230 +  this is safe). The corrective bounce leaves `deliverable` Tr
+          +ue so the retry turn re-enters the gate                       
+      231 +  even if the model again records nothing — this is what makes
+          + the no-claims corrective reachable.                          
+      232 +  Clearing on the gate's proceed branch (not in render) remove
+          +s any S3/S4 ordering dependency.                              
+      233 +- **Accepted tradeoff:** on the dr_agent profile, any turn tha
+          +t searches gets gated, so a casual                            
+      234 +  "fetch this URL" chat turn on a dr thread yields a correctiv
+          +e bounce and, at cap, a "no substantiated                     
+      235 +  findings" report. Acceptable because dr_agent is an explicit
+          +ly selected research assistant; ordinary                      
+      236 +  chat belongs to lead_agent. Rejected alternative: per-turn c
+          +laims-delta snapshots (more precise,                          
+      237 +  more turn-boundary bookkeeping; errs toward NOT gating, the 
+          +wrong direction for an assurance agent).                      
+⏺ D7 is ruled and logged. Now waiting on the S1 and S2 workers; when they land
+  I'll verify their diffs, commit, and dispatch S3 (render node) and S4
+  (turn-scoping, now unblocked by the D7 ruling) in parallel.
+
+› Message from s2-guards (ctrl+o to expand)
+
+⏺ S2 is done (both ladders guarded, 252 tests passing at its run time). Waiting
+  on S1 before re-running the combined suite and committing both.
+
+
+⏺ Teammate @s2-guards finished
+
+⏺ S2's completion ping — already noted. Still waiting on the S1 worker's report.
+
+
+⏺ Teammate @s1-bugfix finished
+
+⏺ Prompted S1 for its report.
+
+› Message from s1-bugfix (ctrl+o to expand)
+
+⏺ S1 is done too (264 passing). Verifying the combined tree independently, then
+  committing.
+
+  Ran 3 shell commands (ctrl+o to expand)
+
+⏺ 2 background agents launched (↓ to manage)
+   ├ @s3-render (sonnet-worker)
+   └ @s4-routing (sonnet-worker)
+
+  Read 2 files, ran 1 shell command (ctrl+o to expand)
+
+⏺ Making the three S5 edits now.
+
+⏺ Update(backend/app/gateway/services.py)
+  ⎿  Added 3 lines, removed 1 line
+      556                  graph_input=graph_input,
+      557                  config=config,
+      558                  stream_modes=stream_modes,
+      559 -                stream_subgraphs=body.stream_subgraphs,       
+      559 +                # dr_agent nests the lead agent as a subgraph;
+          + without subgraph                                             
+      560 +                # streaming its tokens never surface (D5 smoke
+          +-test finding).                                               
+      561 +                stream_subgraphs=body.stream_subgraphs or body
+          +.assistant_id == "dr_agent",                                  
+      562                  interrupt_before=body.interrupt_before,
+      563                  interrupt_after=body.interrupt_after,
+      564              )
+
+⏺ Update(backend/app/gateway/routers/assistants_compat.py)
+  ⎿  Added 17 lines, removed 1 line
+      56      )
+      57  
+      58  
+      59 +def _get_dr_assistant() -> AssistantResponse:                  
+      60 +    """Return the dr_agent assistant (dr_core gated outer graph
+         +, see D5)."""                                                  
+      61 +    now = datetime.now(UTC).isoformat()                        
+      62 +    return AssistantResponse(                                  
+      63 +        assistant_id="dr_agent",                               
+      64 +        graph_id="dr_agent",                                   
+      65 +        name="dr_agent",                                       
+      66 +        config={},                                             
+      67 +        metadata={"created_by": "system"},                     
+      68 +        description="Deep-research assurance agent (claim ledge
+         +r, eligibility gate, deterministic report)",                   
+      69 +        created_at=now,                                        
+      70 +        updated_at=now,                                        
+      71 +        version=1,                                             
+      72 +    )                                                          
+      73 +                                                               
+      74 +                                                               
+      75  def _list_assistants() -> list[AssistantResponse]:
+      76      """List all available assistants from config."""
+      61 -    assistants = [_get_default_assistant()]                    
+      77 +    assistants = [_get_default_assistant(), _get_dr_assistant()
+         +]                                                              
+      78  
+      79      # Also include custom agents from config.yaml agents direct
+          ory
+      80      try:
+
+⏺ Update(backend/packages/dr_core/dr_core/graph/state.py)
+  ⎿  Error editing file
+
+  Read 1 file (ctrl+o to expand)
+
+⏺ Update(backend/packages/dr_core/dr_core/graph/state.py)
+  ⎿  Added 10 lines
+      156      subgraph node ("research") to this outer graph, which is s
+           afe because the
+      157      reducers above are keyed/idempotent. ``messages`` is inher
+           ited from
+      158      ``AgentState`` so it coexists with the dr_* channels.
+      159 +                                                              
+      160 +    ``title`` mirrors ThreadState's channel so TitleMiddleware
+          +'s write inside                                               
+      161 +    the nested subgraph propagates to the outer checkpoint, wh
+          +ere                                                           
+      162 +    ``runtime/runs/worker.py`` reads it for thread display-nam
+          +e sync (without                                               
+      163 +    this the title feature is silently inert for dr_agent runs
+          +). ``goal`` is                                                
+      164 +    deliberately NOT mirrored: the goal-continuation loop re-e
+          +nters the graph                                               
+      165 +    with hidden turns, which would interact with the gate's co
+          +rrective loop;                                                
+      166 +    add it only after that interaction is designed.           
+      167      """
+      168  
+      169 +    title: str                                                
+      170 +                                                              
+      171      dr_sources: Annotated[dict[str, dict], merge_ledger]
+      172      dr_claims: Annotated[dict[str, dict], merge_ledger]
+      173      dr_requirements: Annotated[dict[str, dict], merge_ledger]
+⏺ Update(~/Documents/Projects/deerflow-dr/FORK_DELTA.md)
+  ⎿  Added 17 lines
+      48  (`dr_core.graph.make_dr_agent`) needs a distinct entry point fr
+          om ordinary chat threads.
+      49  Trigger is exact-match on `assistant_id`, the minimum surface D
+          5-D calls for.
+      50  
+      51 +## backend/app/gateway/services.py — 2026-07-07 (S5 wiring)    
+      52 +**Change:** in `start_run`, the `run_agent` call now passes    
+      53 +`stream_subgraphs=body.stream_subgraphs or body.assistant_id ==
+         + "dr_agent"` (was                                              
+      54 +`body.stream_subgraphs` alone). One line + comment.            
+      55 +**Why (why an extension could not do it):** dr_agent nests the 
+         +lead agent as a subgraph;                                      
+      56 +with `stream_subgraphs=False` (the request default) the nested 
+         +agent's tokens never reach                                     
+      57 +the stream (measured in SUBSTRATE_VALIDATION Phase 2: subgraphs
+         +=False -> 0 chunks). The                                       
+      58 +flag is consumed inside the gateway's run dispatch, so no dr_co
+         +re-side surface can set it.                                    
+      59 +                                                               
+      60 +## backend/app/gateway/routers/assistants_compat.py — 2026-07-0
+         +7 (S5 wiring)                                                  
+      61 +**Change:** `_list_assistants` now also returns a system `dr_ag
+         +ent` entry (new                                                
+      62 +`_get_dr_assistant()` helper, ~15 lines, purely additive) so La
+         +ngGraph-compatible clients                                     
+      63 +and the frontend can discover/select the dr assurance agent.   
+      64 +**Why (why an extension could not do it):** the assistants-comp
+         +at router is the gateway's                                     
+      65 +discovery surface; `resolve_agent_factory` already routes `assi
+         +stant_id=="dr_agent"` (see                                     
+      66 +the services.py entry above) but nothing advertised it.        
+      67 +                                                               
+      68  (Everything else so far is additive: new files under the projec
+          t root + the `dr_core` package.)
+
+  Ran 2 shell commands (ctrl+o to expand)
+
+⏺ Update(backend/Makefile)
+  ⎿  Added 1 line, removed 1 line
+       8    PYTHONPATH=. PYTHONIOENCODING=utf-8 PYTHONUTF8=1 uv run uvico
+          rn app.gateway.app:app --host 0.0.0.0 --port 8001
+       9  
+      10  test:
+      11 -  PYTHONPATH=. PYTHONIOENCODING=utf-8 PYTHONUTF8=1 uv run pytes
+         -t tests/ -v                                                    
+      11 +  PYTHONPATH=. PYTHONIOENCODING=utf-8 PYTHONUTF8=1 uv run pytes
+         +t tests/ packages/dr_core/tests -v                             
+      12  
+      13  test-blocking-io:
+      14    PYTHONPATH=. PYTHONIOENCODING=utf-8 PYTHONUTF8=1 uv run pytes
+          t tests/blocking_io -q --tb=short
+
+⏺ Update(~/Documents/Projects/deerflow-dr/FORK_DELTA.md)
+  ⎿  Added 6 lines
+      65  discovery surface; `resolve_agent_factory` already routes `assi
+          stant_id=="dr_agent"` (see
+      66  the services.py entry above) but nothing advertised it.
+      67  
+      68 +## backend/Makefile — 2026-07-07 (S11 pulled forward)          
+      69 +**Change:** `test` target now runs `pytest tests/ packages/dr_c
+         +ore/tests -v` so the fork's                                    
+      70 +assurance suite is collected by the standard entry point.      
+      71 +**Why (why an extension could not do it):** `make test` is the 
+         +repo's documented test                                         
+      72 +entry point; dr_core tests were invisible to it.               
+      73 +                                                               
+      74  (Everything else so far is additive: new files under the projec
+          t root + the `dr_core` package.)
+
+⏺ S5 edits complete. Verifying the pinned upstream tests still pass with the
+  core edits (leaving the dr_core suite until S3/S4 land, since those workers
+  are mid-edit).
+
+  Ran 2 shell commands (ctrl+o to expand)
+
+› Message from s4-routing (ctrl+o to expand)
+
+⏺ Waiting on the S3 render-node worker now.
+
+
+⏺ Teammate @s1-bugfix finished
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ Task #5 assigned by team-lead                                                │
+│                                                                              │
+│ S5: Wiring batch (stream_subgraphs, assistants list, title channel)          │
+│                                                                              │
+│ Force stream_subgraphs for dr_agent in start_run; expose dr_agent in         │
+│ assistants_compat; decide title/goal channels; FORK_DELTA entries.           │
+╰──────────────────────────────────────────────────────────────────────────────╯
+
+
+⏺ Teammate @s4-routing finished
+
+⏺ Those are just completion pings; S5's edits are done and verified, so I'll
+  mark it complete. S3 (render node) is the only worker still running.
+
+⏺ Waiting on S3.
+
+› Message from s3-render (ctrl+o to expand)
+
+⏺ S3 landed — the render node is real, lint-gated on all three paths, 278 tests
+  passing. Now I'll do the integration piece it flagged: repoint gate.py to the
+  shared eligibility helper so gate and render can never drift.
+
+  Read 2 files (ctrl+o to expand)
+
+⏺ Update(backend/packages/dr_core/dr_core/graph/gate.py)
+  ⎿  Added 6 lines, removed 16 lines
+      70      excluded: list[tuple[str, str]] = []
+      71      for claim_id, payload in dr_claims.items():
+      72          claim = Claim.model_validate(payload)
+      73 -        # E2 (D6 ruling E): requirement-coverage is out of scop
+         -e this                                                         
+      74 -        # sub-phase, so no mappings/requirements exist yet -- d
+         -erived_materiality                                             
+      75 -        # caps the unmapped claim at MEDIUM, exactly as it does
+         - for a real run                                                
+      76 -        # before coverage mappings land.                       
+      77 -        materiality = derived_materiality(claim, [], {})       
+      78 -        grounded = is_grounded(claim, materiality)             
+      79 -        # TODO(phase2): wire conflicts -- conflict detection is
+         - a later piece.                                                
+      80 -        status = publication_status(claim, materiality=material
+         -ity, grounded=grounded, conflicts=())                          
+      81 -        source_ok = claim.source_id in dr_sources              
+      82 -        if status != PublicationStatus.EXCLUDED and source_ok: 
+      73 +        # Derivation lives in dr_core.models.eligibility (share
+         +d with the                                                     
+      74 +        # render node so gate and render can never disagree; D6
+         +-B consistency                                                 
+      75 +        # requirement). E2/conflict caveats are documented ther
+         +e.                                                             
+      76 +        reason = ineligibility_reason(claim, dr_sources)       
+      77 +        if reason is None:                                     
+      78              eligible_ids.append(claim_id)
+      84 -        elif source_ok:                                        
+      85 -            excluded.append((claim_id, status.value))          
+      86 -        elif status == PublicationStatus.EXCLUDED:             
+      87 -            # Both reasons apply (m5): don't conflate down to j
+         -ust "missing_source".                                          
+      88 -            excluded.append((claim_id, f"{status.value}+missing
+         -_source"))                                                     
+      79          else:
+      90 -            excluded.append((claim_id, "missing_source"))      
+      80 +            excluded.append((claim_id, reason))                
+      81  
+      82      retries = dr_run.get("gate_retries", 0)
+      83      prev_sig = dr_run.get("gate_ledger_sig")
+
+  Ran 2 shell commands (ctrl+o to expand)
+
+⏺ Update(backend/packages/dr_core/dr_core/graph/gate.py)
+  ⎿  Added 2 lines, removed 2 lines
+      19  
+      20  from langchain_core.messages import HumanMessage
+      21  
+      22 -from dr_core.models import Claim, PublicationStatus, StopReason
+      23 -from dr_core.models.derive import derived_materiality, is_groun
+         -ded, publication_status                                        
+      22 +from dr_core.models import Claim, StopReason                   
+      23 +from dr_core.models.eligibility import ineligibility_reason    
+      24  
+      25  RETRY_CAP = 2  # D6-C: N=2 retries (3 research passes total).
+      26  
+
+⏺ Update(backend/packages/dr_core/dr_core/models/eligibility.py)
+  ⎿  Added 2 lines, removed 6 lines
+       5  `is_grounded(claim, materiality)` + `conflicts=()` -- no covera
+          ge mappings or
+       6  conflict channel exist this sub-phase) so the render node can r
+          econstruct the
+       7  identical eligible set without re-deriving it ad hoc. Pure func
+          tions only: no
+       8 -I/O, no LLM, no randomness.                                    
+       9 -                                                               
+      10 -TODO(orchestrator): repoint `dr_core.graph.gate.eligibility_gat
+         -e` to import                                                   
+      11 -`derive_status` / `is_eligible` / `ineligibility_reason` from h
+         -ere instead of                                                 
+      12 -inlining the same derivation, so there is exactly one copy. gat
+         -e.py is out of                                                 
+      13 -scope for this stage (a parallel worker owns it this cycle).   
+       8 +I/O, no LLM, no randomness. `dr_core.graph.gate.eligibility_gat
+         +e` imports from                                                
+       9 +here too, so there is exactly one copy of the derivation.      
+      10  """
+      11  
+      12  from __future__ import annotations
+
+  Ran 1 shell command (ctrl+o to expand)
+⏺ All green (278 dr_core + 19 pinned upstream, ruff clean). Committing S3+S4+S5.
+
+  Ran 1 shell command (ctrl+o to expand)
+
+  Made 1 scratchpad edit +108, ran 1 shell command (ctrl+o to expand)
+
+⏺ Update(~/Documents/Projects/deerflow-dr/BUILD_LEDGER.md)
+  ⎿  Error editing file
+
+  Read 1 file (ctrl+o to expand)
+
+⏺ Still running (real model calls take a minute or two). I'll wait for the
+  completion notification.
+
+
+⏺ Teammate @s3-render finished
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ Task #6 assigned by team-lead                                                │
+│                                                                              │
+│ S6: Live E2E proof + ledger updates                                          │
+│                                                                              │
+│ Gateway run of dr_agent end-to-end (claims → gate → render → lint-clean      │
+│ folder), resume test, SUBSTRATE_VALIDATION + BUILD_LEDGER entries, commits   │
+│ per step.                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────╯
+
+
+⏺ Just pings — S3's completion notice and the task-assignment echo for S6, which
+  I'm already running. The live E2E is still executing in the background.
+
+  Listed 1 directory (ctrl+o to expand)
+
+⏺ The run is mid-flight (model resolved, no run folder yet). Waiting for
+  completion.
+
+⏺ Monitor(E2E live-run result)
+  ⎿  Monitor started · task b4hclh57n · timeout 480s
+  ⎿  You've hit your session limit · resets 10:50am (America/Chicago)
+     /upgrade or /usage-credits to finish what you’re working on.
+
+⏺ Background command "Run live E2E proof (real OpenRouter/Tavily calls)"
+completed (exit code 0)
+  ⎿  You've hit your session limit · resets 10:50am (America/Chicago)
+     /upgrade or /usage-credits to finish what you’re working on.
+
+⏺ Monitor event: "E2E live-run result"
+
+⏺ Monitor "E2E live-run result" stream ended
+  ⎿  You've hit your session limit · resets 10:50am (America/Chicago)
+     /upgrade or /usage-credits to finish what you’re working on.
+
+❯ Session limit has reset. Please resume in full.                               
+
+  Ran 1 shell command (ctrl+o to expand)
+
+⏺ It's not even Tavily — config.yaml wires web_search to the DuckDuckGo
+  community tool. Checking its return format.
+
+  Ran 5 shell commands (ctrl+o to expand)
+
+⏺ web_fetch (jina + readability markdown) is compatible with the hook; only the
+  search parser needs the fix. Patching _sources_from_web_search to accept the
+  real payload shape, plus a regression test pinned to the actual ddg_search
+  format.
+⏺ Update(backend/packages/dr_core/dr_core/graph/middleware.py)
+  ⎿  Error editing file
+
+  Searched for 1 pattern, read 1 file (ctrl+o to expand)
+
+⏺ Update(backend/packages/dr_core/dr_core/graph/middleware.py)
+  ⎿  Added 8 lines
+      73          results = json.loads(content)
+      74      except (TypeError, ValueError):
+      75          return {}
+      76 +    # The live ddg_search web_search tool returns an OBJECT:   
+      77 +    # {"query", "total_results", "results": [{"title","url","co
+         +ntent"}, ...]}                                                 
+      78 +    # (community/ddg_search/tools.py:175-182; caught by the S6 
+         +live E2E run,                                                  
+      79 +    # which extracted zero sources from a real search). Tavily-
+         +style tools                                                    
+      80 +    # return a bare list. Accept both; anything else (e.g. the 
+         +ddg "error"                                                    
+      81 +    # object) extracts nothing.                                
+      82 +    if isinstance(results, dict):                              
+      83 +        results = results.get("results")                       
+      84      if not isinstance(results, list):
+      85          return {}
+      86  
+
+⏺ Now the regression test pinned to the real ddg format, then the full suite,
+  then re-run the live E2E.
+
+  Searched for 1 pattern, read 1 file (ctrl+o to expand)
+
+⏺ Update(backend/packages/dr_core/tests/test_dr_source_hook.py)
+  ⎿  Added 37 lines
+       61  
+       62          assert list(out_1["dr_sources"].keys()) == list(out_2[
+           "dr_sources"].keys())
+       63  
+       64 +    def test_ddg_object_payload_yields_sources(self):         
+       65 +        # The LIVE web_search tool (community/ddg_search/tools
+          +.py) returns an                                               
+       66 +        # object {"query", "total_results", "results": [...]},
+          + not a bare                                                   
+       67 +        # list. The S6 live E2E run caught the hook extracting
+          + zero sources                                                 
+       68 +        # from a real search; this pins the real payload shape
+          +.                                                             
+       69 +        payload = {                                           
+       70 +            "query": "q",                                     
+       71 +            "total_results": 2,                               
+       72 +            "results": [                                      
+       73 +                {"title": "A", "url": "https://a.example.com",
+          + "content": "..."},                                           
+       74 +                {"title": "B", "url": "https://b.example.com",
+          + "content": "..."},                                           
+       75 +            ],                                                
+       76 +        }                                                     
+       77 +        messages = [                                          
+       78 +            _web_search_call(),                               
+       79 +            ToolMessage(content=json.dumps(payload, indent=2),
+          + tool_call_id="call_search", name="web_search"),              
+       80 +        ]                                                     
+       81 +                                                              
+       82 +        out = DrLedgerMiddleware().before_model({"messages": m
+          +essages, "dr_run": {}}, None)                                 
+       83 +                                                              
+       84 +        assert out is not None                                
+       85 +        urls = {record["url_or_id"] for record in out["dr_sour
+          +ces"].values()}                                               
+       86 +        assert urls == {"https://a.example.com", "https://b.ex
+          +ample.com"}                                                   
+       87 +                                                              
+       88 +    def test_ddg_error_object_yields_no_sources(self):        
+       89 +        payload = {"error": "No results found", "query": "q"} 
+       90 +        messages = [                                          
+       91 +            _web_search_call(),                               
+       92 +            ToolMessage(content=json.dumps(payload), tool_call
+          +_id="call_search", name="web_search"),                        
+       93 +        ]                                                     
+       94 +                                                              
+       95 +        out = DrLedgerMiddleware().before_model({"messages": m
+          +essages, "dr_run": {}}, None)                                 
+       96 +                                                              
+       97 +        assert out is not None                                
+       98 +        assert out.get("dr_sources") is None or out["dr_source
+          +s"] == {}                                                     
+       99 +        assert out["dr_run"]["deliverable"] is True           
+      100 +                                                              
+      101      def test_malformed_json_is_skipped_without_crash(self):
+      102          messages = [_web_search_call(), ToolMessage(content="n
+           ot json{{", tool_call_id="call_search", name="web_search")]
+      103  
+
+  Ran 2 shell commands (ctrl+o to expand)
+
+⏺ Second live run in flight; I'll report when it completes.
+
+  Listed 1 directory (ctrl+o to expand)
+
+⏺ Waiting on the second live run to complete.
+
+⏺ Background command "Re-run live E2E after payload fix (fresh thread)"
+completed (exit code 0)
+
+  Read 2 files (ctrl+o to expand)
+
+⏺ Update(backend/packages/dr_core/dr_core/graph/claim_tool.py)
+  ⎿  Added 12 lines, removed 2 lines
+       86  
+       87      Args:
+       88          text: The claim being asserted, in your own words.
+       89 -        source_id: The id of a source already returned by web_
+          -search/web_fetch.                                             
+       89 +        source_id: The exact url of a source already returned 
+          +by                                                            
+       90 +            web_search/web_fetch (its ledger id is also accept
+          +ed).                                                          
+       91          quote: The exact supporting span from that source.
+       92          importance: 1 (minor) to 5 (central to the answer).
+       93          gate_flags: Optional risk flags, e.g. "vendor-reported
+           ", "period-mismatch".
+       94      """
+       95      dr_sources = state.get("dr_sources") or {}
+       96      if source_id not in dr_sources:
+       96 -        return _reject(tool_call_id, f"source_id {source_id!r}
+          - not found -- cite an id from a prior web_search/web_fetch res
+          -ult.")                                                        
+       97 +        # The model only ever SEES urls (search/fetch results 
+          +never carry the                                               
+       98 +        # sha256-minted ledger ids), so resolve a url citation
+          + to its                                                       
+       99 +        # deterministic id -- same hash the C2 hook minted it 
+          +under. Caught by                                              
+      100 +        # the S6 live E2E run: every record_claim was rejected
+          + because the                                                  
+      101 +        # model had no way to know a ledger id. Resolution is 
+          +exact-match                                                   
+      102 +        # deterministic; referential integrity is unchanged.  
+      103 +        url_resolved = _source_id_for_url(source_id)          
+      104 +        if url_resolved not in dr_sources:                    
+      105 +            return _reject(tool_call_id, f"source {source_id!r
+          +} not found -- cite the exact url (or id) of a prior web_searc
+          +h/web_fetch result.")                                         
+      106 +        source_id = url_resolved                              
+      107  
+      108      normalized_flags = _normalize_gate_flags(gate_flags)
+      109      if normalized_flags is None:
+
+⏺ Update(backend/packages/dr_core/dr_core/graph/claim_tool.py)
+  ⎿  Added 7 lines
+      45      return hashlib.sha256((norm(text) + source_id).encode("utf-
+          8")).hexdigest()[:16]
+      46  
+      47  
+      48 +def _source_id_for_url(url: str) -> str:                       
+      49 +    """The C2 hook's deterministic source id for a url (middlew
+         +are._source_id);                                               
+      50 +    duplicated one-liner rather than importing the middleware m
+         +odule (which                                                   
+      51 +    pulls in the langgraph runtime) into this tool module."""  
+      52 +    return hashlib.sha256(url.encode("utf-8")).hexdigest()[:16]
+      53 +                                                               
+      54 +                                                               
+      55  def _normalize_gate_flags(gate_flags: list[str] | None) -> list
+          [str] | None:
+      56      """Validates model-supplied flags against ``GateFlag``, nor
+          malizing
+      57      hyphens to underscores like ``eval/score_run.py::_normalize
+          _flag`` (fixture
+
+⏺ Now the regression tests for URL citation.
+
+  Searched for 1 pattern, read 1 file (ctrl+o to expand)
+
+⏺ Update(backend/packages/dr_core/tests/test_dr_record_claim.py)
+  ⎿  Added 32 lines
+      26      return record_claim.func(**args)
+      27  
+      28  
+      29 +class TestUrlCitationResolution:                               
+      30 +    """The model only sees urls in search/fetch results (never 
+         +the sha256                                                     
+      31 +    ledger ids), so record_claim resolves an exact-url citation
+         + to the C2                                                     
+      32 +    hook's deterministic id. Pinned by the S6 live E2E finding.
+         +"""                                                            
+      33 +                                                               
+      34 +    URL = "https://mw.example.gov/minimum-wage"                
+      35 +                                                               
+      36 +    def _url_state(self):                                      
+      37 +        import hashlib                                         
+      38 +                                                               
+      39 +        ledger_id = hashlib.sha256(self.URL.encode("utf-8")).he
+         +xdigest()[:16]                                                 
+      40 +        return ledger_id, {"dr_sources": {ledger_id: {"id": led
+         +ger_id, "url_or_id": self.URL}}, "dr_claims": {}}              
+      41 +                                                               
+      42 +    def test_url_citation_resolves_to_ledger_id(self):         
+      43 +        ledger_id, state = self._url_state()                   
+      44 +        out = _record(source_id=self.URL, state=state)         
+      45 +        (_, payload), = out.update["dr_claims"].items()        
+      46 +        assert payload["source_id"] == ledger_id               
+      47 +                                                               
+      48 +    def test_url_and_id_citations_yield_same_claim_id(self):   
+      49 +        ledger_id, state = self._url_state()                   
+      50 +        by_url = _record(source_id=self.URL, state=state)      
+      51 +        by_id = _record(source_id=ledger_id, state=state)      
+      52 +        assert list(by_url.update["dr_claims"]) == list(by_id.u
+         +pdate["dr_claims"])                                            
+      53 +                                                               
+      54 +    def test_unknown_url_still_rejected(self):                 
+      55 +        _, state = self._url_state()                           
+      56 +        out = _record(source_id="https://not-retrieved.example.
+         +com/", state=state)                                            
+      57 +        assert "dr_claims" not in out.update                   
+      58 +        assert "not found" in out.update["messages"][0].content
+      59 +                                                               
+      60 +                                                               
+      61  class TestValidClaim:
+      62      def test_records_claim_under_deterministic_id(self):
+      63          out = _record()
+
+  Ran 1 shell command (ctrl+o to expand)
+
+⏺ 283 green. Third live run — this time claims should actually land and render.
+
+  Ran 1 shell command (ctrl+o to expand)
+
+⏺ Waiting for the third live run.
+
+⏺ Background command "Third live E2E run after URL-citation fix" completed (exit
+code 0)
+
+  Read 1 file, ran 2 shell commands (ctrl+o to expand)
+
+⏺ Lint exit 0 on a live-generated report — the Phase 2 gate's core criteria are
+  met. Committing the two live-run fixes and closing out the ledgers.
+  Ran 1 shell command (ctrl+o to expand)
+
+⏺ Update(~/Documents/Projects/deerflow-dr/DECISIONS.md)
+  ⎿  Added 6 lines
+      235    findings" report. Acceptable because dr_agent is an explicit
+           ly selected research assistant; ordinary
+      236    chat belongs to lead_agent. Rejected alternative: per-turn c
+           laims-delta snapshots (more precise,
+      237    more turn-boundary bookkeeping; errs toward NOT gating, the 
+           wrong direction for an assurance agent).
+      238 +- **Addendum (same session, from the S6 live runs):** record_c
+          +laim accepts the source's exact URL as                        
+      239 +  the citation key and resolves it deterministically to the sh
+          +a256 ledger id. The model only ever sees                      
+      240 +  urls in search/fetch results (the C2 hook mints ids the mode
+          +l cannot know), so the D6-A "cite the                         
+      241 +  source_id" contract was unsatisfiable live -- every record_c
+          +laim was rejected on a real run. URL                          
+      242 +  resolution is exact-match against the same hash the hook min
+          +ted; the referential-integrity guarantee                      
+      243 +  is unchanged. C1's deterministic-transport property is intac
+          +t.                                                            
+
+  Read 1 file (ctrl+o to expand)
+
+⏺ Update(~/Documents/Projects/CLAUDE.md)
+  ⎿  Added 1 line, removed 1 line
+      22  | _workspaces/extraction-factory/ | Reusable bulk download+pars
+          e+extract factory: the reference ICM workspace (cached L3 schem
+          a, parallel Haiku sub-agents via `tiered-models`, three human g
+          ates at intake/schema/merge). Built and proven end-to-end 2026-
+          06-28 (T1.2). | Active | Yes (`CLAUDE.md` + `CONTEXT.md`, the p
+          attern the rest of this table's ICM-layering work follows) |
+      23  | EventDesk/ | Kalshi event-trading system: measurement-first i
+          nfrastructure (DuckDB market data, deterministic risk kernel, c
+          alibration ledger) plus a procedural-legal event desk (CourtLis
+          tener/Federal Register signals on legal/regulatory contracts). 
+          Python 3.12 + uv, official Kalshi async SDK, no LLM in the mone
+          y path. Decision memo at `../FABLE_WINDOW_PLAN_2026-07-03.md`; 
+          cold start via `HANDOFF.md`. Started 2026-07-04; MVP (M0-M5) bu
+          ilt same day, 228 tests green, pre-live and gated. | Active (MV
+          P built, pre-live) | Yes |
+      24  | SpecPack_2026-07-07/ | Five Fable-authored implementation spe
+          cs (spec-pack format: acceptance tests first, settled questions
+           binding, escalation via /fable-consult) from the window plan's
+           spec-pack day: Depreciation Shadow M1-M3, QuantPlatform Stage 
+          0-1, DRIF unblock, Polymarket US expansion, plus a pointer to t
+          he subpoena ICM spec in the UH Law tree. README.md carries the 
+          execution order. Executors are Sonnet sessions. | Active (specs
+           awaiting execution) | No (README.md is the index) |
+      25 -| deerflow-dr/ | Maintained fork of DeerFlow 2.0 (`bytedance/de
+         -er-flow`, in `deer-flow/`) carrying the DeepResearch harness's 
+         -research-assurance layer (claim ledger, requirement coverage, a
+         -dversarial verify, legal/financial gates, report lint, determin
+         -istic renderer) as a `dr_core` package + extension config. Mode
+         -l plane is the Claude subscription via a `claude -p` shim (no A
+         -nthropic API billing), OpenRouter fallback. Built per `HANDOFF_
+         -DEERFLOW_BUILD.md` under a /goal loop; durable state in `BUILD_
+         -LEDGER.md`/`DECISIONS.md`/`FORK_DELTA.md`/`SUBSTRATE_VALIDATION
+         -.md`. Started 2026-07-03. | Active (Phase 0) | Yes |           
+      25 +| deerflow-dr/ | Maintained fork of DeerFlow 2.0 (`bytedance/de
+         +er-flow`, in `deer-flow/`) carrying the DeepResearch harness's 
+         +research-assurance layer (claim ledger, requirement coverage, a
+         +dversarial verify, legal/financial gates, report lint, determin
+         +istic renderer) as a `dr_core` package + extension config. Mode
+         +l plane is OpenRouter gruntwork + a `claude -p` shim for the to
+         +p tier (no Anthropic API billing). Built per `HANDOFF_DEERFLOW_
+         +BUILD.md`; durable state in `BUILD_LEDGER.md`/`DECISIONS.md`/`F
+         +ORK_DELTA.md`/`SUBSTRATE_VALIDATION.md`; defect audit + executi
+         +on plan in `REVIEW_FINISH_PLAN_2026-07-06.md`. Started 2026-07-
+         +03; Phase 2 core loop (research→claim ledger→eligibility gate→d
+         +eterministic lint-clean render) live-proven 2026-07-07, 283 tes
+         +ts green. Verify layer (S7+) outstanding. | Active (Phase 2 cor
+         +e proven) | Yes |                                              
+      26  
+      27  ## Archived
+      28  
+
+❯ /compact                                                                      
+
+⏺ All six steps are done. Here's where the project now stands.
+
+  What landed today (4 commits on deerflow-dr, 283 dr_core tests + 19 pinned
+  upstream green):
+
+  - S0 — The entire build is finally in git (it had been sitting uncommitted in
+  the working tree).
+  - S1/S2 (parallel Sonnet workers) — All nine deterministic bugs fixed with
+  regression tests (appendix corruption, URLError passthrough, count mismatches,
+  ChatClaudeCLI cwd/JSON guards), and the citation/provenance transition guards
+  landed, closing the latent reducer kill before the verify pass can trip it.
+  - S3 — The render node is real: deterministic body generator, shared
+  gate/render eligibility module (gate repointed to it, so they can never
+  drift), write_run + HTML render, with the happy, cap-hit, and zero-eligible
+  paths all report_lint-clean and byte-deterministic.
+  - S4 — I ruled the deliverable-marker design at the Fable seat (logged as D7
+  in DECISIONS.md) and a worker implemented it: zero-claim search turns now get
+  gated, chat turns on claim-laden threads no longer re-render, and loop
+  bookkeeping resets properly.
+  - S5 — Gateway wiring: stream_subgraphs forced on for dr_agent, dr_agent
+  exposed in the assistants API, title channel mirrored so thread titles work,
+  and make test now collects the dr_core suite. Three new FORK_DELTA entries;
+  the fork surface is still small.
+  - S6 — The live end-to-end proof passed, and it earned its keep: run 1 exposed
+  that the real web_search tool returns a JSON object (not the list the source
+  hook parsed), and run 2 exposed that the model can never see the sha256 ledger
+  ids, so the "cite the source_id" contract was unsatisfiable on a real run.
+  Both fixed (URL citations now resolve deterministically to ledger ids; D7
+  addendum logged). Run 3: a real research question produced 5 sources, 2
+  model-recorded claims, gate proceed, and a rendered, lint-clean report with
+  correctly attributed claims, and the follow-up chat turn didn't re-render.
+
+  Honest residuals, recorded in the ledger: mid-run kill/restart resume and the
+  ask_clarification-inside-dr_agent interrupt path still need gateway-driven
+  live tests; the headless path is proven but a make dev + HTTP run of dr_agent
+  hasn't been done; and all claims render as attributed not_verified by design
+  until the verify layer exists.
+
+  What's left for release (per the plan): S7 verify layer (the 2-vote refutation
+  protocol plus citation/provenance gates — needs a design consult first, and
+  it's the gate to passing the Phase 4 seeded traps), S8 requirement coverage,
+  S9 connectors/profiles/token accounting, S10 acceptance benchmarks.
+  BUILD_LEDGER, DECISIONS, FORK_DELTA, SUBSTRATE-adjacent logs, and the
+  Projects/CLAUDE.md row are all updated, so any session can pick up cold from
+  the ledger tail.
+
+❯ /rename Deerflow-DR 
+  ⎿  Session renamed to: Deerflow-DR
+
+❯ /compact                                                                      
+  ⎿  Compacted (ctrl+o to see full summary)
+  ⎿  Referenced file ../DECISIONS.md
+  ⎿  Read ../../../../../../private/tmp/claude-501/-Users-ryanfree-Documents-Pro
+     jects/fe743a0d-9107-4893-9fb0-6ca39e14529e/tasks/bg48jgakk.output (12 
+     lines)
+  ⎿  Read backend/packages/dr_core/tests/test_dr_record_claim.py (176 lines)
+  ⎿  Read backend/packages/dr_core/dr_core/graph/claim_tool.py (146 lines)
+  ⎿  Read ../../../../../../private/tmp/claude-501/-Users-ryanfree-Documents-Pro
+     jects/fe743a0d-9107-4893-9fb0-6ca39e14529e/tasks/bp0f3iauv.output (12 
+     lines)
+  ⎿  Skills restored (orchestrate, handoff-contract)
+
+❯ Please /orchestrate and complete the remaining steps, starting with S7.       
+  ⎿  1 skill available
+
+⏺ The remaining plan steps are S7 through S12. First I'll re-read the plan's
+  Part II for the exact S7-S12 contracts, then run the S7 design ruling inline
+  (it's a gating decision, which stays on the orchestrator seat) before
+  dispatching workers.
+
+  Read 1 file (ctrl+o to expand)
+  ⎿  Loaded ../CLAUDE.md
+
+⏺ Now I'll refresh the binding rulings (D2, D6) before making the S7 design
+  ruling inline, since the verify-layer design must be consistent with them.
+
+  Searched for 1 pattern, read 1 file (ctrl+o to expand)
+
+⏺ scout(Distill old harness verify layer)
+
+  Read 6 files (ctrl+o to expand)
+  ⎿  Loaded CLAUDE.md
+  ⎿  Loaded AGENTS.md
+  ⎿  Loaded backend/CLAUDE.md  ⎿  Loaded backend/AGENTS.md
+
+  Searched for 2 patterns, read 1 file, listed 1 directory (ctrl+o to expand)
+
+⏺ Monitor(Fallback timer for scout-verify report)
+  ⎿  Monitor started · task bnejzla0r · timeout 300s
+
+  Listed 1 directory (ctrl+o to expand)
+
+⏺ S9's inputs are confirmed (32-connector registry with a closed schema, five
+  profile dirs). Now waiting on the scout's verify-layer distillation; when it
+  lands I'll write the D8 ruling and dispatch the S7 and S9 workers together.
+
+
+› Message from @scout-verify (ctrl+o to expand)
+
+⏺ Teammate @scout-verify finished
+
+⏺ The scout's distillation confirms the old harness's exact semantics. Writing
+  the D8 ruling into DECISIONS.md now, then dispatching the S7 and S9 workers in
+  parallel.
+  Read 1 file (ctrl+o to expand)
+
+⏺ D8 is logged. Dispatching both workers now — S7 (verify layer) and S9
+  (connectors/profiles/accounting) run in parallel on disjoint files.
+
+⏺ 2 background agents launched (↓ to manage)
+   ├ @s7-verify (sonnet-worker)
+   └ @s9-phase3 (sonnet-worker)
+
+  Read 1 file (ctrl+o to expand)
+
+⏺ Monitor event: "Fallback timer for scout-verify report"
+
+⏺ Monitor "Fallback timer for scout-verify report" stream ended
+
+⏺ That fallback timer is stale — the scout already reported and both rulings (D8
+  verify layer, D9 requirements coverage) are logged in DECISIONS.md. The S7
+  and S9 workers are now building in parallel; S8 dispatches as soon as S7's
+  graph rewiring lands. I'll report when the workers return.
+
+› Message from s9-phase3 (ctrl+o to expand)
+
+⏺ S9 reports done with 91 new tests, a live tier-0 probe pass, and clean ruff on
+  its own files (the one suite failure sits in S7's in-progress files, as
+  expected mid-build). Dispatching a read-only verifier against the S9 contract
+  now; the commit waits until S7 lands so we don't snapshot a half-built verify
+  layer.
+
+⏺ verifier(Verify S9 stage contract)
+
+⏺ S9's verifier is running. Waiting on it and on the S7 worker; S8 dispatches
+  when S7's graph rewiring lands.
+
+
+› Message from @s9-phase3 (ctrl+o to expand)
+
+⏺ Teammate @s9-phase3 finished
+
+⏺ That's a duplicate confirmation from the S9 worker — its report is already in
+  hand and the independent verifier is checking it now. Still waiting on the S7
+  worker and the S9 verifier.
+
+› Message from verify-s9 (ctrl+o to expand)
+
+⏺ The S9 verifier passed everything except one dead import (a one-line fix I'll
+  make now) and correctly flagged cross-worker diffs — those are the S7 worker's
+  in-scope agent.py rewiring plus semantics-preserving ruff format rewraps from
+  S9 running the formatter package-wide (ruff's formatter is
+  AST-equivalence-checked, and the 368-green suite confirms behavior is
+  unchanged).
+
+  Ran 1 shell command (ctrl+o to expand)
+
+⏺ S9 is verified and closed (pending the joint commit once S7 lands). Waiting on
+  the S7 worker.
+
+
+⏺ Teammate @verify-s9 finished
+
+⏺ Teammate @s7-verify finished
+
+⏺ The S7 worker went idle without delivering its report — the known pattern.
+  Requesting it.
+
+⏺ Report requested from the S7 worker; waiting on its reply.
+
+› Message from s7-verify (ctrl+o to expand)
+⏺ S7 reports complete — 436 tests green across both workers' additions.
+  Dispatching the S7 verifier now, focused on the D8 acceptance gates (seeded
+  traps, ladder discipline, graph wiring).
+
+⏺ verifier(Verify S7 stage contract)
+
+⏺ S7's verifier is running; on a pass I'll commit S7 and S9 as separate logical
+  commits and dispatch the S8 worker against the D9 ruling.
+
+
+⏺ Teammate @s7-verify finished
+
+⏺ Duplicate idle notice from the S7 worker — its report is already in hand.
+  Waiting on the S7 verifier's table.
+
+› Message from verify-s7 (ctrl+o to expand)
+
+⏺ S7 verified 11/11 with the seeded-trap gates passing through the real
+  eligibility derivation. Committing the two stages as separate logical commits
+  now.
+
+  Read 1 file, ran 2 shell commands (ctrl+o to expand)
+
+⏺ sonnet-worker(S8: requirements + coverage)
+
+⏺ S8 is dispatched with the full D9 contract (plan_coverage node, turn-scoped
+  extraction, coverage-aware gate predicate with the breaker-signature
+  extension, materiality activation, and the Unsubstantiated section growing
+  real requirement content). I'll verify and commit it when it reports, then
+  move to S10 acceptance.
+
+
+⏺ Teammate @verify-s7 finished
+
+⏺ Duplicate idle notice from the S7 verifier — already processed and committed.
+  Waiting on the S8 worker.
+
+› Message from s8-coverage (ctrl+o to expand)
+
+⏺ S8 reports complete — 477 passed, with one sound deviation (freezing
+  must_cover_states at the gate, mirroring the citation_ordinals pattern) that
+  I'll ratify as a D9 addendum. Dispatching the S8 verifier.
+
+⏺ verifier(Verify S8 stage contract)
+
+  Read 1 file (ctrl+o to expand)
+
+⏺ D9 addendum logged. Waiting on the S8 verifier's table; on a pass I'll commit
+  S8 and move to S10 acceptance.
+
+
+⏺ Teammate @s8-coverage finished
+
+⏺ Duplicate idle notice from the S8 worker — report already in hand. Waiting on
+  the verifier.
+
+› Message from verify-s8 (ctrl+o to expand)
+
+⏺ S8 verified 12/12. Committing, logging, and moving to S10 acceptance.
+
+  Ran 1 shell command (ctrl+o to expand)
+
+  Searched for 1 pattern, read 1 file, listed 2 directories, ran 1 shell command (ctrl+o to expand)
+⏺ Update(backend/packages/dr_core/dr_core/verify/citation.py)
+  ⎿  Added 5 lines, removed 3 lines
+       91  
+       92  async def lookup_citations(text: str, *, token: str | None = N
+           one, timeout: float = _DEFAULT_TIMEOUT) -> list[dict] | None:
+       93      """Async, non-blocking CourtListener citation-lookup. ``to
+           ken`` defaults to
+       94 -    ``COURTLISTENER_API_TOKEN``; any failure (missing token, n
+          -etwork error,                                                 
+       95 -    timeout, malformed response) degrades to ``None`` rather t
+          -han raising, per D8                                           
+       94 +    ``COURTLISTENER_TOKEN`` (the name connectors.yaml's auth f
+          +ield and Ryan's                                               
+       95 +    credential store actually use; ``COURTLISTENER_API_TOKEN``
+          + accepted as a                                                
+       96 +    fallback spelling); any failure (missing token, network er
+          +ror, timeout,                                                 
+       97 +    malformed response) degrades to ``None`` rather than raisi
+          +ng, per D8                                                    
+       98      decision 6 (a hung source never stalls a run)."""
+       97 -    resolved_token = token if token is not None else os.enviro
+          -n.get("COURTLISTENER_API_TOKEN")                              
+       99 +    resolved_token = token if token is not None else os.enviro
+          +n.get("COURTLISTENER_TOKEN") or os.environ.get("COURTLISTENER_
+          +API_TOKEN")                                                   
+      100      try:
+      101          return await asyncio.to_thread(_lookup_citations_sync,
+            text, resolved_token, timeout)
+      102      except Exception:
+
+  Ran 2 shell commands (ctrl+o to expand)
+
+⏺ Token fix committed. Dispatching the S10 acceptance worker for the live Phase
+  4 gate:
+
+⏺ sonnet-worker(S10: Phase 4 live acceptance)
+
+  Read 1 file (ctrl+o to expand)
+
+⏺ Update(~/Documents/Projects/deerflow-dr/DECISIONS.md)
+  ⎿  Added 3 lines
+      11  **Ruling:** ...
+      12  **Rationale / constraints:** ...
+      13  
+      14 +Numbering note: D3 and D4 never existed (the numbering jumped f
+         +rom D2 to D5 when two planned                                  
+      15 +consults were absorbed into D5's scope). Do not hunt for them. 
+      16 +                                                               
+      17  ---
+      18  
+      19  ## D1 — 2026-07-03 — Model-plane shim: hybrid (OpenRouter + too
+          l-free claude -p)
+
+⏺ m6 is closed. The S10 worker is now running the live Phase 4 acceptance: both
+  seeded traps against the real CourtListener and OpenRouter planes, the
+  kill/resume test, the volatility benchmark, and the first-ever gateway-HTTP
+  smoke of dr_agent. I'll report when its checklist comes back.
+
+
+⏺ Teammate @verify-s8 finished
+
+⏺ Duplicate idle notice from the S8 verifier — already processed and committed.
+  Waiting on the S10 acceptance worker.
+
+› Message from s10-acceptance (ctrl+o to expand)
+
+⏺ S10's report is decision-rich. The acceptance machinery held up (kill/resume
+  passed, real CourtListener discrimination worked, cost accounting real, lint
+  clean), but it surfaced one release-blocking calibration defect — the verify 
+  layer killed 100% of claims in every live run, including well-sourced ones —
+  plus a broken gateway-HTTP path (a missing dr_agent carve-out in
+  build_run_config), a scorer/render contract mismatch, and the uv-reapplied
+  UF_HIDDEN break. The calibration defect needs investigation at my seat before
+  any fix ruling: I need to read the actual vote reasoning from the benchmark
+  checkpoint.
+
+  Searched for 1 pattern, read 1 file, listed 1 directory, ran 1 shell command (ctrl+o to expand)
+
+⏺ The fix is a carve-out at the custom-agent injection, mirroring the one
+  resolve_agent_factory already has:
+
+⏺ Update(backend/app/gateway/services.py)
+  ⎿  Added 4 lines, removed 1 line
+      334  
+      335      # Inject custom agent name when the caller specified a non
+           -default assistant.
+      336      # Honour an explicit agent_name in either runtime options 
+           container.
+      337 -    if assistant_id and assistant_id != _DEFAULT_ASSISTANT_ID:
+      337 +    # "dr_agent" is the same carve-out resolve_agent_factory()
+          + has (D5): it is a                                            
+      338 +    # first-class graph factory, not a custom agent, so it mus
+          +t never be                                                    
+      339 +    # rewritten into an agents/<name>/ directory lookup.      
+      340 +    if assistant_id and assistant_id not in (_DEFAULT_ASSISTAN
+          +T_ID, "dr_agent"):                                            
+      341          normalized = assistant_id.strip().lower().replace("_",
+            "-")
+      342          if not normalized or not re.fullmatch(r"[a-z0-9-]+", n
+           ormalized):
+      343              raise ValueError(f"Invalid assistant_id {assistant
+           _id!r}: must contain only letters, digits, and hyphens after n
+           ormalization.")
+
+  Read 1 file (ctrl+o to expand)
+
+⏺ sonnet-worker(S10-fixups: D10 calibration + mechanical fixes)
+⏺ While the fixup worker runs, logging the FORK_DELTA entry for the services.py
+  core edit:
+
+  Read 1 file, ran 1 shell command (ctrl+o to expand)
+
+⏺ FORK_DELTA now carries both new core-file entries (the fork surface is still
+  the two gated files plus config-level touches). Waiting on the fixup worker;
+  after it lands I'll commit, then send the S10 worker back out to re-run the
+  acceptance gate — both traps must still die deterministically, and a
+  well-sourced live question must now yield a non-zero publication rate.
+
+
+⏺ Teammate @s10-acceptance finished
+
+⏺ Duplicate idle notice from the S10 worker — its report was already processed
+  and drove the D10 ruling. Waiting on the fixup worker.
+
+› Message from s10-fixups (ctrl+o to expand)
+
+⏺ Fixups landed at 490 green — but item 8 needs my own check: PYTHONPATH=. alone
+  can't resolve deerflow/dr_core when uv re-hides the .pth files, which is
+  exactly the failure the acceptance worker hit. Verifying the Makefile myself:
+
+  Ran 1 shell command (ctrl+o to expand)
+
+⏺ Confirmed — the worker misjudged item 8: PYTHONPATH=. fails, the full path
+  works. Fixing the Makefile at my seat:
+
+  Ran 2 shell commands (ctrl+o to expand)
+
+⏺ Wrong invocation from the repo root — the established acceptance command runs
+  from backend/. Re-running properly in the background:
+
+  Ran 2 shell commands (ctrl+o to expand)
+
+⏺ The suite is running in the background; I'll commit when it reports green.
+
+
+⏺ Teammate @s10-fixups finished
+
+⏺ Duplicate idle notice from the fixup worker — already processed. Waiting on
+  the background suite run to confirm green before committing.
+
+⏺ Background command "Run dr_core suite from backend dir" completed (exit code
+0)
+
+  Read 1 file (ctrl+o to expand)
+
+⏺ 490 green. Committing the D10 batch:
+
+  Ran 1 shell command (ctrl+o to expand)
+
+⏺ Now sending the acceptance worker back out for the D10 re-acceptance:
+
+⏺ Re-acceptance is dispatched to the same worker (it keeps its full context and
+  scripts). Waiting on its four-point report: traps still excluded and now
+  scorable, non-zero publication rate on a well-sourced question, gateway HTTP
+  unblocked, and the suite-duration anomaly named.
+
+› Message from s10-acceptance (ctrl+o to expand)
+
+⏺ Strong progress: both traps pass and score 4/4 and 3/3 after the worker's
+  scorer fix, the gateway path is fully unblocked end-to-end, and the timing
+  anomaly was noise. One defect remains: in the evidence-absent regime,
+  gpt-4o-mini ignores the abstain instruction and refutes plainly-true claims at
+  high confidence (their sources 403 the evidence fetcher). That gets a
+  deterministic fix, not a prompt hope — ruling it now as a D10 addendum, plus
+  committing the verified scorer fix.
+
+  Ran 1 shell command (ctrl+o to expand)
+
+⏺ Round-2 fixups are dispatched (evidence-fetch headers, the deterministic
+  refute-requires-contradiction clamp, and the legal-trap lint gap). After they
+  land: commit, one final publication-rate probe, then the S10 ledger entry and
+  S12 closeout.
+
+
+⏺ Teammate @s10-acceptance finished
+
+⏺ Duplicate idle notice — the re-acceptance report was already processed and
+  drove the D10 addendum. Waiting on the round-2 fixups.
+
+› Message from s10-fixups (ctrl+o to expand)
+⏺ Round 2 is in at 500 green, and the lint-gap root cause was actually a false
+  positive in the linter's sentence splitter fragmenting legal citations
+  ("Harlow v. Fitzgerald") — fixed in the right place with the verbatim-ported
+  PART 1 untouched. Committing, then running the final acceptance probe.
+
+  Ran 1 shell command (ctrl+o to expand)
+
+⏺ The final probe is dispatched — one live publication-rate run plus a trap
+  re-confirmation that the clamp didn't resurrect the planted claims. On a pass,
+  S10 closes and S12 closeout begins.
+
+
+⏺ Teammate @s10-fixups finished
+
+⏺ Duplicate idle notice from the fixup worker — round 2 is already committed.
+  Waiting on the final acceptance probe.
+
+› Message from s10-acceptance (ctrl+o to expand)
+
+⏺ The publication-rate probe passes and both traps hold on their deterministic
+  ladders (the fabricated-number claim renders only as CONTESTED with its inline
+  caveat — exactly the "flagged or excluded" behavior the Phase 4 criterion
+  specifies). S10 is done. Closing it out and starting S12.
+
+  Read 1 file, ran 1 shell command (ctrl+o to expand)
+
+⏺ Background command "Final suite count for the ledger" completed (exit code 0)
+
+⏺ One failure appeared in the final count — identifying it before closeout:
+
+  Ran 3 shell commands (ctrl+o to expand)
+
+⏺ Update(~/Documents/Projects/CLAUDE.md)
+  ⎿  File must be read first
+
+  Searched for 1 pattern, read 1 file (ctrl+o to expand)
+
+⏺ Update(~/Documents/Projects/CLAUDE.md)
+  ⎿  Added 1 line, removed 1 line
+      22  | _workspaces/extraction-factory/ | Reusable bulk download+pars
+          e+extract factory: the reference ICM workspace (cached L3 schem
+          a, parallel Haiku sub-agents via `tiered-models`, three human g
+          ates at intake/schema/merge). Built and proven end-to-end 2026-
+          06-28 (T1.2). | Active | Yes (`CLAUDE.md` + `CONTEXT.md`, the p
+          attern the rest of this table's ICM-layering work follows) |
+      23  | EventDesk/ | Kalshi event-trading system: measurement-first i
+          nfrastructure (DuckDB market data, deterministic risk kernel, c
+          alibration ledger) plus a procedural-legal event desk (CourtLis
+          tener/Federal Register signals on legal/regulatory contracts). 
+          Python 3.12 + uv, official Kalshi async SDK, no LLM in the mone
+          y path. Decision memo at `../FABLE_WINDOW_PLAN_2026-07-03.md`; 
+          cold start via `HANDOFF.md`. Started 2026-07-04; MVP (M0-M5) bu
+          ilt same day, 228 tests green, pre-live and gated. | Active (MV
+          P built, pre-live) | Yes |
+      24  | SpecPack_2026-07-07/ | Five Fable-authored implementation spe
+          cs (spec-pack format: acceptance tests first, settled questions
+           binding, escalation via /fable-consult) from the window plan's
+           spec-pack day: Depreciation Shadow M1-M3, QuantPlatform Stage 
+          0-1, DRIF unblock, Polymarket US expansion, plus a pointer to t
+          he subpoena ICM spec in the UH Law tree. README.md carries the 
+          execution order. Executors are Sonnet sessions. | Active (specs
+           awaiting execution) | No (README.md is the index) |
+      25 -| deerflow-dr/ | Maintained fork of DeerFlow 2.0 (`bytedance/de
+         -er-flow`, in `deer-flow/`) carrying the DeepResearch harness's 
+         -research-assurance layer (claim ledger, requirement coverage, a
+         -dversarial verify, legal/financial gates, report lint, determin
+         -istic renderer) as a `dr_core` package + extension config. Mode
+         -l plane is OpenRouter gruntwork + a `claude -p` shim for the to
+         -p tier (no Anthropic API billing). Built per `HANDOFF_DEERFLOW_
+         -BUILD.md`; durable state in `BUILD_LEDGER.md`/`DECISIONS.md`/`F
+         -ORK_DELTA.md`/`SUBSTRATE_VALIDATION.md`; defect audit + executi
+         -on plan in `REVIEW_FINISH_PLAN_2026-07-06.md`. Started 2026-07-
+         -03; Phase 2 core loop (research→claim ledger→eligibility gate→d
+         -eterministic lint-clean render) live-proven 2026-07-07, 283 tes
+         -ts green. Verify layer (S7+) outstanding. | Active (Phase 2 cor
+         -e proven) | Yes |                                              
+      25 +| deerflow-dr/ | Maintained fork of DeerFlow 2.0 (`bytedance/de
+         +er-flow`, in `deer-flow/`) carrying the DeepResearch harness's 
+         +research-assurance layer (claim ledger, requirement coverage, a
+         +dversarial verify, legal/financial gates, report lint, determin
+         +istic renderer) as a `dr_core` package + extension config. Mode
+         +l plane is OpenRouter gruntwork + a `claude -p` shim for the to
+         +p tier (no Anthropic API billing). Built per `HANDOFF_DEERFLOW_
+         +BUILD.md`; durable state in `BUILD_LEDGER.md`/`DECISIONS.md`/`F
+         +ORK_DELTA.md`/`SUBSTRATE_VALIDATION.md`; defect audit + executi
+         +on plan in `REVIEW_FINISH_PLAN_2026-07-06.md`. Started 2026-07-
+         +03; full assurance loop (research→plan/coverage→verify→gate→det
+         +erministic render) built and Phase 4 acceptance passed live 202
+         +6-07-08: both seeded traps die deterministically (CourtListener
+         + citation gate, provenance audit), kill/resume proven, gateway 
+         +HTTP path works, per-phase token+dollar accounting in the manif
+         +est, 500 tests green. Known limits in BUILD_LEDGER (voter-model
+         + strictness keeps publication rates low until DR_VERIFY_MODEL i
+         +s upgraded; profile allowlists data-only). Cold start via RELEA
+         +SE_HANDOFF.md. | Active (Phase 4 passed, release candidate) | Y
+         +es |                                                           
+      26  
+      27  ## Archived
+      28  
+
+⏺ Now the release handoff (seven-field contract) at the project root:
+
+⏺ Write(~/Documents/Projects/deerflow-dr/RELEASE_HANDOFF.md)
+  ⎿  Wrote 80 lines to ../RELEASE_HANDOFF.md
+       1 # RELEASE_HANDOFF.md — deerflow-dr release candidate (2026-07-08
+       2 
+       3 Written at the close of the S7-S12 execution session (Fable orch
+       4 Read this before operating or extending the system cold. Compani
+       5 (work log, read the tail), `DECISIONS.md` (D1-D10, binding), `FO
+         RK_DELTA.md` (fork surface),
+         AN_2026-07-06.md` (the executed plan).
+       7 
+       9 
+          verification layer (S7),
+     … +120 lines (ctrl+o to expand)
+
+  Searched for 1 pattern, ran 4 shell commands (ctrl+o to expand)
+⏺ The plan is executed to the end: S7 through S12 are done, Phase 4 acceptance
+  passed live, and deerflow-dr is now a release candidate. Here is what happened
+  since S6.
+
+  What landed (7 commits, suite 283 → 500 tests green, all worker stages
+  independently verified):
+
+  - S7 verify layer (ruled as D8 after a scout distilled the old harness's exact
+  semantics): a new outer verify node with a deterministic CourtListener
+  citation gate, a pure provenance audit, depth-capped claim selection, and the
+  adaptive 1-to-3 adversarial vote protocol on or-mid. Terminal ladders advance
+  only on unambiguous evidence, never on vote mood.
+  - S8 requirements coverage (D9): turn-scoped requirement extraction and claim
+  mapping via a plan_coverage node, a coverage-aware gate that bounces
+  corrective turns naming uncovered must-cover requirements verbatim, and
+  materiality finally live through the single shared gate/render derivation.
+  - S9 Phase 3: vendored connector registry with a review-only config generator
+  and live-probed reachability, five research profiles, and per-phase token plus
+  dollar accounting in every run manifest.
+  - S10 live acceptance: this earned its cost. The first pass found that the
+  verify layer killed 100% of claims in every live run, including plainly true
+  ones. Reading the actual vote records showed two compounding causes: the
+  default authority tier made a risk flag universal, and text-only voters scored
+  "I could not retrieve the source" as "false." I ruled the fix (D10 and an
+  addendum): unverifiable now aggregates to attributed not_verified rather than
+  killed, evidence fetches send browser headers (the failures were 403s on
+  default user agents), and a refute in the no-evidence regime is
+  deterministically discarded unless it quotes an actual contradiction. The same
+  pass also surfaced and we fixed a gateway 404 that had made dr_agent
+  unreachable over HTTP, a scorer contract mismatch (run folders now carry a
+  full ledger.jsonl beside the eligible-only claims.jsonl), a false-positive
+  linter split on legal citations like "Harlow v. Fitzgerald", and the Makefile
+  breakage from uv re-hiding the editable installs.
+  - Final acceptance state: both seeded traps die on their deterministic ladders
+  against the real CourtListener API and score 4/4 and 3/3; kill/resume works
+  (SIGKILL mid-run, resume, no re-retrieval); the gateway HTTP path streams a
+  dr_agent run end to end; publication rate is non-zero; every final report
+  lints clean; manifests show real per-phase cost (the benchmark run cost
+  $0.013).
+  - S12 closeout: fork surface audited against the actual git diff and matches
+  FORK_DELTA exactly; RELEASE_HANDOFF.md written and validated; BUILD_LEDGER,
+  DECISIONS (D8, D9, D10), Projects/CLAUDE.md, and PORTFOLIO.md all updated.
+
+  Two decisions are now yours, deliberately not started (detailed in
+  RELEASE_HANDOFF.md §Open questions): first, the voter model. gpt-4o-mini
+  remains a harsh judge even after the epistemics fix, killing borderline-true
+  claims on wording technicalities, so publication rates will read low until you
+  point DR_VERIFY_MODEL at a stronger model or claude-top. Second, profile and
+  connector enforcement: S9's allowlists are data plus loader only, and the weak
+  volatility-benchmark output relative to your 2026-07-02 baseline is mostly
+  that gap, since live runs still only have generic web search rather than the
+  32-connector fan-out. Those two knobs are what stand between "assurance
+  machinery proven" and "reports worth reading."
+
+  Session worker spend ran moderately over the initial 330k estimate (four
+  workers, three verifiers, a scout, plus two unplanned fixup rounds from the
+  live acceptance findings); live API spend was about five cents total.
+
+
+⏺ Teammate @s10-acceptance finished
+
+⏺ That's a duplicate idle notice from the acceptance worker — its final probe
+  report was already processed, and the full run (S7 through S12) is closed out.
+  Nothing further is pending: all tasks are completed, the seven commits are
+  in, and the release-candidate summary with your two open decisions (voter
+  model, connector enforcement) stands as delivered.
+
+❯ Nice. Let's switch the verify model over to Sonnet 5. On the connectors,      
+  please suggest 2-3 options for how to resolve and improve this step.          
+
+⏺ Two workstreams: the verify-model switch (I'll implement it now) and connector
+  options (recommendations for you to pick from). Starting with the current
+  model-plane config:
+
+  Searched for 2 patterns, ran 2 shell commands (ctrl+o to expand)
+
+⏺ All edit points identified. Applying the switch:
+
+⏺ Update(config.yaml)
+  ⎿  File must be read first
+
+⏺ Update(backend/packages/dr_core/dr_core/verify/votes.py)
+  ⎿  File must be read first
+
+  Read 2 files (ctrl+o to expand)
+
+⏺ Update(config.yaml)
+  ⎿  Added 8 lines
+      27      extra_body: { usage: { include: true } }
+      28      max_retries: 2
+      29  
+      30 +  - name: or-sonnet         # tier: verification votes (upgrade
+         +d from or-mid 2026-07-08:                                      
+      31 +    use: langchain_openai:ChatOpenAI    # or-mid killed borderl
+         +ine-true claims on wording                                     
+      32 +    model: anthropic/claude-sonnet-5    # hairsplits — BUILD_LE
+         +DGER S10 residuals / RELEASE_HANDOFF q.1)                      
+      33 +    base_url: https://openrouter.ai/api/v1                     
+      34 +    api_key: $OPENROUTER_API_KEY                               
+      35 +    extra_body: { usage: { include: true } }                   
+      36 +    max_retries: 2                                             
+      37 +                                                               
+      38    - name: claude-top        # synthesis / arbitration ONLY, too
+          l-free
+      39      use: dr_core.models.claude_cli:ChatClaudeCLI
+      40      model: opus
+
+⏺ Update(backend/packages/dr_core/dr_core/verify/votes.py)
+  ⎿  Added 1 line, removed 1 line
+      147      rather than reaching into ``deerflow.models``."""
+      148      from deerflow.models import create_chat_model
+      149  
+      150 -    return create_chat_model(os.environ.get("DR_VERIFY_MODEL",
+          - "or-mid"))                                                   
+      150 +    return create_chat_model(os.environ.get("DR_VERIFY_MODEL",
+          + "or-sonnet"))                                                
+      151  
+      152  
+      153  def _format_evidence(claim: Claim, source: dict | None, eviden
+           ce_excerpt: str | None) -> str:
+
+⏺ Now the accounting tier map, pricing, and the five profile files:
+
+  Read 1 file (ctrl+o to expand)
+
+⏺ Update(backend/packages/dr_core/dr_core/accounting.py)
+  ⎿  Added 1 line
+      24  MODEL_TIER_IDS = {
+      25      "or-cheap": "openai/gpt-oss-20b",
+      26      "or-mid": "openai/gpt-4o-mini",
+      27 +    "or-sonnet": "anthropic/claude-sonnet-5",                  
+      28      "claude-top": "claude-top",
+      29  }
+      30  
+
+⏺ Update(backend/packages/dr_core/dr_core/accounting.py)
+  ⎿  Added 1 line
+      34  PRICING = {
+      35      "openai/gpt-oss-20b": {"input": 0.03, "output": 0.14},
+      36      "openai/gpt-4o-mini": {"input": 0.15, "output": 0.60},
+      37 +    "anthropic/claude-sonnet-5": {"input": 3.00, "output": 15.0
+         +0},                                                            
+      38      "claude-top": {"input": 0.0, "output": 0.0},
+      39  }
+      40  
+
+  Ran 4 shell commands (ctrl+o to expand)
+
+⏺ The Sonnet 5 switch is committed (b5be21fd) and a live probe is validating it
+  now. When it reports back I'll deliver the probe results together with the
+  connector options.
+
+※ recap: Finishing the deerflow-dr release work: the verify voter is now Sonnet 5 and a live probe run is validating that switch. Once its results land, I'll report them along with 2-3 options for the connector enforcement gap. (disable recaps in /config)
+
+› Message from s10-acceptance (ctrl+o to expand)
+
+⏺ Decisive probe result — closing the loop in the ledgers, then the connector
+  options:
+  Ran 1 shell command (ctrl+o to expand)
+
+⏺ The Sonnet 5 switch is done, committed (b5be21fd), and validated live. The
+  probe on the minimum-wage question: 5 claims recorded, 5/5 published (was 1/5
+  on gpt-4o-mini), with 1 supported, 4 not_verified in attributed form, and zero
+  false kills. Verify-phase cost was $0.054 of a $0.059 total run, wall-clock
+  136s (comparable to before). One minor residual logged: the single-vote fast
+  path never fires (every claim went to three votes), which wastes two Sonnet
+  calls per clean claim — a cost tune-up worth a look later, not a correctness
+  issue. Ledger, RELEASE_HANDOFF, and the portfolio row are updated.
+
+  Connector options. The gap: live runs only have generic web_search/web_fetch;
+  S9's registry, allowlists, and tiering are data plus a loader, with nothing
+  wired to the live tool surface. That gap, more than model quality, is why the
+  volatility benchmark underperformed your 2026-07-02 baseline (which had
+  32-connector fan-out). Three ways to close it, cheapest first:
+
+  Option A — Apply the S9 generator output as static config. Review the
+  fragments the generator already emits (build-logs/connectors-generated/), fill
+  in the MCP package specs it left as TODOs, and merge the chosen connectors
+  into config.yaml tools and extensions_config.json. Coverage jumps immediately
+  (FRED, SEC EDGAR, CourtListener, OpenAlex, govinfo become real tools) and
+  DeerFlow's deferred tool-search keeps prompt bloat down. Limitations: every
+  profile sees every tool (no enforcement), and the per-connector
+  timeout/retry/breaker policy stays advisory. Effort: an hour or two of review
+  plus a smoke run.
+
+  Option B — Profile-scoped tool middleware in dr_core. A
+  DrProfileToolMiddleware riding the same extra_middlewares seam as the ledger
+  middleware (zero new fork surface): it filters the bound tool list to the
+  active profile's allowlist (DeerFlow's own DeferredToolFilterMiddleware proves
+  middleware can do this) and wraps tool calls with the S9 policy map, so
+  timeout/retry/circuit-breaker per connector durability becomes enforced
+  behavior rather than data. This makes profiles real: a legal run gets
+  CourtListener but not FRED. Effort: roughly one worker day. It presumes A (or
+  something like it) has put tools in the config to filter.
+
+  Option C — First-class structured-connector tools. A tool factory in
+  dr_core/connectors/ generating typed REST tools from registry rows for the
+  anchor connectors (FRED, EDGAR company facts, CourtListener, OpenAlex),
+  returning structured JSON that the source hook can mint sources from and,
+  critically, carrying data_ref so the provenance audit finally runs live on
+  financial claims — today it only fires on fixtures. This is the piece that
+  closes the report-quality gap to the old harness, and it's the difference
+  between the financial profile existing and working. Effort: two to three
+  worker days if scoped to 5-8 anchor connectors rather than all 32.
+
+  My recommendation: A now to unblock coverage, B next for enforcement, and C
+  staged for the financial and legal anchors first — they're the profiles with
+  seeded-trap machinery already waiting for structured data. If you want it as
+  one initiative, B+C with A as its first step is the natural spec-pack. Say the
+  word and I'll dispatch A immediately; B and C are better run as a fresh
+  orchestrated session against the release handoff.
+
+
+⏺ Teammate @s10-acceptance finished
+
+⏺ Duplicate idle notice from the probe worker — those results were already
+  delivered. Everything is closed out and committed; the only open item is your
+  pick on the connector options (A: apply generated config now, B:
+  profile-scoped enforcement middleware, C: structured connector tools for the
+  financial/legal anchors).
+
+❯ I agree. Let's implement A now, and then leave an easy to find handoff doc    
+  for next instance to orchestrate B + C. Also, I now have WRDS access, so we   
+  definately want to get that wired up as well--that will be crucial for        
+  Financial searches, the FactorZoo project, etc.                               
+
+⏺ Good — dispatching Option A plus the WRDS registry wiring as one worker now,
+  and I'll author the B+C handoff at this seat while it runs.
+
+  One thing I need from you for WRDS: credentials aren't in the environment yet
+  (no WRDS keys in ~/.claude/.env or backend/.env). The plumbing I'm building
+  reads WRDS_USERNAME / WRDS_PASSWORD from env. Please add those two lines to
+  ~/.claude/.env yourself when convenient — everything else will be wired and
+  waiting, and the probe will flip from NEEDS-KEY to OK on its own once they
+  exist.
+
+⏺ sonnet-worker(Option A: wire connectors + WRDS registry)
+
+⏺ Write(~/Documents/Projects/deerflow-dr/HANDOFF_CONNECTORS_BC.md)
+  ⎿  Wrote 95 lines to ../HANDOFF_CONNECTORS_BC.md
+      1 # HANDOFF_CONNECTORS_BC.md — next initiative: profile enforcement
+      2 
+      3 Written 2026-07-08 at the close of the release-candidate session,
+      4 instance. Ryan has approved this work. Run it under /orchestrate 
+        against this file as the brief.
+        md` D8-D10, then the tail of
+      6 `BUILD_LEDGER.md`. Option A (static connector config + WRDS regis
+      7 2026-07-08 session — check the ledger tail for its final state be
+        fore assuming anything below.
+      9 ## Task
+     … +143 lines (ctrl+o to expand)
+
+  Ran 1 shell command (ctrl+o to expand)
+
+⏺ Fixing the header names to the canonical contract fields:
+
+  Ran 1 shell command (ctrl+o to expand)
+
+⏺ The B+C handoff is written and validated (HANDOFF_CONNECTORS_BC.md at the
+  project root, referenced from RELEASE_HANDOFF and the portfolio row, so any
+  next instance finds it from either entry point). It carries the approved plan,
+  the WRDS-first anchor order for Option C, the pre-made decisions, and the
+  open rulings the next orchestrator should make — including the FactorZoo/DRIF
+  pointer once the WRDS tool exists.
+
+  The Option A worker is wiring connectors now (community-tool entries into
+  config.yaml, MCP servers with real package specs from the old harness docs,
+  the WRDS registry row with a TCP probe gated on your pending credentials).
+  I'll verify, commit, and report when it lands.
+
+※ recap: Getting deerflow-dr to release: verify voter now Sonnet 5 (5/5 publication), B+C handoff written, and a worker is wiring Option A connectors plus WRDS registration. Next: verify and commit its work; you still owe WRDS_USERNAME/WRDS_PASSWORD in ~/.claude/.env. (disable recaps in /config)
+
+› Message from sA-connectors (ctrl+o to expand)
+
+⏺ Option A landed with a bonus: your WRDS credentials were already in place, and
+  the live TCP probe to wrds-pgdata hit OK. Spot-checking, then committing:
+
+  Ran 3 shell commands (ctrl+o to expand)
+
+⏺ The task list was cleared externally, but the work itself is done. Here's
+  where things stand.
+
+  Option A is committed (d97bd2f1, suite 500 → 507 green). The concrete result:
+
+  - Four MCP servers are live in the config: tavily, docling, semantic_scholar,
+  and openbb — all with package specs confirmed from the old harness's
+  CONNECTORS.md, none invented. CourtListener and govinfo are wired but disabled
+  pending auth-flow confirmation (their REST substrates remain the working
+  paths). Five connectors were skipped for lack of a confirmed spec rather than
+  guessed at.
+  - The config.yaml tools wiring was deliberately skipped, and the reason
+  matters for what comes next: DeerFlow's community search tools hardcode their
+  tool names to web_search/web_fetch, and the tool loader dedupes first-wins —
+  so adding a second search tool would either be dead config or silently replace
+  the proven ddg/jina path. Real tool fan-out arrives with Option C, whose
+  tools will carry distinct names. This finding is recorded in the ledger and in
+  the B+C handoff so the next instance builds around it.
+  - WRDS is registered and reachable. The registry gained a sql access kind and
+  a wrds row (tier 1, financial profile, with a driverless TCP probe). Better
+  news than expected: your credentials were already in ~/.claude/.env — no
+  action needed from you — and the live probe connected to wrds-pgdata
+  successfully. Clean copies are mirrored into the gitignored backend/.env. An
+  authenticated SQL query is deliberately left as Option C's first milestone.
+  - Live probe sweep: most connectors OK; one item worth your eye at some point
+  — SEC EDGAR returned 403 even with SEC_EDGAR_USER_AGENT set, flagged in the
+  ledger for a manual look.
+
+  The B+C handoff is in place at Projects/deerflow-dr/HANDOFF_CONNECTORS_BC.md —
+  validated seven-field contract, findable from RELEASE_HANDOFF, the portfolio
+  row, and the ledger tail. It carries the approved plan (B: profile-enforcement
+  middleware with per-connector timeout/retry/breaker; C: typed structured
+  tools with WRDS first, feeding data_ref into the live provenance audit), the
+  pre-made decisions, the tool-naming caveat above, and four open rulings for
+  the next orchestrator — including checking what DRIF already uses for WRDS
+  access so the dependency choice stays consistent across your projects.
+
+  A fresh session can start the B+C initiative with just /orchestrate pointed at
+  that handoff.
+
+
+› Message from @sA-connectors (ctrl+o to expand)
+
+⏺ Teammate @sA-connectors finished
+
+⏺ That was the worker double-checking a stale line in its task description — it
+  confirmed the Option A commit (d97bd2f1), the ledger entry, and the WRDS
+  credential mirroring are all complete and accurate, with nothing left
+  uncommitted. Everything from this session is closed: verify votes on Sonnet 5
+  (validated live at 5/5 publication), Option A wired, WRDS registered and
+  probed, and the B+C initiative waiting in HANDOFF_CONNECTORS_BC.md for a fresh
+  /orchestrate session whenever you want to run it. The one loose thread for
+  your eye remains the SEC EDGAR 403 flagged in the ledger.
+
+※ recap: Deerflow-dr is release-ready: verify votes now run on Sonnet 5 and Option A connector wiring plus WRDS registration are committed. Next action: start a fresh /orchestrate session on HANDOFF_CONNECTORS_BC.md for profile enforcement and structured tools.
