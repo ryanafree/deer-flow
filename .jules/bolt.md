@@ -1,0 +1,1 @@
+## 2024-07-18 - Missing React.memo \n**Learning:** Components rendered in large lists like MessageList should use React.memo to prevent unnecessary re-renders when parent states change without affecting their props.\n**Action:** Add React.memo to MessageList related components if they are not already memoized.
