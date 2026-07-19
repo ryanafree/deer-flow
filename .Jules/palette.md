@@ -1,0 +1,3 @@
+## 2024-05-24 - Dynamic ARIA labels on Icon-only Copy Buttons
+**Learning:** Icon-only buttons in generic UI components (like code blocks and scroll buttons) often miss `aria-label`s. Providing dynamic `aria-label`s and `title`s (e.g., "Copy to clipboard" -> "Copied to clipboard") significantly enhances the experience for screen readers and provides helpful feedback for mouse users through tooltips.
+**Action:** Always ensure icon-only generic component buttons have appropriate `aria-label` and `title` attributes. For actions with state (like copy), dynamically update these attributes to reflect the current state.
