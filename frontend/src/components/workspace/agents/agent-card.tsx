@@ -189,6 +189,7 @@ export function AgentCard({ agent }: AgentCardProps) {
               className="text-destructive hover:text-destructive h-8 w-8 shrink-0"
               onClick={() => setDeleteOpen(true)}
               title={t.agents.delete}
+              aria-label={t.agents.delete}
             >
               <Trash2Icon className="h-3.5 w-3.5" />
             </Button>
