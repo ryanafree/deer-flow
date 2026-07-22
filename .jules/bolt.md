@@ -1,3 +1,8 @@
+## 2024-04-18 - Missing Memoization in Message List
+
+**Learning:** `getMessageGroups` and `getAssistantTurnUsageMessages` were running O(N) recalculations on every re-render in `message-list.tsx` due to unrelated state changes (like `turnStartTime`).
+**Action:** Consistently memoize operations scaling with message array size using `useMemo` in core message list components.
+
 ## 2024-07-11 - [Optimize array searches with backward iteration]
 **Learning:** Found an anti-pattern in the React components where `.filter(condition)[array.length - 1]` was used to find the last item matching a condition. This forces a full $O(N)$ scan of the array and allocates $O(N)$ new memory.
 **Action:** Replace this pattern with a backward `for` loop to search from the end. This stops exactly when the last match is found (avoiding unnecessary iterations) and requires $O(1)$ memory. Remember to add safety checks (like `if (step?.type)`) when iterating arrays directly.
