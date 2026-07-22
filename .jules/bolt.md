@@ -1,3 +1,7 @@
+## 2024-07-11 - [Optimize array searches with backward iteration]
+**Learning:** Found an anti-pattern in the React components where `.filter(condition)[array.length - 1]` was used to find the last item matching a condition. This forces a full $O(N)$ scan of the array and allocates $O(N)$ new memory.
+**Action:** Replace this pattern with a backward `for` loop to search from the end. This stops exactly when the last match is found (avoiding unnecessary iterations) and requires $O(1)$ memory. Remember to add safety checks (like `if (step?.type)`) when iterating arrays directly.
+
 ## 2024-05-24 - Intl.Segmenter Performance Bottleneck
 **Learning:** `Intl.Segmenter` instantiation is significantly slow (~0.3ms per instance). Creating it inside text-processing loops (like AST node visitors) causes severe O(N) performance degradation, especially during markdown rendering of long chat logs.
 **Action:** Always cache and reuse `Intl` formatter/segmenter instances at the module level when their options are static, rather than recreating them per function call.
