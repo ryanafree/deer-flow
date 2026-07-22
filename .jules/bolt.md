@@ -1,3 +1,7 @@
+## 2024-07-18 - Missing React.memo
+**Learning:** Components rendered in large lists like MessageList should use React.memo to prevent unnecessary re-renders when parent states change without affecting their props.
+**Action:** Add React.memo to MessageList related components if they are not already memoized.
+
 ## 2024-04-18 - Missing Memoization in Message List
 
 **Learning:** `getMessageGroups` and `getAssistantTurnUsageMessages` were running O(N) recalculations on every re-render in `message-list.tsx` due to unrelated state changes (like `turnStartTime`).

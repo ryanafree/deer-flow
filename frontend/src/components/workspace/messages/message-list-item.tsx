@@ -118,7 +118,7 @@ function FeedbackButtons({
   );
 }
 
-export function MessageListItem({
+export const MessageListItem = memo(function MessageListItem({
   className,
   message,
   isLoading,
@@ -179,7 +179,7 @@ export function MessageListItem({
       )}
     </AIElementMessage>
   );
-}
+});
 
 /**
  * Custom image component that handles artifact URLs
@@ -245,7 +245,7 @@ function MessageContent_({
       clientTurnDurations.set(`${threadId}:${message.id}`, rawTurnDuration);
       setCachedDuration(rawTurnDuration);
     }
-  }, [rawTurnDuration, message.id]);
+  }, [rawTurnDuration, message.id, threadId]);
 
   const handleDurationChange = useCallback(
     (d: number | undefined) => {
@@ -254,7 +254,7 @@ function MessageContent_({
         setCachedDuration(d);
       }
     },
-    [message.id],
+    [message.id, threadId],
   );
 
   useEffect(() => {

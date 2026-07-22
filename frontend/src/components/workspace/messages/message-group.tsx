@@ -13,7 +13,7 @@ import {
   SquareTerminalIcon,
   WrenchIcon,
 } from "lucide-react";
-import { useMemo, useState } from "react";
+import { memo, useMemo, useState } from "react";
 
 import {
   ChainOfThought,
@@ -42,7 +42,7 @@ import { Tooltip } from "../tooltip";
 
 import { MarkdownContent } from "./markdown-content";
 
-export function MessageGroup({
+export const MessageGroup = memo(function MessageGroup({
   className,
   messages,
   isLoading = false,
@@ -368,7 +368,7 @@ export function MessageGroup({
       )}
     </ChainOfThought>
   );
-}
+});
 
 function formatDebugToken(
   debugStep: TokenDebugStep,
