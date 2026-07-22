@@ -200,7 +200,9 @@ export function MessageList({
     prevIsLoading.current = thread.isLoading;
   }, [thread.isLoading]);
   const messages = thread.messages;
-  const groupedMessages = getMessageGroups(messages);
+
+  // Memoize grouped messages to prevent O(N) recalculation on unrelated state changes
+  const groupedMessages = useMemo(() => getMessageGroups(messages), [messages]);
   const [regeneratingMessageId, setRegeneratingMessageId] = useState<
     string | null
   >(null);
@@ -220,8 +222,12 @@ export function MessageList({
   const rehypePlugins = useRehypeSplitWordsIntoSpans(thread.isLoading);
   const updateSubtask = useUpdateSubtask();
   const lastGroupIndex = groupedMessages.length - 1;
-  const turnUsageMessagesByGroupIndex =
-    getAssistantTurnUsageMessages(groupedMessages);
+
+  // Memoize turn usage messages based on grouped messages
+  const turnUsageMessagesByGroupIndex = useMemo(
+    () => getAssistantTurnUsageMessages(groupedMessages),
+    [groupedMessages],
+  );
   const tokenDebugSteps = useMemo(
     () => buildTokenDebugSteps(messages, t),
     [messages, t],
