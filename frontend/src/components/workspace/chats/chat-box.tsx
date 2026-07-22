@@ -10,6 +10,7 @@ import {
   ResizablePanel,
   ResizablePanelGroup,
 } from "@/components/ui/resizable";
+import { useI18n } from "@/core/i18n/hooks";
 import { env } from "@/env";
 import { cn } from "@/lib/utils";
 
@@ -19,6 +20,7 @@ import {
   useArtifacts,
 } from "../artifacts";
 import { useThread } from "../messages/context";
+import { Tooltip } from "../tooltip";
 
 const CLOSE_MODE = { chat: 100, artifacts: 0 };
 const OPEN_MODE = { chat: 60, artifacts: 40 };
@@ -29,6 +31,7 @@ const ChatBox: React.FC<{ children: React.ReactNode; threadId: string }> = ({
 }) => {
   const { thread } = useThread();
   const pathname = usePathname();
+  const { t } = useI18n();
   const threadIdRef = useRef(threadId);
   const layoutRef = useRef<GroupImperativeHandle>(null);
 
@@ -146,15 +149,18 @@ const ChatBox: React.FC<{ children: React.ReactNode; threadId: string }> = ({
           ) : (
             <div className="relative flex size-full justify-center">
               <div className="absolute top-1 right-1 z-30">
-                <Button
-                  size="icon-sm"
-                  variant="ghost"
-                  onClick={() => {
-                    setArtifactsOpen(false);
-                  }}
-                >
-                  <XIcon />
-                </Button>
+                <Tooltip content={t.common.close}>
+                  <Button
+                    size="icon-sm"
+                    variant="ghost"
+                    onClick={() => {
+                      setArtifactsOpen(false);
+                    }}
+                    aria-label={t.common.close}
+                  >
+                    <XIcon />
+                  </Button>
+                </Tooltip>
               </div>
               {artifacts.length === 0 ? (
                 <ConversationEmptyState
