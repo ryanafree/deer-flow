@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, memo } from "react";
 
 import { type ClipboardSafeStreamdownProps } from "@/components/ai-elements/streamdown";
 import {
@@ -21,7 +21,7 @@ export type MarkdownContentProps = {
 };
 
 /** Renders markdown content. */
-export function MarkdownContent({
+export const MarkdownContent = memo(function MarkdownContent({
   content,
   isLoading,
   rehypePlugins,
@@ -58,4 +58,4 @@ export function MarkdownContent({
       {normalizedContent}
     </SafeMessageResponse>
   );
-}
+});

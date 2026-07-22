@@ -13,7 +13,7 @@ import {
   SquareTerminalIcon,
   WrenchIcon,
 } from "lucide-react";
-import { useMemo, useState } from "react";
+import { memo, useMemo, useState } from "react";
 
 import {
   ChainOfThought,
@@ -42,7 +42,7 @@ import { Tooltip } from "../tooltip";
 
 import { MarkdownContent } from "./markdown-content";
 
-export function MessageGroup({
+export const MessageGroup = memo(function MessageGroup({
   className,
   messages,
   isLoading = false,
@@ -86,8 +86,15 @@ export function MessageGroup({
     return counts;
   }, [steps]);
   const lastToolCallStep = useMemo(() => {
-    const filteredSteps = steps.filter((step) => step.type === "toolCall");
-    return filteredSteps[filteredSteps.length - 1];
+    // ⚡ Bolt: Replaced O(N) memory allocation and full array scan (.filter()[length - 1])
+    // with O(1) memory, O(N) backward search for better performance.
+    for (let i = steps.length - 1; i >= 0; i--) {
+      const step = steps[i];
+      if (step?.type === "toolCall") {
+        return step;
+      }
+    }
+    return undefined;
   }, [steps]);
   const aboveLastToolCallSteps = useMemo(() => {
     if (lastToolCallStep) {
@@ -101,8 +108,15 @@ export function MessageGroup({
       const index = steps.indexOf(lastToolCallStep);
       return steps.slice(index + 1).find((step) => step.type === "reasoning");
     } else {
-      const filteredSteps = steps.filter((step) => step.type === "reasoning");
-      return filteredSteps[filteredSteps.length - 1];
+      // ⚡ Bolt: Replaced O(N) memory allocation and full array scan (.filter()[length - 1])
+      // with O(1) memory, O(N) backward search for better performance.
+      for (let i = steps.length - 1; i >= 0; i--) {
+        const step = steps[i];
+        if (step?.type === "reasoning") {
+          return step;
+        }
+      }
+      return undefined;
     }
   }, [lastToolCallStep, steps]);
   const rehypePlugins = useRehypeSplitWordsIntoSpans(isLoading);
@@ -354,7 +368,7 @@ export function MessageGroup({
       )}
     </ChainOfThought>
   );
-}
+});
 
 function formatDebugToken(
   debugStep: TokenDebugStep,

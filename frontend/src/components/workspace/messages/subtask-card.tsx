@@ -7,7 +7,7 @@ import {
   WrenchIcon,
   XCircleIcon,
 } from "lucide-react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { memo, useEffect, useMemo, useRef, useState } from "react";
 
 import {
   ChainOfThought,
@@ -33,7 +33,7 @@ import { FlipDisplay } from "../flip-display";
 
 import { MarkdownContent } from "./markdown-content";
 
-export function SubtaskCard({
+export const SubtaskCard = memo(function SubtaskCard({
   className,
   taskId,
   threadId,
@@ -232,4 +232,4 @@ export function SubtaskCard({
       </div>
     </ChainOfThought>
   );
-}
+});
