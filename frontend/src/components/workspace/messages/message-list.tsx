@@ -262,9 +262,17 @@ export function MessageList({
       enableRegenerateForTurn: boolean,
     ) => {
       const clipboardData = getAssistantTurnCopyData(messages, { isStreaming });
-      const regenerateTarget = [...messages]
-        .reverse()
-        .find((message) => message.type === "ai" && message.id);
+
+      // ⚡ Bolt: Replace O(N) array allocation/reverse/find with O(1) memory backward search
+      let regenerateTarget: Message | undefined = undefined;
+      for (let i = messages.length - 1; i >= 0; i--) {
+        const message = messages[i];
+        if (message?.type === "ai" && message.id) {
+          regenerateTarget = message;
+          break;
+        }
+      }
+
       const supersededMessageIds = messages
         .filter((message) => message.type === "ai" && message.id)
         .map((message) => message.id)
