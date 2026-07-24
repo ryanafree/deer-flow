@@ -18,3 +18,7 @@
 ## 2024-10-18 - Markdown Rendering Performance in Chat UI
 **Learning:** In a chat interface with long context threads, parsing and rendering markdown (`rehype`, `remark`, etc.) for every single message during re-renders causes significant main-thread lag, even if the content itself hasn't changed.
 **Action:** Always wrap heavy content rendering components like `MarkdownContent` in `React.memo` to skip unnecessary reconciliation passes during parent state updates (like new messages or typing animations). Ensure props like `rehypePlugins` passed down to it are memoized or stable.
+
+## 2024-07-24 - Array Chaining Allocation Overhead
+**Learning:** Using `[...array].reverse().find()` or `.filter().map()` chains to search an array backwards allocates unnecessary O(N) memory for intermediate arrays and forces full iteration, causing garbage collection pauses in hot code paths.
+**Action:** Always prefer a simple backward `for` loop when finding the last matching element in an array, avoiding the creation of shallow copies and intermediate arrays.
