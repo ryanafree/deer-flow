@@ -265,16 +265,18 @@ export function getAssistantTurnCopyData(
     return null;
   }
 
-  return (
-    [...messages]
-      .reverse()
-      .filter((message) => message.type === "ai")
-      .map((message) => {
-        const content = extractContentFromMessage(message);
-        return content ?? extractReasoningContentFromMessage(message) ?? "";
-      })
-      .find((content) => content.length > 0) ?? null
-  );
+  // Optimization: Use backward for-loop to avoid O(N) memory allocation and multiple O(N) iterations
+  for (let i = messages.length - 1; i >= 0; i--) {
+    const message = messages[i];
+    if (message.type === "ai") {
+      const content = extractContentFromMessage(message) ?? extractReasoningContentFromMessage(message) ?? "";
+      if (content.length > 0) {
+        return content;
+      }
+    }
+  }
+
+  return null;
 }
 
 export function extractTextFromMessage(message: Message) {
