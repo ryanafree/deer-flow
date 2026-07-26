@@ -891,9 +891,14 @@ export function InputBox({
       return;
     }
 
-    const lastAi = [...messagesRef.current]
-      .reverse()
-      .find((m) => m.type === "ai");
+    let lastAi: (typeof messagesRef.current)[number] | undefined = undefined;
+    for (let i = messagesRef.current.length - 1; i >= 0; i--) {
+      const msg = messagesRef.current[i];
+      if (msg && msg.type === "ai") {
+        lastAi = msg;
+        break;
+      }
+    }
     const lastAiId = lastAi?.id ?? null;
     if (!lastAiId || lastAiId === lastGeneratedForAiIdRef.current) {
       return;
