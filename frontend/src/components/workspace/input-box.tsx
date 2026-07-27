@@ -891,9 +891,15 @@ export function InputBox({
       return;
     }
 
-    const lastAi = [...messagesRef.current]
-      .reverse()
-      .find((m) => m.type === "ai");
+    // ⚡ Bolt: Replace O(N) allocation with backward loop for last AI message
+    let lastAi = undefined;
+    for (let i = messagesRef.current.length - 1; i >= 0; i--) {
+      const m = messagesRef.current[i];
+      if (m?.type === "ai") {
+        lastAi = m;
+        break;
+      }
+    }
     const lastAiId = lastAi?.id ?? null;
     if (!lastAiId || lastAiId === lastGeneratedForAiIdRef.current) {
       return;
