@@ -262,13 +262,23 @@ export function MessageList({
       enableRegenerateForTurn: boolean,
     ) => {
       const clipboardData = getAssistantTurnCopyData(messages, { isStreaming });
-      const regenerateTarget = [...messages]
-        .reverse()
-        .find((message) => message.type === "ai" && message.id);
-      const supersededMessageIds = messages
-        .filter((message) => message.type === "ai" && message.id)
-        .map((message) => message.id)
-        .filter((id): id is string => typeof id === "string");
+      // ⚡ Bolt: Replace O(N) allocation with backward loop
+      let regenerateTarget = undefined;
+      for (let i = messages.length - 1; i >= 0; i--) {
+        const message = messages[i];
+        if (message?.type === "ai" && message?.id) {
+          regenerateTarget = message;
+          break;
+        }
+      }
+
+      // ⚡ Bolt: Replace chained filter/map/filter with single loop
+      const supersededMessageIds: string[] = [];
+      for (const message of messages) {
+        if (message?.type === "ai" && typeof message.id === "string") {
+          supersededMessageIds.push(message.id);
+        }
+      }
 
       if (!clipboardData && !regenerateTarget) {
         return null;
