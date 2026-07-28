@@ -1,6 +1,6 @@
 "use client";
 
-import { BotIcon, MessageSquareIcon, Trash2Icon } from "lucide-react";
+import { BotIcon, Loader2Icon, MessageSquareIcon, Trash2Icon } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { type ComponentProps, type ReactElement, useState } from "react";
 import { toast } from "sonner";
@@ -217,7 +217,14 @@ export function AgentCard({ agent }: AgentCardProps) {
               onClick={handleDelete}
               disabled={deleteAgent.isPending}
             >
-              {deleteAgent.isPending ? t.common.loading : t.common.delete}
+              {deleteAgent.isPending ? (
+                <>
+                  <Loader2Icon className="mr-2 h-4 w-4 animate-spin" />
+                  {t.common.loading}
+                </>
+              ) : (
+                t.common.delete
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>
