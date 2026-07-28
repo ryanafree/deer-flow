@@ -1,7 +1,7 @@
 import type { Message } from "@langchain/langgraph-sdk";
 import type { BaseStream } from "@langchain/langgraph-sdk/react";
 import { ChevronUpIcon, Loader2Icon, RefreshCcwIcon } from "lucide-react";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import {
   Conversation,
@@ -163,7 +163,8 @@ function LoadMoreHistoryIndicator({
   );
 }
 
-export function MessageList({
+// ⚡ Bolt: Memoize MessageList to prevent expensive re-renders when parent state changes. This is effective because the parent component (Workspace) passes stable references for callbacks and the thread object.
+export const MessageList = memo(function MessageList({
   className,
   threadId,
   thread,
@@ -608,4 +609,4 @@ export function MessageList({
       </ConversationContent>
     </Conversation>
   );
-}
+});
