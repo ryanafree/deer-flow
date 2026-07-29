@@ -1,6 +1,6 @@
 "use client";
 
-import { LogOutIcon } from "lucide-react";
+import { Loader2Icon, LogOutIcon } from "lucide-react";
 import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
@@ -135,9 +135,14 @@ export function AccountSettingsPage() {
               size="sm"
               disabled={loading}
             >
-              {loading
-                ? t.settings.account.updating
-                : t.settings.account.updatePassword}
+              {loading ? (
+                <>
+                  <Loader2Icon className="animate-spin" />
+                  {t.settings.account.updating}
+                </>
+              ) : (
+                t.settings.account.updatePassword
+              )}
             </Button>
           </form>
         </SettingsSection>
