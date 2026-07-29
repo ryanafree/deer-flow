@@ -265,16 +265,18 @@ export function getAssistantTurnCopyData(
     return null;
   }
 
-  return (
-    [...messages]
-      .reverse()
-      .filter((message) => message.type === "ai")
-      .map((message) => {
-        const content = extractContentFromMessage(message);
-        return content ?? extractReasoningContentFromMessage(message) ?? "";
-      })
-      .find((content) => content.length > 0) ?? null
-  );
+  for (let i = messages.length - 1; i >= 0; i--) {
+    const message = messages[i];
+    if (message && message.type === "ai") {
+      const content = extractContentFromMessage(message);
+      const stringContent = content ?? extractReasoningContentFromMessage(message) ?? "";
+      if (stringContent.length > 0) {
+        return stringContent;
+      }
+    }
+  }
+
+  return null;
 }
 
 export function extractTextFromMessage(message: Message) {
