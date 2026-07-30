@@ -1,5 +1,6 @@
 import type { Message } from "@langchain/langgraph-sdk";
 import { CoinsIcon } from "lucide-react";
+import { memo } from "react";
 
 import { Badge } from "@/components/ui/badge";
 import { useI18n } from "@/core/i18n/hooks";
@@ -44,7 +45,9 @@ function TokenUsageSummary({
   );
 }
 
-export function MessageTokenUsageList({
+// ⚡ Bolt: Wrapped MessageTokenUsageList in React.memo to prevent unnecessary re-renders
+// of the token usage summary when parent message lists re-render.
+export const MessageTokenUsageList = memo(function MessageTokenUsageList({
   className,
   enabled = false,
   isLoading: _isLoading = false,
@@ -79,9 +82,11 @@ export function MessageTokenUsageList({
       totalTokens={usage.totalTokens}
     />
   );
-}
+});
 
-export function MessageTokenUsageDebugList({
+// ⚡ Bolt: Wrapped MessageTokenUsageDebugList in React.memo to prevent unnecessary re-renders
+// of the debug list when parent message lists re-render.
+export const MessageTokenUsageDebugList = memo(function MessageTokenUsageDebugList({
   className,
   enabled = false,
   isLoading = false,
@@ -157,4 +162,4 @@ export function MessageTokenUsageDebugList({
       </div>
     </div>
   );
-}
+});

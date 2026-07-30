@@ -1,7 +1,7 @@
 import type { Message } from "@langchain/langgraph-sdk";
 import type { BaseStream } from "@langchain/langgraph-sdk/react";
 import { ChevronUpIcon, Loader2Icon, RefreshCcwIcon } from "lucide-react";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import {
   Conversation,
@@ -163,7 +163,9 @@ function LoadMoreHistoryIndicator({
   );
 }
 
-export function MessageList({
+// ⚡ Bolt: Wrapped MessageList in React.memo to prevent unnecessary O(N) re-renders
+// of the entire chat history when unrelated parent states change.
+export const MessageList = memo(function MessageList({
   className,
   threadId,
   thread,
@@ -608,4 +610,4 @@ export function MessageList({
       </ConversationContent>
     </Conversation>
   );
-}
+});

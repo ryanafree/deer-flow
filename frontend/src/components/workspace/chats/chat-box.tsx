@@ -32,7 +32,6 @@ const ChatBox: React.FC<{ children: React.ReactNode; threadId: string }> = ({
   const { t } = useI18n();
   const { thread } = useThread();
   const pathname = usePathname();
-  const { t } = useI18n();
   const threadIdRef = useRef(threadId);
   const layoutRef = useRef<GroupImperativeHandle>(null);
 
