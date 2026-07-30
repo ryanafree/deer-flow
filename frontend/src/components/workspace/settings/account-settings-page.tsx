@@ -103,30 +103,57 @@ export function AccountSettingsPage() {
           title={t.settings.account.changePasswordTitle}
           description={t.settings.account.changePasswordDescription}
         >
-          <form onSubmit={handleChangePassword} className="max-w-sm space-y-3">
-            <Input
-              type="password"
-              placeholder={t.settings.account.currentPassword}
-              value={currentPassword}
-              onChange={(e) => setCurrentPassword(e.target.value)}
-              required
-            />
-            <Input
-              type="password"
-              placeholder={t.settings.account.newPassword}
-              value={newPassword}
-              onChange={(e) => setNewPassword(e.target.value)}
-              required
-              minLength={8}
-            />
-            <Input
-              type="password"
-              placeholder={t.settings.account.confirmNewPassword}
-              value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
-              required
-              minLength={8}
-            />
+          <form onSubmit={handleChangePassword} className="max-w-sm space-y-4">
+            <div className="space-y-1.5">
+              <label
+                htmlFor="currentPassword"
+                className="text-sm leading-none font-medium peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+              >
+                {t.settings.account.currentPassword}
+              </label>
+              <Input
+                id="currentPassword"
+                type="password"
+                placeholder={t.settings.account.currentPassword}
+                value={currentPassword}
+                onChange={(e) => setCurrentPassword(e.target.value)}
+                required
+              />
+            </div>
+            <div className="space-y-1.5">
+              <label
+                htmlFor="newPassword"
+                className="text-sm leading-none font-medium peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+              >
+                {t.settings.account.newPassword}
+              </label>
+              <Input
+                id="newPassword"
+                type="password"
+                placeholder={t.settings.account.newPassword}
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                required
+                minLength={8}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <label
+                htmlFor="confirmNewPassword"
+                className="text-sm leading-none font-medium peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+              >
+                {t.settings.account.confirmNewPassword}
+              </label>
+              <Input
+                id="confirmNewPassword"
+                type="password"
+                placeholder={t.settings.account.confirmNewPassword}
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                required
+                minLength={8}
+              />
+            </div>
             {error && <p className="text-sm text-red-500">{error}</p>}
             {message && <p className="text-sm text-green-500">{message}</p>}
             <Button
