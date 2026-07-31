@@ -16,6 +16,12 @@ type PostMetaProps = {
   pathname?: string;
 };
 
+const dateFormatter = new Intl.DateTimeFormat("en-US", {
+  day: "numeric",
+  month: "short",
+  year: "numeric",
+});
+
 function formatDate(date?: string): string | null {
   if (!date) {
     return null;
@@ -26,11 +32,7 @@ function formatDate(date?: string): string | null {
     return date;
   }
 
-  return new Intl.DateTimeFormat("en-US", {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-  }).format(value);
+  return dateFormatter.format(value);
 }
 
 export function PostMeta({
