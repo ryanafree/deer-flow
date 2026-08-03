@@ -18,3 +18,7 @@
 ## 2024-10-18 - Markdown Rendering Performance in Chat UI
 **Learning:** In a chat interface with long context threads, parsing and rendering markdown (`rehype`, `remark`, etc.) for every single message during re-renders causes significant main-thread lag, even if the content itself hasn't changed.
 **Action:** Always wrap heavy content rendering components like `MarkdownContent` in `React.memo` to skip unnecessary reconciliation passes during parent state updates (like new messages or typing animations). Ensure props like `rehypePlugins` passed down to it are memoized or stable.
+
+## 2024-08-03 - Cache Intl Formatters
+**Learning:** `Intl.NumberFormat` (and other `Intl` formatter instances) recreation is surprisingly expensive in React renders. If instantiated inside components like `ContextTrigger` or `ContextContentHeader`, it negatively impacts performance, especially if rendered frequently or in large lists.
+**Action:** Extract `Intl` formatters into module-level constants or use `useMemo` so they are initialized once per locale/configuration and reused across renders.
