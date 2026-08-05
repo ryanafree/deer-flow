@@ -13,6 +13,21 @@ import { type ComponentProps, createContext, useContext } from "react";
 import { getUsage } from "tokenlens";
 
 const PERCENT_MAX = 100;
+
+// ⚡ Bolt: Cache Intl.NumberFormat instances to avoid expensive recreation on every render
+const percentFormatter = new Intl.NumberFormat("en-US", {
+  style: "percent",
+  maximumFractionDigits: 1,
+});
+
+const compactFormatter = new Intl.NumberFormat("en-US", {
+  notation: "compact",
+});
+
+const currencyFormatter = new Intl.NumberFormat("en-US", {
+  style: "currency",
+  currency: "USD",
+});
 const ICON_RADIUS = 10;
 const ICON_VIEWBOX = 24;
 const ICON_CENTER = 12;
@@ -106,10 +121,7 @@ export type ContextTriggerProps = ComponentProps<typeof Button>;
 export const ContextTrigger = ({ children, ...props }: ContextTriggerProps) => {
   const { usedTokens, maxTokens } = useContextValue();
   const usedPercent = usedTokens / maxTokens;
-  const renderedPercent = new Intl.NumberFormat("en-US", {
-    style: "percent",
-    maximumFractionDigits: 1,
-  }).format(usedPercent);
+  const renderedPercent = percentFormatter.format(usedPercent);
 
   return (
     <HoverCardTrigger asChild>
@@ -146,16 +158,9 @@ export const ContextContentHeader = ({
 }: ContextContentHeaderProps) => {
   const { usedTokens, maxTokens } = useContextValue();
   const usedPercent = usedTokens / maxTokens;
-  const displayPct = new Intl.NumberFormat("en-US", {
-    style: "percent",
-    maximumFractionDigits: 1,
-  }).format(usedPercent);
-  const used = new Intl.NumberFormat("en-US", {
-    notation: "compact",
-  }).format(usedTokens);
-  const total = new Intl.NumberFormat("en-US", {
-    notation: "compact",
-  }).format(maxTokens);
+  const displayPct = percentFormatter.format(usedPercent);
+  const used = compactFormatter.format(usedTokens);
+  const total = compactFormatter.format(maxTokens);
 
   return (
     <div className={cn("w-full space-y-2 p-3", className)} {...props}>
@@ -205,10 +210,7 @@ export const ContextContentFooter = ({
         },
       }).costUSD?.totalUSD
     : undefined;
-  const totalCost = new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD",
-  }).format(costUSD ?? 0);
+  const totalCost = currencyFormatter.format(costUSD ?? 0);
 
   return (
     <div
@@ -252,10 +254,7 @@ export const ContextInputUsage = ({
         usage: { input: inputTokens, output: 0 },
       }).costUSD?.totalUSD
     : undefined;
-  const inputCostText = new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD",
-  }).format(inputCost ?? 0);
+  const inputCostText = currencyFormatter.format(inputCost ?? 0);
 
   return (
     <div
@@ -292,10 +291,7 @@ export const ContextOutputUsage = ({
         usage: { input: 0, output: outputTokens },
       }).costUSD?.totalUSD
     : undefined;
-  const outputCostText = new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD",
-  }).format(outputCost ?? 0);
+  const outputCostText = currencyFormatter.format(outputCost ?? 0);
 
   return (
     <div
@@ -332,10 +328,7 @@ export const ContextReasoningUsage = ({
         usage: { reasoningTokens },
       }).costUSD?.totalUSD
     : undefined;
-  const reasoningCostText = new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD",
-  }).format(reasoningCost ?? 0);
+  const reasoningCostText = currencyFormatter.format(reasoningCost ?? 0);
 
   return (
     <div
@@ -372,10 +365,7 @@ export const ContextCacheUsage = ({
         usage: { cacheReads: cacheTokens, input: 0, output: 0 },
       }).costUSD?.totalUSD
     : undefined;
-  const cacheCostText = new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD",
-  }).format(cacheCost ?? 0);
+  const cacheCostText = currencyFormatter.format(cacheCost ?? 0);
 
   return (
     <div
@@ -398,9 +388,7 @@ const TokensWithCost = ({
   <span>
     {tokens === undefined
       ? "—"
-      : new Intl.NumberFormat("en-US", {
-          notation: "compact",
-        }).format(tokens)}
+      : compactFormatter.format(tokens)}
     {costText ? (
       <span className="text-muted-foreground ml-2">• {costText}</span>
     ) : null}
