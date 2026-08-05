@@ -259,6 +259,8 @@ export const zhCN: Translations = {
 
   // Conversation
   conversation: {
+    goodResponse: "好的回答",
+    badResponse: "不好的回答",
     noMessages: "还没有消息",
     startConversation: "开始新的对话以查看消息",
   },
