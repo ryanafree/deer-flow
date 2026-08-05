@@ -202,6 +202,8 @@ export interface Translations {
   // Conversation
   conversation: {
     noMessages: string;
+    goodResponse: string;
+    badResponse: string;
     startConversation: string;
   };
 
