@@ -1,0 +1,15 @@
+{
+  "run_dir": "/Users/ryanfree/Documents/Projects/deerflow-dr/runs/bench-2026-08-19/2026-08-19-135331-financial-provide-a-research-report-investigating-the",
+  "exit_code": 0,
+  "status": "pass",
+  "findings": [],
+  "warnings": [
+    "[source-class-mismatch] requirement 6e3a1aafd4e7797f expects academic evidence but claim 560d7a6cbb2bfa92 (via requirement mapping) cites a news-class source (web): 'Insights from recent practitioner guides emphasize sectoral allocations and inte'",
+    "[source-class-mismatch] requirement 6d988993086dd1fc expects academic evidence but claim 6a8f948dde7be5b6 (via requirement mapping) cites a news-class source (web): 'A discrepancy exists between beta and implied volatility, where implied beta is '",
+    "[source-class-mismatch] requirement 6e3a1aafd4e7797f expects academic evidence but claim b8b8b109bba2cde0 (via requirement mapping) cites a news-class source (web): 'Current understanding emphasizes implied volatility as a future estimate of pric'",
+    "[source-class-mismatch] requirement b700f02b854bc25f expects academic evidence but claim 118bd85b80f89fdc (via requirement mapping) cites a news-class source (web): 'Disagreement among investors regarding future volatility influences trading beha'",
+    "[source-class-mismatch] requirement b700f02b854bc25f expects academic evidence but claim 2a68a7946e62aedc (via requirement mapping) cites a news-class source (web): 'Increase in volatility disagreement is expected to correlate with a reduction in'"
+  ],
+  "n_findings": 0,
+  "n_warnings": 5
+}

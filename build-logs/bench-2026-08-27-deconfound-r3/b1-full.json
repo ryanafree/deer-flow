@@ -1,0 +1,111 @@
+{
+  "thread_id": "benchmark-81c1113a",
+  "depth": "full",
+  "new_run_folders": [
+    "2026-08-27-205625-financial-provide-a-research-report-investigating-the"
+  ],
+  "run_dir": "/Users/ryanfree/Documents/Projects/deerflow-dr/runs/bench-2026-08-27-deconfound/2026-08-27-205625-financial-provide-a-research-report-investigating-the",
+  "gate_decision": "render",
+  "stop_reason": "completed_with_open_requirements",
+  "gate_retries": 2,
+  "tool_calls_total": 57,
+  "tool_calls_by_name": {
+    "academic_search": 13,
+    "record_claim": 31,
+    "web_search": 13
+  },
+  "n_sources": 55,
+  "n_claims": 17,
+  "n_requirements": 8,
+  "requirements_covered": 0,
+  "requirements_must_cover": 7,
+  "first_pass_coverage": {
+    "requirements_covered": 0,
+    "requirements_must_cover": 7,
+    "must_cover_states": {
+      "25c0319ad9f9a88e": "partial",
+      "4f4f6eaf552b8435": "uncovered",
+      "5942336da4e0af35": "uncovered",
+      "6e4440b2316475bf": "deferred",
+      "90489a30c657e04d": "uncovered",
+      "df89e737b4f3b694": "uncovered",
+      "ef1b0b786ea35c6c": "uncovered"
+    }
+  },
+  "final_coverage": {
+    "requirements_covered": 0,
+    "requirements_must_cover": 7,
+    "must_cover_states": {
+      "25c0319ad9f9a88e": "partial",
+      "4f4f6eaf552b8435": "uncovered",
+      "5942336da4e0af35": "uncovered",
+      "6e4440b2316475bf": "deferred",
+      "90489a30c657e04d": "uncovered",
+      "df89e737b4f3b694": "uncovered",
+      "ef1b0b786ea35c6c": "uncovered"
+    }
+  },
+  "sources_by_evidence_class": {
+    "academic": 6,
+    "news": 49
+  },
+  "cell": "b1-full",
+  "question_file": "/Users/ryanfree/Documents/Projects/deerflow-dr/build-logs/bench-2026-07-15-rerun/b1-question.txt",
+  "requested_model": "or-mid",
+  "manifest_model": "or-mid",
+  "accounting": {
+    "phases": {
+      "research": {
+        "input_tokens": 295587,
+        "output_tokens": 5378,
+        "cache_read_tokens": 283264,
+        "cache_write_tokens": 0
+      },
+      "verify": {
+        "input_tokens": 32,
+        "output_tokens": 2434,
+        "cache_read_tokens": 766924,
+        "cache_write_tokens": 0
+      },
+      "plan": {
+        "input_tokens": 2375,
+        "output_tokens": 240,
+        "cache_read_tokens": 0,
+        "cache_write_tokens": 0
+      }
+    },
+    "totals": {
+      "input_tokens": 297994,
+      "output_tokens": 8052,
+      "cache_read_tokens": 1050188,
+      "cache_write_tokens": 0
+    },
+    "dollar_cost": 0.090554,
+    "pricing": {
+      "research": {
+        "model": "or-mid",
+        "cost": 0.090054,
+        "estimated": false
+      },
+      "verify": {
+        "model": "claude-verify",
+        "cost": 0.0,
+        "estimated": false
+      },
+      "plan": {
+        "model": "or-mid",
+        "cost": 0.0005,
+        "estimated": false
+      }
+    },
+    "estimated": false
+  },
+  "tokens_in": 297994,
+  "tokens_out": 8052,
+  "dollar_cost": 0.090554,
+  "zero_plan_verify_tokens": false,
+  "lint_exit_code": 1,
+  "lint_findings": 1,
+  "lint_warnings": 9,
+  "exit_code": 0
+}

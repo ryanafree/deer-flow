@@ -1,0 +1,21 @@
+{
+  "run_dir": "/Users/ryanfree/Documents/Projects/deerflow-dr/runs/bench-2026-08-27-deconfound/2026-08-27-205625-financial-provide-a-research-report-investigating-the",
+  "exit_code": 1,
+  "status": "fail",
+  "findings": [
+    "[cite-required] factual sentence has no claim-keyed citation: 'According to Volatility Measures: Understanding Volatility in the...'"
+  ],
+  "warnings": [
+    "[unattributed-not-verified] not_verified claim [6] cited without attribution/hedging (heuristic, WARN): 'Implied Volatility statistical arbitrage using options, the correlation between '",
+    "[unattributed-not-verified] not_verified claim [7] cited without attribution/hedging (heuristic, WARN): 'Implied Volatility statistical arbitrage using options, the correlation between '",
+    "[source-class-mismatch] requirement 4f4f6eaf552b8435 expects academic evidence but claim d92d86f5742bc60d (via requirement mapping) cites a news-class source (web): 'Understanding equity price and options volatility is crucial for investment stra'",
+    "[source-class-mismatch] requirement 5942336da4e0af35 expects academic evidence but claim a91f9638b9a6ba99 (via requirement mapping) cites a news-class source (web): 'Exploring the correlation between beta and implied volatility in determining ass'",
+    "[source-class-mismatch] requirement 25c0319ad9f9a88e expects academic evidence but claim 46764340e7ad45b8 (via requirement mapping) cites a news-class source (web): 'AI/ML models are being explored as potential sources of alpha in volatility stra'",
+    "[source-class-mismatch] requirement 4f4f6eaf552b8435 expects academic evidence but claim 93ffe44535eef8fa (via requirement mapping) cites a news-class source (web): 'Understanding volatility in equity prices and options is critical for recognizin'",
+    "[source-class-mismatch] requirement 5942336da4e0af35 expects academic evidence but claim 1a468313204cbd4b (via requirement mapping) cites a news-class source (web): 'The correlation between beta and implied volatility plays a crucial role in the '",
+    "[source-class-mismatch] requirement 5942336da4e0af35 expects academic evidence but claim 8a169e5691dca71c (via requirement mapping) cites a news-class source (web): 'The correlation between beta and implied volatility plays a crucial role in opti'",
+    "[source-class-mismatch] requirement df89e737b4f3b694 expects academic evidence but claim b9e168646fb05f29 (via requirement mapping) cites a news-class source (web): 'Recent academic insights contribute to a deeper understanding of volatility, hig'"
+  ],
+  "n_findings": 1,
+  "n_warnings": 9
+}

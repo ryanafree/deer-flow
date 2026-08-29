@@ -1,0 +1,18 @@
+{
+  "run_dir": "/Users/ryanfree/Documents/Projects/deerflow-dr/runs/bench-2026-08-27-deconfound/2026-08-27-204730-financial-provide-a-research-report-investigating-the",
+  "exit_code": 1,
+  "status": "fail",
+  "findings": [
+    "[cite-required] factual sentence has no claim-keyed citation: 'According to LO 15.5: Describe the volatility smile for equity options...'"
+  ],
+  "warnings": [
+    "[source-class-mismatch] requirement 9695770c07fbf811 expects academic evidence but claim f2cdcd2ea3364f4b (via requirement mapping) cites a news-class source (web): 'The volatility smile indicates that equity options exhibit a left-skewed implied'",
+    "[source-class-mismatch] requirement f6863b092152402f expects academic evidence but claim c0e2a7fa323825fc (via requirement mapping) cites a news-class source (web): 'The understanding of market volatility encompasses deviations from average perfo'",
+    "[source-class-mismatch] requirement 58fd4ec4c858e0be expects academic evidence but claim 2ccb79f525b8ca7b (via requirement mapping) cites a news-class source (web): \"Beta provides a measure of how a stock's price changes compared to market moveme\"",
+    "[source-class-mismatch] requirement 30a251781fe57a23 expects academic evidence but claim 9430a2f117add5f1 (via requirement mapping) cites a news-class source (web): 'Higher volatility disagreement tends to lead to lower stock market valuations, w'",
+    "[source-class-mismatch] requirement b475fb8c1d618220 expects academic evidence but claim 380c238fd87ed470 (via requirement mapping) cites a news-class source (web): 'AI and ML models are increasingly deployed across finance for advanced analytics'",
+    "[source-class-mismatch] requirement 220265564a136e7c expects practitioner evidence but claim daf8d8e825075628 (via requirement mapping) cites a news-class source (web): 'Current financial investigations rely on AI and emerging technologies to enhance'"
+  ],
+  "n_findings": 1,
+  "n_warnings": 6
+}

@@ -1,0 +1,113 @@
+Thinking mode is enabled but model 'or-mid' does not support it; fallback to non-thinking mode.
+Tavily MCP server running on stdio
+npm notice
+npm notice New major version of npm available! 11.19.0 -> 12.0.2
+npm notice Changelog: https://github.com/npm/cli/releases/tag/v12.0.2
+npm notice To update run: npm install -g npm@12.0.2
+npm notice
+Downloading cryptography (3.8MiB)
+Downloading cryptography (3.8MiB)
+Downloading cryptography (3.8MiB)
+ Downloaded cryptography
+ Downloaded cryptography
+ Downloaded cryptography
+Installed 59 packages in 204ms
+Installed 90 packages in 359ms
+Installed 62 packages in 254ms
+Traceback (most recent call last):
+  File "/Users/ryanfree/.cache/uv/archive-v0/RWRCCBDgLpdWzliH/bin/semantic-scholar-mcp", line 6, in <module>
+    from semantic_scholar_mcp import main
+  File "/Users/ryanfree/.cache/uv/archive-v0/RWRCCBDgLpdWzliH/lib/python3.12/site-packages/semantic_scholar_mcp/__init__.py", line 5, in <module>
+    from .server import main
+  File "/Users/ryanfree/.cache/uv/archive-v0/RWRCCBDgLpdWzliH/lib/python3.12/site-packages/semantic_scholar_mcp/server.py", line 24, in <module>
+    from mcp.server.fastmcp import FastMCP
+  File "/Users/ryanfree/.cache/uv/archive-v0/RWRCCBDgLpdWzliH/lib/python3.12/site-packages/mcp/server/fastmcp.py", line 16, in <module>
+    raise ModuleNotFoundError(_MESSAGE, name=__name__)
+ModuleNotFoundError: No module named 'mcp.server.fastmcp'. This is mcp 2.x, where FastMCP was renamed to MCPServer (from mcp.server.mcpserver import MCPServer) and other APIs changed; see the migration guide at https://py.sdk.modelcontextprotocol.io/v2/migration/#fastmcp-renamed-to-mcpserver or pin 'mcp<2' to keep running v1 code.
+Skipping MCP server 'semantic_scholar' after tool discovery failed: unhandled errors in a TaskGroup (1 sub-exception)
+  + Exception Group Traceback (most recent call last):
+  |   File "/Users/ryanfree/Documents/Projects/deerflow-dr/deer-flow/backend/packages/dr_core/dr_core/benchmarks/../../../../packages/dr_core/dr_core/benchmarks/../../../../packages/harness/deerflow/mcp/tools.py", line 636, in load_server_tools
+  |     return await client.get_tools(server_name=server_name)
+  |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  |   File "/Users/ryanfree/Documents/Projects/deerflow-dr/deer-flow/backend/.venv/lib/python3.12/site-packages/langchain_mcp_adapters/client.py", line 174, in get_tools
+  |     return await load_mcp_tools(
+  |            ^^^^^^^^^^^^^^^^^^^^^
+  |   File "/Users/ryanfree/Documents/Projects/deerflow-dr/deer-flow/backend/.venv/lib/python3.12/site-packages/langchain_mcp_adapters/tools.py", line 478, in load_mcp_tools
+  |     async with create_session(
+  |                ^^^^^^^^^^^^^^^
+  |   File "/Users/ryanfree/.local/share/uv/python/cpython-3.12.13-macos-aarch64-none/lib/python3.12/contextlib.py", line 231, in __aexit__
+  |     await self.gen.athrow(value)
+  |   File "/Users/ryanfree/Documents/Projects/deerflow-dr/deer-flow/backend/.venv/lib/python3.12/site-packages/langchain_mcp_adapters/sessions.py", line 457, in create_session
+  |     async with _create_stdio_session(**params) as session:
+  |                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  |   File "/Users/ryanfree/.local/share/uv/python/cpython-3.12.13-macos-aarch64-none/lib/python3.12/contextlib.py", line 231, in __aexit__
+  |     await self.gen.athrow(value)
+  |   File "/Users/ryanfree/Documents/Projects/deerflow-dr/deer-flow/backend/.venv/lib/python3.12/site-packages/langchain_mcp_adapters/sessions.py", line 269, in _create_stdio_session
+  |     stdio_client(server_params) as (read, write),
+  |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  |   File "/Users/ryanfree/.local/share/uv/python/cpython-3.12.13-macos-aarch64-none/lib/python3.12/contextlib.py", line 231, in __aexit__
+  |     await self.gen.athrow(value)
+  |   File "/Users/ryanfree/Documents/Projects/deerflow-dr/deer-flow/backend/.venv/lib/python3.12/site-packages/mcp/client/stdio/__init__.py", line 183, in stdio_client
+  |     anyio.create_task_group() as tg,
+  |     ^^^^^^^^^^^^^^^^^^^^^^^^^
+  |   File "/Users/ryanfree/Documents/Projects/deerflow-dr/deer-flow/backend/.venv/lib/python3.12/site-packages/anyio/_backends/_asyncio.py", line 799, in __aexit__
+  |     raise BaseExceptionGroup(
+  | ExceptionGroup: unhandled errors in a TaskGroup (1 sub-exception)
+  +-+---------------- 1 ----------------
+    | Exception Group Traceback (most recent call last):
+    |   File "/Users/ryanfree/Documents/Projects/deerflow-dr/deer-flow/backend/.venv/lib/python3.12/site-packages/mcp/client/stdio/__init__.py", line 189, in stdio_client
+    |     yield read_stream, write_stream
+    |   File "/Users/ryanfree/Documents/Projects/deerflow-dr/deer-flow/backend/.venv/lib/python3.12/site-packages/langchain_mcp_adapters/sessions.py", line 270, in _create_stdio_session
+    |     ClientSession(read, write, **(session_kwargs or {})) as session,
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |   File "/Users/ryanfree/Documents/Projects/deerflow-dr/deer-flow/backend/.venv/lib/python3.12/site-packages/mcp/shared/session.py", line 238, in __aexit__
+    |     return await self._task_group.__aexit__(exc_type, exc_val, exc_tb)
+    |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |   File "/Users/ryanfree/Documents/Projects/deerflow-dr/deer-flow/backend/.venv/lib/python3.12/site-packages/anyio/_backends/_asyncio.py", line 799, in __aexit__
+    |     raise BaseExceptionGroup(
+    | ExceptionGroup: unhandled errors in a TaskGroup (1 sub-exception)
+    +-+---------------- 1 ----------------
+      | Traceback (most recent call last):
+      |   File "/Users/ryanfree/Documents/Projects/deerflow-dr/deer-flow/backend/.venv/lib/python3.12/site-packages/langchain_mcp_adapters/sessions.py", line 272, in _create_stdio_session
+      |     yield session
+      |   File "/Users/ryanfree/Documents/Projects/deerflow-dr/deer-flow/backend/.venv/lib/python3.12/site-packages/langchain_mcp_adapters/sessions.py", line 458, in create_session
+      |     yield session
+      |   File "/Users/ryanfree/Documents/Projects/deerflow-dr/deer-flow/backend/.venv/lib/python3.12/site-packages/langchain_mcp_adapters/tools.py", line 481, in load_mcp_tools
+      |     await tool_session.initialize()
+      |   File "/Users/ryanfree/Documents/Projects/deerflow-dr/deer-flow/backend/.venv/lib/python3.12/site-packages/mcp/client/session.py", line 171, in initialize
+      |     result = await self.send_request(
+      |              ^^^^^^^^^^^^^^^^^^^^^^^^
+      |   File "/Users/ryanfree/Documents/Projects/deerflow-dr/deer-flow/backend/.venv/lib/python3.12/site-packages/mcp/shared/session.py", line 306, in send_request
+      |     raise McpError(response_or_error.error)
+      | mcp.shared.exceptions.McpError: Connection closed
+      +------------------------------------
+[08/27/26 20:30:48] WARNING  OpenAPI schema has no paths defined.  parser.py:668
+                    INFO     Starting OpenBB MCP Server in STDIO      app.py:947
+                             mode. Press Ctrl+C to stop.                        
+2026-08-27 20:30:56,586 - docling_mcp - INFO - loading conversion tools...
+2026-08-27 20:30:56,592 - docling_mcp - INFO - loading generation tools...
+
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│                                                                              │
+│                                                                              │
+│                         ▄▀▀ ▄▀█ █▀▀ ▀█▀ █▀▄▀█ █▀▀ █▀█                        │
+│                         █▀  █▀█ ▄▄█  █  █ ▀ █ █▄▄ █▀▀                        │
+│                                                                              │
+│                                                                              │
+│                                                                              │
+│                                FastMCP 3.4.7                                 │
+│                            https://gofastmcp.com                             │
+│                                                                              │
+│                  🖥  Server:      OpenBB MCP, 3.4.7                           │
+│                  🚀 Deploy free: https://horizon.prefect.io                  │
+│                                                                              │
+╰──────────────────────────────────────────────────────────────────────────────╯
+
+
+[08/27/26 20:30:56] INFO     Starting MCP server 'OpenBB MCP'   transport.py:241
+                             with transport 'stdio'                             
+2026-08-27 20:30:57,169 - docling_mcp - INFO - loading manipulation tools...
+2026-08-27 20:30:57,172 - docling_mcp - INFO - loading prompts...
+2026-08-27 20:30:57,176 - docling_mcp - INFO - starting up Docling MCP-server ...
+Tool frequency warning — too many calls to same tool type

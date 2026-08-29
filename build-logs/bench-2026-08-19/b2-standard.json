@@ -1,0 +1,50 @@
+{
+  "thread_id": "benchmark-e3535b45",
+  "depth": "standard",
+  "new_run_folders": [
+    "2026-08-19-140531-financial-using-primary-data-sources-characterize-how"
+  ],
+  "run_dir": "/Users/ryanfree/Documents/Projects/deerflow-dr/runs/bench-2026-08-19/2026-08-19-140531-financial-using-primary-data-sources-characterize-how",
+  "gate_decision": "render",
+  "stop_reason": "completed_with_open_requirements",
+  "gate_retries": 0,
+  "tool_calls_total": 42,
+  "tool_calls_by_name": {
+    "edgar_company_facts": 2,
+    "fred_series": 40
+  },
+  "n_sources": 2,
+  "n_claims": 29,
+  "n_requirements": 8,
+  "requirements_covered": 5,
+  "requirements_must_cover": 7,
+  "first_pass_coverage": {
+    "requirements_covered": 5,
+    "requirements_must_cover": 7,
+    "must_cover_states": {
+      "02a0368a8d3ac154": "covered",
+      "1da89fbcf96af251": "covered",
+      "61102fc78db9b521": "deferred",
+      "a3bc97e5e66138b0": "covered",
+      "b033e30794199c10": "deferred",
+      "dae20ef736d506ac": "covered",
+      "f95fe640cdd2513b": "covered"
+    }
+  },
+  "final_coverage": {
+    "requirements_covered": 5,
+    "requirements_must_cover": 7,
+    "must_cover_states": {
+      "02a0368a8d3ac154": "covered",
+      "1da89fbcf96af251": "covered",
+      "61102fc78db9b521": "deferred",
+      "a3bc97e5e66138b0": "covered",
+      "b033e30794199c10": "deferred",
+      "dae20ef736d506ac": "covered",
+      "f95fe640cdd2513b": "covered"
+    }
+  },
+  "sources_by_evidence_class": {
+    "primary_data": 2
+  }
+}

@@ -1,0 +1,357 @@
+=== RERUN 1 START 2026-08-28T01:30:38Z ===
+/Users/ryanfree/Documents/Projects/deerflow-dr/deer-flow/backend/.venv/lib/python3.12/site-packages/langgraph/checkpoint/serde/encrypted.py:5: LangChainPendingDeprecationWarning: The default value of `allowed_objects` will change in a future version. Pass an explicit value (e.g., allowed_objects='messages' or allowed_objects='core') to suppress this warning.
+  from langgraph.checkpoint.serde.jsonplus import JsonPlusSerializer
+[
+  {
+    "thread_id": "benchmark-94039493",
+    "depth": "full",
+    "new_run_folders": [
+      "2026-08-27-204007-financial-provide-a-research-report-investigating-the"
+    ],
+    "run_dir": "/Users/ryanfree/Documents/Projects/deerflow-dr/runs/bench-2026-08-27-deconfound/2026-08-27-204007-financial-provide-a-research-report-investigating-the",
+    "gate_decision": "render",
+    "stop_reason": "completed_with_open_requirements",
+    "gate_retries": 2,
+    "tool_calls_total": 66,
+    "tool_calls_by_name": {
+      "academic_search": 25,
+      "record_claim": 31,
+      "web_search": 10
+    },
+    "n_sources": 40,
+    "n_claims": 18,
+    "n_requirements": 8,
+    "requirements_covered": 0,
+    "requirements_must_cover": 8,
+    "first_pass_coverage": {
+      "requirements_covered": 0,
+      "requirements_must_cover": 8,
+      "must_cover_states": {
+        "0214b85a5345e60b": "uncovered",
+        "2f054b567747dc53": "uncovered",
+        "38b77905c2fb2d23": "uncovered",
+        "6ad9c1cff6b574e6": "uncovered",
+        "78688dcdf77d01f8": "uncovered",
+        "a86b3179b6dbbef0": "uncovered",
+        "a9d8a3c67a4bebef": "uncovered",
+        "d1dc2f94f34bbd48": "uncovered"
+      }
+    },
+    "final_coverage": {
+      "requirements_covered": 0,
+      "requirements_must_cover": 8,
+      "must_cover_states": {
+        "0214b85a5345e60b": "uncovered",
+        "2f054b567747dc53": "partial",
+        "38b77905c2fb2d23": "uncovered",
+        "6ad9c1cff6b574e6": "uncovered",
+        "78688dcdf77d01f8": "uncovered",
+        "a86b3179b6dbbef0": "uncovered",
+        "a9d8a3c67a4bebef": "uncovered",
+        "d1dc2f94f34bbd48": "uncovered"
+      }
+    },
+    "sources_by_evidence_class": {
+      "academic": 14,
+      "news": 25,
+      "primary_data": 1
+    },
+    "cell": "b1-full",
+    "question_file": "/Users/ryanfree/Documents/Projects/deerflow-dr/build-logs/bench-2026-07-15-rerun/b1-question.txt",
+    "requested_model": "or-mid",
+    "manifest_model": "or-mid",
+    "accounting": {
+      "phases": {
+        "research": {
+          "input_tokens": 327896,
+          "output_tokens": 6190,
+          "cache_read_tokens": 301696,
+          "cache_write_tokens": 0
+        },
+        "verify": {
+          "input_tokens": 40,
+          "output_tokens": 2683,
+          "cache_read_tokens": 974232,
+          "cache_write_tokens": 0
+        },
+        "plan": {
+          "input_tokens": 3021,
+          "output_tokens": 314,
+          "cache_read_tokens": 0,
+          "cache_write_tokens": 0
+        }
+      },
+      "totals": {
+        "input_tokens": 330957,
+        "output_tokens": 9187,
+        "cache_read_tokens": 1275928,
+        "cache_write_tokens": 0
+      },
+      "dollar_cost": 0.098795,
+      "pricing": {
+        "research": {
+          "model": "or-mid",
+          "cost": 0.098153,
+          "estimated": false
+        },
+        "verify": {
+          "model": "claude-verify",
+          "cost": 0.0,
+          "estimated": false
+        },
+        "plan": {
+          "model": "or-mid",
+          "cost": 0.000642,
+          "estimated": false
+        }
+      },
+      "estimated": false
+    },
+    "tokens_in": 330957,
+    "tokens_out": 9187,
+    "dollar_cost": 0.098795,
+    "zero_plan_verify_tokens": false,
+    "lint_exit_code": 0,
+    "lint_findings": 0,
+    "lint_warnings": 0,
+    "exit_code": 0
+  }
+]
+=== RERUN 1 EXIT=0 2026-08-28T01:40:07Z ===
+=== RERUN 2 START 2026-08-28T01:40:07Z ===
+/Users/ryanfree/Documents/Projects/deerflow-dr/deer-flow/backend/.venv/lib/python3.12/site-packages/langgraph/checkpoint/serde/encrypted.py:5: LangChainPendingDeprecationWarning: The default value of `allowed_objects` will change in a future version. Pass an explicit value (e.g., allowed_objects='messages' or allowed_objects='core') to suppress this warning.
+  from langgraph.checkpoint.serde.jsonplus import JsonPlusSerializer
+[
+  {
+    "thread_id": "benchmark-d506aeff",
+    "depth": "full",
+    "new_run_folders": [
+      "2026-08-27-204730-financial-provide-a-research-report-investigating-the"
+    ],
+    "run_dir": "/Users/ryanfree/Documents/Projects/deerflow-dr/runs/bench-2026-08-27-deconfound/2026-08-27-204730-financial-provide-a-research-report-investigating-the",
+    "gate_decision": "render",
+    "stop_reason": "completed_with_open_requirements",
+    "gate_retries": 2,
+    "tool_calls_total": 33,
+    "tool_calls_by_name": {
+      "academic_search": 5,
+      "record_claim": 16,
+      "web_search": 12
+    },
+    "n_sources": 47,
+    "n_claims": 16,
+    "n_requirements": 8,
+    "requirements_covered": 0,
+    "requirements_must_cover": 8,
+    "first_pass_coverage": {
+      "requirements_covered": 0,
+      "requirements_must_cover": 8,
+      "must_cover_states": {
+        "220265564a136e7c": "uncovered",
+        "30a251781fe57a23": "uncovered",
+        "58fd4ec4c858e0be": "uncovered",
+        "6e4440b2316475bf": "deferred",
+        "8da4fff93487a8de": "uncovered",
+        "9695770c07fbf811": "partial",
+        "b475fb8c1d618220": "uncovered",
+        "f6863b092152402f": "uncovered"
+      }
+    },
+    "final_coverage": {
+      "requirements_covered": 0,
+      "requirements_must_cover": 8,
+      "must_cover_states": {
+        "220265564a136e7c": "partial",
+        "30a251781fe57a23": "partial",
+        "58fd4ec4c858e0be": "partial",
+        "6e4440b2316475bf": "deferred",
+        "8da4fff93487a8de": "uncovered",
+        "9695770c07fbf811": "partial",
+        "b475fb8c1d618220": "uncovered",
+        "f6863b092152402f": "partial"
+      }
+    },
+    "sources_by_evidence_class": {
+      "academic": 1,
+      "news": 46
+    },
+    "cell": "b1-full",
+    "question_file": "/Users/ryanfree/Documents/Projects/deerflow-dr/build-logs/bench-2026-07-15-rerun/b1-question.txt",
+    "requested_model": "or-mid",
+    "manifest_model": "or-mid",
+    "accounting": {
+      "phases": {
+        "research": {
+          "input_tokens": 210116,
+          "output_tokens": 4377,
+          "cache_read_tokens": 200448,
+          "cache_write_tokens": 0
+        },
+        "verify": {
+          "input_tokens": 24,
+          "output_tokens": 5553,
+          "cache_read_tokens": 586110,
+          "cache_write_tokens": 0
+        },
+        "plan": {
+          "input_tokens": 1798,
+          "output_tokens": 164,
+          "cache_read_tokens": 0,
+          "cache_write_tokens": 0
+        }
+      },
+      "totals": {
+        "input_tokens": 211938,
+        "output_tokens": 10094,
+        "cache_read_tokens": 786558,
+        "cache_write_tokens": 0
+      },
+      "dollar_cost": 0.064579,
+      "pricing": {
+        "research": {
+          "model": "or-mid",
+          "cost": 0.064211,
+          "estimated": false
+        },
+        "verify": {
+          "model": "claude-verify",
+          "cost": 0.0,
+          "estimated": false
+        },
+        "plan": {
+          "model": "or-mid",
+          "cost": 0.000368,
+          "estimated": false
+        }
+      },
+      "estimated": false
+    },
+    "tokens_in": 211938,
+    "tokens_out": 10094,
+    "dollar_cost": 0.064579,
+    "zero_plan_verify_tokens": false,
+    "lint_exit_code": 1,
+    "lint_findings": 1,
+    "lint_warnings": 6,
+    "exit_code": 0
+  }
+]
+=== RERUN 2 EXIT=0 2026-08-28T01:47:30Z ===
+=== RERUN 3 START 2026-08-28T01:47:30Z ===
+/Users/ryanfree/Documents/Projects/deerflow-dr/deer-flow/backend/.venv/lib/python3.12/site-packages/langgraph/checkpoint/serde/encrypted.py:5: LangChainPendingDeprecationWarning: The default value of `allowed_objects` will change in a future version. Pass an explicit value (e.g., allowed_objects='messages' or allowed_objects='core') to suppress this warning.
+  from langgraph.checkpoint.serde.jsonplus import JsonPlusSerializer
+[
+  {
+    "thread_id": "benchmark-81c1113a",
+    "depth": "full",
+    "new_run_folders": [
+      "2026-08-27-205625-financial-provide-a-research-report-investigating-the"
+    ],
+    "run_dir": "/Users/ryanfree/Documents/Projects/deerflow-dr/runs/bench-2026-08-27-deconfound/2026-08-27-205625-financial-provide-a-research-report-investigating-the",
+    "gate_decision": "render",
+    "stop_reason": "completed_with_open_requirements",
+    "gate_retries": 2,
+    "tool_calls_total": 57,
+    "tool_calls_by_name": {
+      "academic_search": 13,
+      "record_claim": 31,
+      "web_search": 13
+    },
+    "n_sources": 55,
+    "n_claims": 17,
+    "n_requirements": 8,
+    "requirements_covered": 0,
+    "requirements_must_cover": 7,
+    "first_pass_coverage": {
+      "requirements_covered": 0,
+      "requirements_must_cover": 7,
+      "must_cover_states": {
+        "25c0319ad9f9a88e": "partial",
+        "4f4f6eaf552b8435": "uncovered",
+        "5942336da4e0af35": "uncovered",
+        "6e4440b2316475bf": "deferred",
+        "90489a30c657e04d": "uncovered",
+        "df89e737b4f3b694": "uncovered",
+        "ef1b0b786ea35c6c": "uncovered"
+      }
+    },
+    "final_coverage": {
+      "requirements_covered": 0,
+      "requirements_must_cover": 7,
+      "must_cover_states": {
+        "25c0319ad9f9a88e": "partial",
+        "4f4f6eaf552b8435": "uncovered",
+        "5942336da4e0af35": "uncovered",
+        "6e4440b2316475bf": "deferred",
+        "90489a30c657e04d": "uncovered",
+        "df89e737b4f3b694": "uncovered",
+        "ef1b0b786ea35c6c": "uncovered"
+      }
+    },
+    "sources_by_evidence_class": {
+      "academic": 6,
+      "news": 49
+    },
+    "cell": "b1-full",
+    "question_file": "/Users/ryanfree/Documents/Projects/deerflow-dr/build-logs/bench-2026-07-15-rerun/b1-question.txt",
+    "requested_model": "or-mid",
+    "manifest_model": "or-mid",
+    "accounting": {
+      "phases": {
+        "research": {
+          "input_tokens": 295587,
+          "output_tokens": 5378,
+          "cache_read_tokens": 283264,
+          "cache_write_tokens": 0
+        },
+        "verify": {
+          "input_tokens": 32,
+          "output_tokens": 2434,
+          "cache_read_tokens": 766924,
+          "cache_write_tokens": 0
+        },
+        "plan": {
+          "input_tokens": 2375,
+          "output_tokens": 240,
+          "cache_read_tokens": 0,
+          "cache_write_tokens": 0
+        }
+      },
+      "totals": {
+        "input_tokens": 297994,
+        "output_tokens": 8052,
+        "cache_read_tokens": 1050188,
+        "cache_write_tokens": 0
+      },
+      "dollar_cost": 0.090554,
+      "pricing": {
+        "research": {
+          "model": "or-mid",
+          "cost": 0.090054,
+          "estimated": false
+        },
+        "verify": {
+          "model": "claude-verify",
+          "cost": 0.0,
+          "estimated": false
+        },
+        "plan": {
+          "model": "or-mid",
+          "cost": 0.0005,
+          "estimated": false
+        }
+      },
+      "estimated": false
+    },
+    "tokens_in": 297994,
+    "tokens_out": 8052,
+    "dollar_cost": 0.090554,
+    "zero_plan_verify_tokens": false,
+    "lint_exit_code": 1,
+    "lint_findings": 1,
+    "lint_warnings": 9,
+    "exit_code": 0
+  }
+]
+=== RERUN 3 EXIT=0 2026-08-28T01:56:28Z ===
+S4 ALL DONE

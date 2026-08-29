@@ -1,0 +1,54 @@
+{
+  "thread_id": "benchmark-9acb5fd6",
+  "depth": "standard",
+  "new_run_folders": [
+    "2026-08-19-135331-financial-provide-a-research-report-investigating-the"
+  ],
+  "run_dir": "/Users/ryanfree/Documents/Projects/deerflow-dr/runs/bench-2026-08-19/2026-08-19-135331-financial-provide-a-research-report-investigating-the",
+  "gate_decision": "render",
+  "stop_reason": "completed_with_open_requirements",
+  "gate_retries": 2,
+  "tool_calls_total": 38,
+  "tool_calls_by_name": {
+    "academic_search": 12,
+    "record_claim": 16,
+    "web_search": 10
+  },
+  "n_sources": 39,
+  "n_claims": 15,
+  "n_requirements": 8,
+  "requirements_covered": 0,
+  "requirements_must_cover": 8,
+  "first_pass_coverage": {
+    "requirements_covered": 0,
+    "requirements_must_cover": 8,
+    "must_cover_states": {
+      "5acc263bdfc5a803": "partial",
+      "61cc29372f1da7a9": "deferred",
+      "68db796157fa4861": "uncovered",
+      "6d988993086dd1fc": "uncovered",
+      "6e3655cf8c6deb48": "deferred",
+      "6e3a1aafd4e7797f": "uncovered",
+      "a1c1bfdf95781b00": "deferred",
+      "b700f02b854bc25f": "uncovered"
+    }
+  },
+  "final_coverage": {
+    "requirements_covered": 0,
+    "requirements_must_cover": 8,
+    "must_cover_states": {
+      "5acc263bdfc5a803": "partial",
+      "61cc29372f1da7a9": "deferred",
+      "68db796157fa4861": "partial",
+      "6d988993086dd1fc": "partial",
+      "6e3655cf8c6deb48": "deferred",
+      "6e3a1aafd4e7797f": "uncovered",
+      "a1c1bfdf95781b00": "deferred",
+      "b700f02b854bc25f": "partial"
+    }
+  },
+  "sources_by_evidence_class": {
+    "academic": 11,
+    "news": 28
+  }
+}

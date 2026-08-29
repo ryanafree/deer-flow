@@ -1,0 +1,11 @@
+{
+  "run_dir": "/Users/ryanfree/Documents/Projects/deerflow-dr/runs/bench-2026-08-19/2026-08-19-140347-financial-provide-a-research-report-investigating-the",
+  "exit_code": 0,
+  "status": "pass",
+  "findings": [],
+  "warnings": [
+    "[source-class-mismatch] requirement a0a34ad6c6cddd73 expects practitioner evidence but claim 3a76521745171f92 (via requirement mapping) cites a news-class source (web): 'Insights from leading practitioners reveal the evolution of quants and their pro'"
+  ],
+  "n_findings": 0,
+  "n_warnings": 1
+}

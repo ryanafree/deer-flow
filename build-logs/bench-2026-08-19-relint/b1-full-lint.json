@@ -1,0 +1,14 @@
+{
+  "run_dir": "/Users/ryanfree/Documents/Projects/deerflow-dr/runs/bench-2026-08-19/2026-08-19-140347-financial-provide-a-research-report-investigating-the",
+  "exit_code": 1,
+  "status": "fail",
+  "findings": [
+    "[cite-required] factual sentence has no claim-keyed citation: 'According to What do Quants do?'"
+  ],
+  "warnings": [
+    "[unattributed-not-verified] not_verified claim [7] cited without attribution/hedging (heuristic, WARN): 'Insights from leading practitioners - QuanTensor, insights from leading practiti'",
+    "[source-class-mismatch] requirement a0a34ad6c6cddd73 expects practitioner evidence but claim 3a76521745171f92 (via requirement mapping) cites a news-class source (web): 'Insights from leading practitioners reveal the evolution of quants and their pro'"
+  ],
+  "n_findings": 1,
+  "n_warnings": 2
+}
