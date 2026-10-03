@@ -257,6 +257,19 @@ export function isAssistantMessageGroupStreaming(
   });
 }
 
+export function getLastAssistantMessage(
+  messages: Message[],
+  { requireId = false }: { requireId?: boolean } = {},
+): Message | undefined {
+  for (let i = messages.length - 1; i >= 0; i--) {
+    const message = messages[i];
+    if (message?.type === "ai" && (!requireId || message.id)) {
+      return message;
+    }
+  }
+  return undefined;
+}
+
 export function getAssistantTurnCopyData(
   messages: Message[],
   { isStreaming = false }: { isStreaming?: boolean } = {},
@@ -265,16 +278,18 @@ export function getAssistantTurnCopyData(
     return null;
   }
 
-  return (
-    [...messages]
-      .reverse()
-      .filter((message) => message.type === "ai")
-      .map((message) => {
-        const content = extractContentFromMessage(message);
-        return content ?? extractReasoningContentFromMessage(message) ?? "";
-      })
-      .find((content) => content.length > 0) ?? null
-  );
+  for (let i = messages.length - 1; i >= 0; i--) {
+    const message = messages[i];
+    if (message && message.type === "ai") {
+      const content = extractContentFromMessage(message);
+      const text = content ?? extractReasoningContentFromMessage(message) ?? "";
+      if (text.length > 0) {
+        return text;
+      }
+    }
+  }
+
+  return null;
 }
 
 export function extractTextFromMessage(message: Message) {

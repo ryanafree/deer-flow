@@ -62,7 +62,10 @@ import {
 import { fetch } from "@/core/api/fetcher";
 import { getBackendBaseURL } from "@/core/config";
 import { useI18n } from "@/core/i18n/hooks";
-import { isHiddenFromUIMessage } from "@/core/messages/utils";
+import {
+  getLastAssistantMessage,
+  isHiddenFromUIMessage,
+} from "@/core/messages/utils";
 import { useModels } from "@/core/models/hooks";
 import { useSkills } from "@/core/skills/hooks";
 import { useSuggestionsConfig } from "@/core/suggestions/hooks";
@@ -891,10 +894,7 @@ export function InputBox({
       return;
     }
 
-    const lastAi = [...messagesRef.current]
-      .reverse()
-      .find((m) => m.type === "ai");
-    const lastAiId = lastAi?.id ?? null;
+    const lastAiId = getLastAssistantMessage(messagesRef.current)?.id ?? null;
     if (!lastAiId || lastAiId === lastGeneratedForAiIdRef.current) {
       return;
     }

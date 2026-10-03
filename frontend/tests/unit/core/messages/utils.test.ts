@@ -7,6 +7,7 @@ import {
   extractReasoningContentFromMessage,
   getAssistantTurnCopyData,
   getAssistantTurnUsageMessages,
+  getLastAssistantMessage,
   getMessageGroups,
   getStreamingMessageLookup,
   hasContent,
@@ -322,6 +323,77 @@ test("hides assistant copy data while that turn is streaming", () => {
 
   expect(getAssistantTurnCopyData(messages)).toBe("Partial answer");
   expect(getAssistantTurnCopyData(messages, { isStreaming: true })).toBeNull();
+});
+
+describe("latest assistant lookups", () => {
+  test("follow-up lookup stops at the latest AI even without a usable ID", () => {
+    for (const id of [undefined, ""]) {
+      const latest = { type: "ai", id, content: "Latest answer" } as Message;
+      const earlier = aiMessage("Earlier answer");
+      const messages = [
+        earlier,
+        { type: "human", id: "human-1", content: "Question" },
+        latest,
+        {
+          type: "tool",
+          id: "tool-1",
+          content: "Tool result",
+          tool_call_id: "call-1",
+        },
+      ] as Message[];
+
+      expect(getLastAssistantMessage(messages)).toBe(latest);
+      expect(getLastAssistantMessage(messages, { requireId: true })).toBe(
+        earlier,
+      );
+    }
+  });
+
+  test("regeneration picks the newest usable AI ID and leaves message order intact", () => {
+    const latest = { ...aiMessage("Latest answer"), id: "ai-latest" };
+    const messages = [aiMessage("Earlier answer"), latest];
+    const original = [...messages];
+
+    expect(getLastAssistantMessage(messages, { requireId: true })).toBe(latest);
+    expect(messages).toEqual(original);
+    expect(getLastAssistantMessage([])).toBeUndefined();
+    expect(
+      getLastAssistantMessage([{ type: "ai", content: "No ID" }], {
+        requireId: true,
+      }),
+    ).toBeUndefined();
+  });
+
+  test("backward lookups safely skip sparse message slots", () => {
+    const messages = new Array<Message>(3);
+    messages[0] = aiMessage("Earlier answer");
+    messages[2] = { type: "human", content: "Follow-up" };
+
+    expect(getLastAssistantMessage(messages)).toBe(messages[0]);
+    expect(getAssistantTurnCopyData(messages)).toBe("Earlier answer");
+    expect(1 in messages).toBe(false);
+  });
+
+  test("copy selects the newest nonempty AI text without treating empty content as reasoning", () => {
+    const earlier = aiMessage("Earlier answer");
+    const latest = { ...aiMessage("Newest answer"), id: "ai-latest" };
+    const empty = {
+      ...aiMessage(""),
+      additional_kwargs: { reasoning_content: "Internal reasoning" },
+    };
+    const messages = [
+      earlier,
+      latest,
+      empty,
+      { type: "human", content: "Follow-up" },
+    ] as Message[];
+    const original = [...messages];
+
+    expect(getAssistantTurnCopyData(messages)).toBe("Newest answer");
+    expect(getAssistantTurnCopyData([empty])).toBeNull();
+    expect(getAssistantTurnCopyData([])).toBeNull();
+    expect(messages).toEqual(original);
+  });
 });
 
 test("marks the latest assistant message as streaming", () => {

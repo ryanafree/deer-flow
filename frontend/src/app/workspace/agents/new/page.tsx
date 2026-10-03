@@ -260,6 +260,7 @@ export default function NewAgentPage() {
           variant="ghost"
           size="icon-sm"
           onClick={() => router.push("/workspace/agents")}
+          aria-label={t.agents.backToGallery}
         >
           <ArrowLeftIcon className="h-4 w-4" />
         </Button>

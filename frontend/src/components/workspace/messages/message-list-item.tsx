@@ -27,6 +27,11 @@ import {
 import { Task, TaskTrigger } from "@/components/ai-elements/task";
 import { Badge } from "@/components/ui/badge";
 import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import {
   deleteFeedback,
   upsertFeedback,
   type FeedbackData,
@@ -60,6 +65,7 @@ function FeedbackButtons({
   runId: string;
   initialFeedback: FeedbackData | null;
 }) {
+  const { t } = useI18n();
   const [feedback, setFeedback] = useState<FeedbackData | null>(
     initialFeedback,
   );
@@ -88,32 +94,47 @@ function FeedbackButtons({
 
   return (
     <div className="flex gap-1">
-      <button
-        type="button"
-        className={cn(
-          "text-muted-foreground hover:text-foreground rounded-md p-1 transition-colors",
-          feedback?.rating === 1 && "text-foreground",
-        )}
-        onClick={() => handleClick(1)}
-        disabled={isSubmitting}
-      >
-        <ThumbsUpIcon
-          className={cn("size-4", feedback?.rating === 1 && "fill-current")}
-        />
-      </button>
-      <button
-        type="button"
-        className={cn(
-          "text-muted-foreground hover:text-foreground rounded-md p-1 transition-colors",
-          feedback?.rating === -1 && "text-foreground",
-        )}
-        onClick={() => handleClick(-1)}
-        disabled={isSubmitting}
-      >
-        <ThumbsDownIcon
-          className={cn("size-4", feedback?.rating === -1 && "fill-current")}
-        />
-      </button>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <button
+            type="button"
+            aria-label={t.conversation.goodResponse}
+            className={cn(
+              "text-muted-foreground hover:text-foreground rounded-md p-1 transition-colors",
+              feedback?.rating === 1 && "text-foreground",
+            )}
+            onClick={() => handleClick(1)}
+            disabled={isSubmitting}
+          >
+            <ThumbsUpIcon
+              className={cn("size-4", feedback?.rating === 1 && "fill-current")}
+            />
+          </button>
+        </TooltipTrigger>
+        <TooltipContent>{t.conversation.goodResponse}</TooltipContent>
+      </Tooltip>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <button
+            type="button"
+            aria-label={t.conversation.badResponse}
+            className={cn(
+              "text-muted-foreground hover:text-foreground rounded-md p-1 transition-colors",
+              feedback?.rating === -1 && "text-foreground",
+            )}
+            onClick={() => handleClick(-1)}
+            disabled={isSubmitting}
+          >
+            <ThumbsDownIcon
+              className={cn(
+                "size-4",
+                feedback?.rating === -1 && "fill-current",
+              )}
+            />
+          </button>
+        </TooltipTrigger>
+        <TooltipContent>{t.conversation.badResponse}</TooltipContent>
+      </Tooltip>
     </div>
   );
 }

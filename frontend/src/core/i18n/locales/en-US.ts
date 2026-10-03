@@ -275,6 +275,8 @@ export const enUS: Translations = {
   // Conversation
   conversation: {
     noMessages: "No messages yet",
+    goodResponse: "Good response",
+    badResponse: "Bad response",
     startConversation: "Start a conversation to see messages here",
   },
 

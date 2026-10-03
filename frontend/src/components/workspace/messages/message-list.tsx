@@ -23,6 +23,7 @@ import {
   extractTextFromMessage,
   getAssistantTurnCopyData,
   getAssistantTurnUsageMessages,
+  getLastAssistantMessage,
   getMessageGroups,
   getStreamingMessageLookup,
   hasContent,
@@ -257,9 +258,9 @@ export function MessageList({
       enableRegenerateForTurn: boolean,
     ) => {
       const clipboardData = getAssistantTurnCopyData(messages, { isStreaming });
-      const regenerateTarget = [...messages]
-        .reverse()
-        .find((message) => message.type === "ai" && message.id);
+      const regenerateTarget = getLastAssistantMessage(messages, {
+        requireId: true,
+      });
       const supersededMessageIds = messages
         .filter((message) => message.type === "ai" && message.id)
         .map((message) => message.id)

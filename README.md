@@ -612,6 +612,10 @@ Use it as-is. Or tear it apart and make it yours.
 
 ## Core Features
 
+### Web UI
+
+Password settings have visible labels for every password field. Password updates and agent deletion show a spinner while the request is pending. The agent creation back button has an accessible name, and feedback buttons use localized names and tooltips.
+
 ### Skills & Tools
 
 Skills are what make DeerFlow do *almost anything*.
