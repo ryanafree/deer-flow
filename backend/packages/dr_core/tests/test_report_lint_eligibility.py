@@ -137,3 +137,40 @@ def test_legal_citation_v_abbreviation_does_not_false_split_the_sentence(tmp_pat
         "According to analysts, officials get qualified immunity under Harlow v. Fitzgerald, 457 U.S. 800 (1982) [4].",
     )
     assert _run(tmp_path, monkeypatch, report) == 0
+
+
+def test_question_mark_inside_a_cited_source_title_does_not_false_split(tmp_path, monkeypatch, capsys):
+    """The 2026-08-19 B1-full benchmark cell's only hard finding: the renderer's
+    attribution prefix carries the source's own title, and that title ends in a
+    question mark, so the splitter manufactured a citation-free six-word sentence
+    out of "According to What do Quants do?" while the real citation sat at the
+    true end of the sentence. Fragment is verbatim from that run's report.md."""
+    report = CLEAN_REPORT.replace(
+        "According to analysts, the trend may continue [4].",
+        "According to What do Quants do? Insights from leading practitioners - QuanTensor, insights from leading practitioners reveal the evolution of quants and their profound impact on modern finance [4].",
+    )
+    code = _run(tmp_path, monkeypatch, report)
+    assert code == 0, capsys.readouterr().out
+
+
+def test_exclamation_inside_a_cited_source_title_does_not_false_split(tmp_path, monkeypatch, capsys):
+    report = CLEAN_REPORT.replace(
+        "According to analysts, the trend may continue [4].",
+        "According to Buy Now! The Retail Quarterly, retail order flow rose by twelve percent over the quarter [4].",
+    )
+    code = _run(tmp_path, monkeypatch, report)
+    assert code == 0, capsys.readouterr().out
+
+
+def test_a_real_uncited_question_sentence_still_splits_and_fails(tmp_path, monkeypatch, capsys):
+    """The guard is scoped to attribution prefixes, so an ordinary sentence ending
+    in a question mark is still its own sentence and still needs a citation."""
+    report = CLEAN_REPORT.replace(
+        "According to analysts, the trend may continue [4].",
+        "Does the term structure invert before every drawdown in the sample? Analysts expect the trend to continue [4].",
+    )
+    code = _run(tmp_path, monkeypatch, report)
+    out = capsys.readouterr().out
+    assert code == 1
+    assert "cite-required" in out
+    assert "Does the term structure invert" in out

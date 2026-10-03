@@ -176,3 +176,65 @@ def fetch_compustat_fundamentals(ticker: str, period: str, conn=None) -> dict[st
     except Exception as exc:  # noqa: BLE001 -- normalize to WrdsQueryError
         raise WrdsQueryError(f"Compustat query failed: {exc}") from exc
     return dict(row) if row else None
+
+
+# ---------------------------------------------------------------------------
+# Single-scalar metric selector (P-09 item 1)
+# ---------------------------------------------------------------------------
+#
+# The 2026-07-18 Item-1 scope call (BUILD_LEDGER.md) deferred value capture for
+# WRDS because a `(ticker, period)` call returns a COMPOUND record (a CRSP
+# price plus several Compustat fields); folding any one of them into
+# `data_ref["value"]` would let a revenue claim be scored against a stock
+# price, i.e. exactly the false-MISMATCH shape D10/D11's contradiction clamp
+# exists to prevent. The selector closes that by making the caller name ONE
+# scalar, so the minted record is single-valued and like-for-like.
+#
+# Compustat comp.funda reports monetary fundamentals in MILLIONS of USD;
+# values are converted to BASE USD here so the comparator (which normalizes
+# "$383.285 billion" to 3.83285e11) sees the same quantity. CRSP crsp.dsf
+# `prc` is already USD per share.
+#
+# Deliberately EXCLUDED: CRSP `ret` (a decimal fraction, not a percent),
+# `shrout` (thousands of shares), and `vol` (share counts whose Nasdaq-era
+# double-counting is not carried in the row). None of the three has unit
+# semantics this layer can prove safe against a false MISMATCH, so they are
+# not selectable rather than guessed at.
+
+_COMPUSTAT_MILLIONS_METRICS: frozenset[str] = frozenset({"at", "revt", "ni", "sale"})
+_CRSP_PRICE_METRIC = "price"
+COMPUSTAT_MILLIONS_TO_USD = 1e6
+USD_UNIT = "USD"  # mirrors edgar_client's XBRL unit spelling
+
+WRDS_METRICS: frozenset[str] = frozenset(_COMPUSTAT_MILLIONS_METRICS | {_CRSP_PRICE_METRIC})
+
+
+def select_metric_value(metric: str, *, crsp: dict[str, Any] | None, compustat: dict[str, Any] | None) -> dict[str, Any] | None:
+    """Resolve ONE named scalar out of an already-fetched CRSP/Compustat pair.
+
+    Returns ``{"metric", "value", "unit"}`` in base units, or ``None`` when the
+    backing row is absent or the field is null/unparseable (the caller must
+    then mint no value at all -- never a guess). Raises ``ValueError`` on an
+    unknown metric name; there is deliberately no full-record fallback.
+    """
+    name = str(metric).strip().lower()
+    if name not in WRDS_METRICS:
+        raise ValueError(f"unknown WRDS metric {metric!r} -- use one of: {', '.join(sorted(WRDS_METRICS))}")
+
+    if name == _CRSP_PRICE_METRIC:
+        raw = (crsp or {}).get("prc")
+    else:
+        raw = (compustat or {}).get(name)
+    if raw is None:
+        return None
+    try:
+        value = float(raw)
+    except (TypeError, ValueError):
+        return None
+
+    if name == _CRSP_PRICE_METRIC:
+        # A NEGATIVE crsp.dsf prc encodes a bid/ask midpoint (no trade that
+        # day); its magnitude is still the price estimate, and minting the
+        # sign would guarantee a false MISMATCH against an honest claim.
+        return {"metric": name, "value": abs(value), "unit": USD_UNIT}
+    return {"metric": name, "value": value * COMPUSTAT_MILLIONS_TO_USD, "unit": USD_UNIT}

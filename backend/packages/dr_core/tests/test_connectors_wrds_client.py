@@ -152,3 +152,54 @@ class TestFetchCompustatFundamentals:
         conn.cursor.side_effect = RuntimeError("server error")
         with pytest.raises(wrds_client.WrdsQueryError):
             wrds_client.fetch_compustat_fundamentals("AAPL", "2023", conn=conn)
+
+
+class TestMetricSelector:
+    """P-09 item 1: the single-scalar metric selector. Pure functions over
+    already-fetched rows -- no DB access in this class."""
+
+    def test_vocabulary_is_exactly_the_mandated_five(self):
+        assert set(wrds_client.WRDS_METRICS) == {"at", "revt", "ni", "sale", "price"}
+
+    def test_deliberately_excluded_crsp_fields_are_not_selectable(self):
+        # ret/vol/shrout carry unit semantics this layer cannot prove safe
+        # (ret is a decimal fraction, shrout is in thousands, vol's Nasdaq
+        # double-counting era) -- excluded rather than risk a false MISMATCH.
+        for name in ("ret", "vol", "shrout"):
+            assert name not in wrds_client.WRDS_METRICS
+
+    def test_unknown_metric_raises_value_error(self):
+        with pytest.raises(ValueError):
+            wrds_client.select_metric_value("ebitda", crsp=None, compustat={"revt": 1.0})
+
+    def test_compustat_millions_are_converted_to_base_usd(self):
+        got = wrds_client.select_metric_value("revt", crsp=None, compustat={"revt": 383285.0})
+        assert got == {"metric": "revt", "value": 383285.0 * 1e6, "unit": "USD"}
+
+    def test_every_compustat_metric_converts_from_millions(self):
+        row = {"at": 352583.0, "revt": 383285.0, "ni": 96995.0, "sale": 383285.0}
+        for metric, millions in row.items():
+            got = wrds_client.select_metric_value(metric, crsp=None, compustat=row)
+            assert got["value"] == millions * 1e6
+            assert got["unit"] == "USD"
+
+    def test_crsp_price_is_usd_per_share_unconverted(self):
+        got = wrds_client.select_metric_value("price", crsp={"prc": 192.53}, compustat=None)
+        assert got == {"metric": "price", "value": 192.53, "unit": "USD"}
+
+    def test_negative_crsp_price_is_normalized_to_its_magnitude(self):
+        # CRSP encodes a bid/ask midpoint (no trade that day) as a NEGATIVE
+        # prc; the magnitude is still the price estimate. Minting the signed
+        # value would guarantee a false MISMATCH against any honest claim.
+        got = wrds_client.select_metric_value("price", crsp={"prc": -192.53}, compustat=None)
+        assert got["value"] == 192.53
+
+    def test_missing_row_yields_none(self):
+        assert wrds_client.select_metric_value("revt", crsp={"prc": 1.0}, compustat=None) is None
+        assert wrds_client.select_metric_value("price", crsp=None, compustat={"revt": 1.0}) is None
+
+    def test_null_field_in_a_present_row_yields_none(self):
+        assert wrds_client.select_metric_value("revt", crsp=None, compustat={"fyear": 2023, "revt": None}) is None
+
+    def test_unparseable_field_yields_none_never_raises(self):
+        assert wrds_client.select_metric_value("revt", crsp=None, compustat={"revt": "n/a"}) is None

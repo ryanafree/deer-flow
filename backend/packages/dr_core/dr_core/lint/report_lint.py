@@ -70,6 +70,17 @@ CITATION_RE = re.compile(r"\[(\d+)\]")
 # words) are unaffected.
 _SENTENCE_SPLIT_RE = re.compile(r"(?<!\b[A-Za-z]\.)(?<=[.!?])\s+")
 
+# Companion guard to the "v." lookbehind above, on the ?/! side (found live on the
+# 2026-08-19 B1-full benchmark cell): the renderer writes an attribution prefix that
+# carries the source's own title, and a title ending in ? or ! ("According to What do
+# Quants do? Insights from leading practitioners ...") splits into a citation-free
+# fragment while the real citation marker sits at the TRUE end of the sentence, firing
+# a false [cite-required]. A fragment is treated as a mid-sentence title break, and
+# rejoined with the one after it, only when all three hold: it ends in ? or !, it opens
+# with an attribution cue, and it carries no citation marker of its own. An ordinary
+# sentence ending in a question mark opens with no attribution cue, so it still splits.
+_ATTRIBUTION_PREFIX_RE = re.compile(r"^(?:according to|per|as reported by|citing)\b", re.I)
+
 # Best-effort heuristic for PART 2 rule 5 (not_verified claims must read as attributed or
 # hedged). Catches common surface forms; not a real NLP classifier - see
 # _looks_attributed_or_hedged for its documented limits.
@@ -147,6 +158,28 @@ def _is_factual_sentence(sentence):
     if len(s.split()) <= 5:
         return False
     return not s.startswith(("#", "|", "-", "*", ">"))
+
+
+def _is_attribution_title_break(fragment):
+    """True when `fragment`'s terminal ?/! is a source title's punctuation rather than a
+    sentence end -- see the _ATTRIBUTION_PREFIX_RE comment for the three conditions."""
+    s = fragment.strip()
+    return bool(s.endswith(("?", "!")) and _ATTRIBUTION_PREFIX_RE.match(s) and not CITATION_RE.search(s))
+
+
+def split_sentences(segment):
+    """Split `segment` into sentences for PART 2, rejoining attribution-title breaks.
+
+    The period-side guards live in _SENTENCE_SPLIT_RE's lookbehind (case citations,
+    reporter abbreviations); the ?/! side needs the fragment's own shape, so it is
+    handled here rather than in the regex."""
+    sentences = []
+    for fragment in _SENTENCE_SPLIT_RE.split(segment):
+        if sentences and _is_attribution_title_break(sentences[-1]):
+            sentences[-1] = f"{sentences[-1]} {fragment}"
+        else:
+            sentences.append(fragment)
+    return sentences
 
 
 def _strip_structural_lines(segment):
@@ -236,7 +269,7 @@ def _eligibility_findings(body, claims, conflicts):
     first_seen: set[int] = set()
 
     def scan(segment, *, require_citation):
-        for raw_sentence in _SENTENCE_SPLIT_RE.split(_strip_structural_lines(segment)):
+        for raw_sentence in split_sentences(_strip_structural_lines(segment)):
             s = raw_sentence.strip()
             if not _is_factual_sentence(s):
                 continue
@@ -268,10 +301,13 @@ def _eligibility_findings(body, claims, conflicts):
     return hard, warn
 
 
-def main():
-    if len(sys.argv) != 2:
-        sys.exit("Usage: report_lint.py <run-folder>")
-    folder = sys.argv[1]
+def lint_run(folder):
+    """Lint one run folder and return `(findings, warnings)` without printing.
+
+    `main()` is the CLI wrapper over this; callers that need the findings as data
+    (the benchmark matrix driver persists them per cell) use this directly. Hard
+    findings are what drive the CLI's exit code; warnings never do.
+    """
     with open(os.path.join(folder, "report.md")) as fh:
         body = body_of(fh.read())
     findings = []
@@ -329,6 +365,13 @@ def main():
     # cannot change `main()`'s exit code (settled question 9).
     warnings.extend(_source_class_mismatch_findings(folder))
 
+    return findings, warnings
+
+
+def main():
+    if len(sys.argv) != 2:
+        sys.exit("Usage: report_lint.py <run-folder>")
+    findings, warnings = lint_run(sys.argv[1])
     for finding in findings:
         print(f"LINT: {finding}")
     for warning in warnings:

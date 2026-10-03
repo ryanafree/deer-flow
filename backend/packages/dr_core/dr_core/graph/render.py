@@ -25,6 +25,7 @@ from dr_core.accounting import build_accounting
 from dr_core.connectors.registry import by_name, load_connectors
 from dr_core.models.eligibility import ineligibility_reason
 from dr_core.models.ledger import Claim, CoverageMapping, Requirement, Source
+from dr_core.models.tiers import plan_model_name, verify_model_name
 from dr_core.plan.evidence_class import resolve_evidence_class
 from dr_core.profiles import ProfileError, load_profile
 from dr_core.render.body import generate_body
@@ -39,12 +40,25 @@ def _resolve_runs_dir(dr_run: dict) -> str:
     return dr_run.get("runs_dir") or os.environ.get(_RUNS_DIR_ENV) or _DEFAULT_RUNS_DIR
 
 
-def render_node(state) -> dict:
+def _resolve_model_name(config) -> str | None:
+    """The research model frozen into `config["configurable"]["model_name"]` at
+    graph-construction time (see `dr_core.graph.agent.make_dr_agent`). Returned so
+    the manifest records the model that actually ran instead of write_run's
+    hardcoded default; None when no config is threaded (unit tests, direct calls).
+    """
+    configurable = ((config or {}).get("configurable") or {}) if isinstance(config, dict) else {}
+    model_name = configurable.get("model_name")
+    return model_name if isinstance(model_name, str) and model_name else None
+
+
+def render_node(state, config=None) -> dict:
     """Render the frozen, gated ledger into a run folder + HTML report.
 
     Reads `dr_claims`/`dr_sources` (the ledger) and `dr_run` (citation_ordinals,
     stop_reason, question, profile) from state; writes nothing back onto the
     ledger channels -- only `dr_run.run_dir`/`render_completed` are returned.
+    `config` is LangGraph's RunnableConfig (same optional-second-argument shape
+    as `initialize_node`), read only for the research model's identity.
     """
     dr_claims = state.get("dr_claims") or {}
     dr_sources = state.get("dr_sources") or {}
@@ -124,7 +138,12 @@ def render_node(state) -> dict:
     except (ValueError, ProfileError):
         model_tiers = None
 
-    accounting = build_accounting(state.get("messages"), dr_run, profile_tiers=model_tiers)
+    # Price each phase at the model that actually ran it: research is the run's own
+    # configured model, plan and verify resolve through the tier module that the
+    # plan_coverage and verify nodes themselves use. profile_tiers stays the fallback.
+    model_name = _resolve_model_name(config)
+    phase_models = {"research": model_name, "plan": plan_model_name(), "verify": verify_model_name()}
+    accounting = build_accounting(state.get("messages"), dr_run, profile_tiers=model_tiers, phase_models=phase_models)
 
     baseline_source_ids = set(dr_run.get("baseline_source_ids") or [])
     connectors_by_name = by_name(load_connectors())
@@ -161,6 +180,8 @@ def render_node(state) -> dict:
     if dr_run.get("stop_reason"):
         manifest_in["stop_reason"] = dr_run["stop_reason"]
 
+    write_run_kwargs = {"model": model_name} if model_name else {}
+
     run_dir = write_run(
         report_body=body,
         sources=list(sources_by_id.values()),
@@ -174,6 +195,7 @@ def render_node(state) -> dict:
         question=question,
         runs_dir=runs_dir,
         manifest_in=manifest_in,
+        **write_run_kwargs,
     )
     html_out = render_html(run_dir)
     with open(os.path.join(run_dir, "report.html"), "w") as f:

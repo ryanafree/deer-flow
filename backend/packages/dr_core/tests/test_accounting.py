@@ -80,7 +80,8 @@ class TestBuildAccounting:
     def test_shape_has_phases_totals_dollar_cost(self):
         messages = [_ai_message(10, 5)]
         result = build_accounting(messages, {})
-        assert set(result.keys()) == {"phases", "totals", "dollar_cost"}
+        # `pricing`/`estimated` joined the block when per-phase model pricing landed.
+        assert set(result.keys()) == {"phases", "totals", "dollar_cost", "pricing", "estimated"}
         assert set(result["phases"].keys()) == {"research", "verify", "plan"}
 
     def test_verify_usage_absent_defaults_to_zero(self):
@@ -145,3 +146,49 @@ class TestBuildAccounting:
     def test_dr_run_none_does_not_crash(self):
         result = build_accounting([], None)
         assert result["phases"]["research"]["input_tokens"] == 0
+
+
+class TestPhaseModelPricing:
+    """The recorded dollar figure must price each phase at the model that actually ran
+    it. Pricing research at the profile's gruntwork tier while the run used a `--model`
+    override understated every 2026-08-19 benchmark cell by roughly five times."""
+
+    PROFILE_TIERS = {"gruntwork": "or-cheap", "verify": "claude-verify", "top": "claude-top"}
+
+    def test_research_prices_at_the_model_that_ran_not_the_gruntwork_tier(self):
+        messages = [_ai_message(1_000_000, 1_000_000)]
+        result = build_accounting(messages, {}, profile_tiers=self.PROFILE_TIERS, phase_models={"research": "or-mid"})
+        # or-mid = openai/gpt-4o-mini at $0.15 in / $0.60 out per 1M.
+        assert result["dollar_cost"] == 0.75
+        assert result["pricing"]["research"] == {"model": "or-mid", "cost": 0.75, "estimated": False}
+
+    def test_a_different_research_model_yields_a_different_correct_figure(self):
+        messages = [_ai_message(1_000_000, 1_000_000)]
+        result = build_accounting(messages, {}, profile_tiers=self.PROFILE_TIERS, phase_models={"research": "or-sonnet"})
+        # or-sonnet = anthropic/claude-sonnet-5 at $3.00 in / $15.00 out per 1M.
+        assert result["dollar_cost"] == 18.0
+
+    def test_plan_and_verify_price_at_their_own_tier_models(self):
+        dr_run = {"plan_usage": {"input_tokens": 1_000_000, "output_tokens": 0}, "verify_usage": {"input_tokens": 1_000_000, "output_tokens": 0}}
+        result = build_accounting([], dr_run, profile_tiers=self.PROFILE_TIERS, phase_models={"research": "or-mid", "plan": "or-sonnet", "verify": "claude-verify"})
+        # plan on or-sonnet ($3.00/1M in) + verify on the subscription shim ($0).
+        assert result["pricing"]["plan"] == {"model": "or-sonnet", "cost": 3.0, "estimated": False}
+        assert result["pricing"]["verify"] == {"model": "claude-verify", "cost": 0.0, "estimated": False}
+        assert result["dollar_cost"] == 3.0
+
+    def test_model_with_no_rate_row_falls_back_to_the_tier_and_is_flagged_estimated(self):
+        messages = [_ai_message(1_000_000, 0)]
+        result = build_accounting(messages, {}, profile_tiers=self.PROFILE_TIERS, phase_models={"research": "some/unpriced-model"})
+        assert result["pricing"]["research"]["cost"] == 0.03  # or-cheap fallback
+        assert result["pricing"]["research"]["estimated"] is True
+        assert result["estimated"] is True
+
+    def test_no_phase_models_keeps_the_tier_pricing_and_flags_it_estimated(self):
+        messages = [_ai_message(1_000_000, 0)]
+        result = build_accounting(messages, {}, profile_tiers=self.PROFILE_TIERS)
+        assert result["dollar_cost"] == 0.03
+        assert result["estimated"] is True
+
+    def test_all_phases_priced_at_their_actual_model_is_not_estimated(self):
+        result = build_accounting([_ai_message(10, 5)], {}, profile_tiers=self.PROFILE_TIERS, phase_models={"research": "or-mid", "plan": "or-sonnet", "verify": "claude-verify"})
+        assert result["estimated"] is False

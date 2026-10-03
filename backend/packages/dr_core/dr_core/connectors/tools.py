@@ -86,7 +86,7 @@ def _wrds_fail(error: str, **extra: Any) -> str:
 
 
 @tool
-def wrds_query(ticker: str, period: str) -> str:
+def wrds_query(ticker: str, period: str, metric: str | None = None) -> str:
     """Look up CRSP security price and Compustat standardized annual
     fundamentals for a US-listed ticker in a given period, from WRDS
     (institutional academic data: security prices, standardized financial
@@ -98,14 +98,35 @@ def wrds_query(ticker: str, period: str) -> str:
             CRSP resolves the nearest trading-day price within the period;
             Compustat resolves the standardized annual fundamentals for that
             fiscal year.
+        metric: OPTIONAL. Name ONE scalar to ground a numeric claim on:
+            "at" (Compustat total assets), "revt" (total revenue), "ni" (net
+            income), "sale" (net sales), or "price" (CRSP closing price per
+            share). Compustat figures are returned in BASE US dollars (the
+            source reports millions; the conversion happens here). Omit it
+            when you only need the whole record for context -- but a claim
+            that quotes a FIGURE should name the metric it quotes, because
+            only then can the provenance audit verify that figure. CRSP
+            `ret`, `vol`, and `shrout` are deliberately NOT selectable: their
+            unit semantics (decimal fraction, share counts, thousands of
+            shares) cannot be verified safely here. An unrecognized name is
+            an error, never a fallback to the whole record.
 
     Returns JSON. On success (`ok: true`) the payload carries a `url_or_id`
     field -- cite this EXACT string as record_claim's `source_id` argument --
     and a `data_ref` object; pass that `data_ref` dict VERBATIM as
     record_claim's `data_ref` argument when asserting a claim grounded in this
     data, so the provenance audit can verify the claim against the retrieved
-    period. On failure (`ok: false`) do not cite this result as a source.
+    period. When you passed a `metric`, that `data_ref` also carries `value`,
+    `unit`, and `metric` -- echo all three VERBATIM (do not round, rescale, or
+    rename them) and state the same figure in the claim text. On failure
+    (`ok: false`) do not cite this result as a source.
     """
+    if metric is not None:
+        try:
+            wrds_client.select_metric_value(metric, crsp=None, compustat=None)
+        except ValueError as exc:
+            return _wrds_fail(str(exc), ticker=ticker, period=period, metric=metric)
+
     try:
         conn = wrds_client.get_connection()
     except wrds_client.WrdsUnavailable as exc:
@@ -135,6 +156,7 @@ def wrds_query(ticker: str, period: str) -> str:
     # check, decided at record_claim time, not here).
     resolved_period = str((compustat or {}).get("fyear")) if compustat else str((crsp or {}).get("date"))
     url_or_id = _wrds_url_or_id(ticker, period)
+    data_ref: dict[str, Any] = {"period": resolved_period, "source_class": WRDS_SOURCE_CLASS}
     payload = {
         "ok": True,
         "source_system": "wrds",
@@ -145,8 +167,22 @@ def wrds_query(ticker: str, period: str) -> str:
         "period": period,
         "crsp": crsp,
         "compustat": compustat,
-        "data_ref": {"period": resolved_period, "source_class": WRDS_SOURCE_CLASS},
+        "data_ref": data_ref,
     }
+    if metric is not None:
+        # A named metric makes the record SINGLE-SCALAR, which is the whole
+        # point: without it, folding any one of the compound record's fields
+        # into data_ref["value"] would let (say) a revenue claim be scored
+        # against a stock price -- the false-MISMATCH shape the 2026-07-18
+        # scope call refused to ship. Nothing to select -> ok:false, never a
+        # value-less "success" the model might still quote a figure from.
+        selected = wrds_client.select_metric_value(metric, crsp=crsp, compustat=compustat)
+        if selected is None:
+            return _wrds_fail(f"no {metric!r} value available for that ticker/period", ticker=ticker, period=period, metric=metric)
+        data_ref.update(selected)
+        payload["metric"] = selected["metric"]
+        payload["value"] = selected["value"]
+        payload["unit"] = selected["unit"]
     return json.dumps(payload, default=str)
 
 
@@ -231,8 +267,14 @@ def fred_series(series_id: str, period: str) -> str:
     field -- cite this EXACT string as record_claim's `source_id` argument --
     and a `data_ref` object (period = the LATEST observation's own date
     within the requested window); pass that `data_ref` dict VERBATIM as
-    record_claim's `data_ref` argument. On failure (`ok: false`) do not cite
-    this result as a source.
+    record_claim's `data_ref` argument. When the series' own unit metadata
+    was retrievable, that `data_ref` also carries `value` (the latest
+    observation, converted to base units -- e.g. a series reported in
+    billions of dollars is minted in dollars) and `unit`; echo BOTH
+    VERBATIM (do not round, rescale, or rename them) and state the same
+    figure in the claim text. `units` on the payload is FRED's own
+    description of the raw series. On failure (`ok: false`) do not cite this
+    result as a source.
     """
     try:
         result = fred_client.fetch_series_observations(series_id, period)
@@ -247,6 +289,11 @@ def fred_series(series_id: str, period: str) -> str:
     observations = result["observations"]
     latest = observations[-1]
     url_or_id = f"https://api.stlouisfed.org/fred/series/observations?series_id={series_id}&observation_start={result['start']}&observation_end={result['end']}&file_type=json"
+    data_ref: dict[str, Any] = {
+        "period": latest["date"],
+        "source_class": FRED_SOURCE_CLASS,
+        "series_id": series_id,
+    }
     payload = {
         "ok": True,
         "source_system": "fred",
@@ -256,12 +303,26 @@ def fred_series(series_id: str, period: str) -> str:
         "series_id": series_id,
         "observations": observations,
         "latest_observation": latest,
-        "data_ref": {
-            "period": latest["date"],
-            "source_class": FRED_SOURCE_CLASS,
-            "series_id": series_id,
-        },
+        "data_ref": data_ref,
     }
+
+    # Series units come from a SEPARATE endpoint (/fred/series); the
+    # observations payload carries none. A failure there is not fatal -- the
+    # tool falls back to the pre-P-09 value-less data_ref, which the
+    # provenance audit reads as INCONCLUSIVE (UNAUDITED), never MISMATCH.
+    metadata = None
+    try:
+        metadata = fred_client.fetch_series_metadata(series_id)
+    except (fred_client.FredUnavailable, fred_client.FredQueryError):
+        metadata = None
+    if metadata is not None:
+        payload["units"] = metadata.get("units")
+        payload["series_title"] = metadata.get("title")
+        normalized = fred_client.normalize_observation_value(latest.get("value"), metadata.get("units"))
+        if normalized is not None:
+            data_ref["value"] = normalized["value"]
+            if normalized["unit"] is not None:
+                data_ref["unit"] = normalized["unit"]
     return json.dumps(payload, default=str)
 
 

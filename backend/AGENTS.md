@@ -390,7 +390,7 @@ Additional providers also live here (`brave`, `browserless`, `crawl4ai`, `ddg_se
 - `record_claim` accepts validated `target_requirement_ids`, and coverage mapping sees those candidate links together with the exact quote and deterministic source evidence class.
 - `structured/vix_fomc.py` is the deterministic B2 contract: FRED `VIXCLS` and `VXVCLS`, spread `VIXCLS - VXVCLS`, FOMC-date or nearest-prior-common alignment, latest-common current comparison, matched structured provenance, and explicit unavailable rendering.
 - `render/body.py` cites every factual sentence in a multi-sentence ledger claim. Eight or more structured numeric findings render as a Markdown body table so the report-lint numeric-density contract remains satisfied.
-- Benchmark manifests persist exact tool-call totals/by-name, first-pass and final must-cover states, gate retries, and source-class aggregates. `benchmarks/run_benchmark.py` reads those persisted fields for its summary.
+- Benchmark manifests persist exact tool-call totals/by-name, first-pass and final must-cover states, gate retries, and source-class aggregates. `packages/dr_core/dr_core/benchmarks/run_benchmark.py` reads those persisted fields for its summary. `packages/dr_core/dr_core/benchmarks/run_matrix.py` is the persisted multi-cell driver over that runner: it runs a matrix of cells, writes a `driver.log` plus a per-cell log, summary, and lint capture, and adds accounting, the recorded model, and a zero-plan/verify-token flag to each cell's summary.
 
 ### Skills System (`packages/harness/deerflow/skills/`)
 

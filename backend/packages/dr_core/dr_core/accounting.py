@@ -102,7 +102,22 @@ def price_phase(usage: dict[str, int], model: str | None) -> float | None:
     return round(cost, 6)
 
 
-def build_accounting(messages, dr_run: dict | None = None, *, profile_tiers: dict | None = None) -> dict:
+def _price_with_fallback(usage: dict[str, int], actual_model: str | None, tier_model: str | None) -> tuple[float | None, str | None, bool]:
+    """Price one phase at the model that actually ran it, falling back to the profile's
+    tier when that model is unknown to PRICING (or was never threaded through).
+
+    Returns `(cost, model_used_for_pricing, estimated)`; `estimated` is True whenever the
+    figure comes from the tier rather than the phase's own model, so the manifest can say
+    so instead of presenting a tier estimate as a measured cost.
+    """
+    if actual_model:
+        cost = price_phase(usage, actual_model)
+        if cost is not None:
+            return cost, actual_model, False
+    return price_phase(usage, tier_model), tier_model, True
+
+
+def build_accounting(messages, dr_run: dict | None = None, *, profile_tiers: dict | None = None, phase_models: dict | None = None) -> dict:
     """Build the manifest['accounting'] block.
 
     `messages` is the research phase's message list (typically `state["messages"]`).
@@ -116,9 +131,18 @@ def build_accounting(messages, dr_run: dict | None = None, *, profile_tiers: dic
     verify phase against `verify`. The plan phase has no dedicated tier key yet, so it
     prices against `gruntwork` too (plan_coverage is a structured gruntwork-tier call,
     same model class as research). Omitted -> phases price as unknown (None).
+    `phase_models` ({"research":..., "plan":..., "verify":...}) is the model that
+    ACTUALLY ran each phase -- research is the run's configured `model_name`, plan and
+    verify come from `dr_core.models.tiers`. It takes precedence over `profile_tiers`,
+    which stays the fallback for a phase whose model has no PRICING row or was not
+    threaded at all; every fallback is flagged in the returned `pricing` block and in
+    the top-level `estimated` flag. Without it a `--model` override priced at the
+    profile's gruntwork tier understates the run (found on the 2026-08-19 benchmark
+    matrix: $0.042751 recorded against roughly $0.233 actually spent).
     """
     dr_run = dr_run or {}
     profile_tiers = profile_tiers or {}
+    phase_models = phase_models or {}
 
     research_usage = sum_usage(messages)
     verify_usage_raw = dr_run.get("verify_usage") or {}
@@ -132,9 +156,15 @@ def build_accounting(messages, dr_run: dict | None = None, *, profile_tiers: dic
     for usage in phases.values():
         totals = _add(totals, usage)
 
-    research_cost = price_phase(research_usage, profile_tiers.get("gruntwork"))
-    verify_cost = price_phase(verify_usage, profile_tiers.get("verify"))
-    plan_cost = price_phase(plan_usage, profile_tiers.get("gruntwork"))
+    research_cost, research_model, research_estimated = _price_with_fallback(research_usage, phase_models.get("research"), profile_tiers.get("gruntwork"))
+    verify_cost, verify_model, verify_estimated = _price_with_fallback(verify_usage, phase_models.get("verify"), profile_tiers.get("verify"))
+    plan_cost, plan_model, plan_estimated = _price_with_fallback(plan_usage, phase_models.get("plan"), profile_tiers.get("gruntwork"))
+
+    pricing = {
+        "research": {"model": research_model, "cost": research_cost, "estimated": research_estimated},
+        "verify": {"model": verify_model, "cost": verify_cost, "estimated": verify_estimated},
+        "plan": {"model": plan_model, "cost": plan_cost, "estimated": plan_estimated},
+    }
 
     known_costs = [c for c in (research_cost, verify_cost, plan_cost) if c is not None]
     dollar_cost = round(sum(known_costs), 6) if known_costs else None
@@ -143,4 +173,6 @@ def build_accounting(messages, dr_run: dict | None = None, *, profile_tiers: dic
         "phases": phases,
         "totals": totals,
         "dollar_cost": dollar_cost,
+        "pricing": pricing,
+        "estimated": any(entry["estimated"] for entry in pricing.values()),
     }

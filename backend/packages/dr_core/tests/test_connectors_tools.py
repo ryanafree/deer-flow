@@ -30,6 +30,7 @@ from dr_core.graph.state import merge_ledger
 from dr_core.models.enums import DataProvenance
 from dr_core.models.ledger import Claim
 from dr_core.verify.provenance import audit_provenance
+from dr_core.verify.provenance_compare import Comparison, compare_claim_to_data_ref
 from langchain.agents.middleware.types import ModelRequest
 from langchain_core.messages import AIMessage, ToolMessage
 
@@ -355,6 +356,9 @@ def _mock_fred(monkeypatch, result=None, unavailable=False):
         monkeypatch.setattr(fred_client, "fetch_series_observations", _raise)
     else:
         monkeypatch.setattr(fred_client, "fetch_series_observations", lambda series_id, period, transport=None: result)
+    # Default the metadata boundary OFF so the legacy (value-less) data_ref
+    # shape stays the assertion for every pre-P-09 FRED test in this file.
+    monkeypatch.setattr(fred_client, "fetch_series_metadata", lambda series_id, transport=None: None)
 
 
 class TestFredSeriesTool:
@@ -589,3 +593,210 @@ class TestBatch2ProfileEnforcementWithTheRealTools:
         result = mw.wrap_tool_call(request, _handler)
         assert result.status == "error"
         assert "not in the 'financial' profile's connector allowlist" in result.content
+
+
+# ---------------------------------------------------------------------------
+# P-09 item 1: WRDS metric selector + FRED series-unit metadata
+# ---------------------------------------------------------------------------
+
+
+def _mock_fred_metadata(monkeypatch, metadata=None, unavailable=False):
+    if unavailable:
+
+        def _raise(*a, **k):
+            raise fred_client.FredQueryError("FRED request failed: 400")
+
+        monkeypatch.setattr(fred_client, "fetch_series_metadata", _raise)
+    else:
+        monkeypatch.setattr(fred_client, "fetch_series_metadata", lambda series_id, transport=None: metadata)
+
+
+class TestWrdsMetricSelectorTool:
+    def test_metric_none_is_byte_for_byte_the_legacy_payload(self, monkeypatch):
+        """Backward-compatibility regression: the value-less compound data_ref
+        is unchanged when no metric is selected."""
+        crsp = {"date": "2023-12-29", "prc": 192.53}
+        compustat = {"fyear": 2023, "revt": 383285.0, "at": 352583.0}
+        _mock_wrds(monkeypatch, crsp=crsp, compustat=compustat)
+
+        explicit_none = tools_mod.wrds_query.func("AAPL", "2023", None)
+        defaulted = tools_mod.wrds_query.func("AAPL", "2023")
+
+        assert explicit_none == defaulted
+        out = json.loads(defaulted)
+        assert out["data_ref"] == {"period": "2023", "source_class": "primary_database"}
+        assert "value" not in out["data_ref"]
+        assert "metric" not in out["data_ref"]
+
+    def test_selected_compustat_metric_mints_value_unit_metric(self, monkeypatch):
+        _mock_wrds(monkeypatch, crsp={"date": "2023-12-29", "prc": 192.53}, compustat={"fyear": 2023, "revt": 383285.0})
+        out = json.loads(tools_mod.wrds_query.func("AAPL", "2023", "revt"))
+
+        assert out["ok"] is True
+        assert out["metric"] == "revt"
+        assert out["data_ref"] == {
+            "period": "2023",
+            "source_class": "primary_database",
+            "value": 383285.0 * 1e6,
+            "unit": "USD",
+            "metric": "revt",
+        }
+        # EDGAR's `concept` key means XBRL vocabulary -- never reused here.
+        assert "concept" not in out["data_ref"]
+
+    def test_selected_price_metric_mints_the_crsp_price(self, monkeypatch):
+        _mock_wrds(monkeypatch, crsp={"date": "2023-12-29", "prc": 192.53}, compustat={"fyear": 2023, "revt": 383285.0})
+        out = json.loads(tools_mod.wrds_query.func("AAPL", "2023", "price"))
+        assert out["data_ref"]["value"] == 192.53
+        assert out["data_ref"]["metric"] == "price"
+
+    def test_unknown_metric_is_a_hard_error_never_a_full_record_fallback(self, monkeypatch):
+        _mock_wrds(monkeypatch, crsp={"date": "2023-12-29", "prc": 192.53}, compustat={"fyear": 2023, "revt": 383285.0})
+        out = json.loads(tools_mod.wrds_query.func("AAPL", "2023", "ebitda"))
+        assert out["ok"] is False
+        assert "data_ref" not in out
+        assert "ebitda" in out["error"]
+
+    def test_selected_metric_absent_from_the_record_is_ok_false(self, monkeypatch):
+        _mock_wrds(monkeypatch, crsp={"date": "2023-12-29", "prc": 192.53}, compustat=None)
+        out = json.loads(tools_mod.wrds_query.func("AAPL", "2023", "revt"))
+        assert out["ok"] is False
+        assert "data_ref" not in out
+
+    def test_a_revenue_claim_can_no_longer_be_scored_against_a_price_payload(self, monkeypatch):
+        """The false-MISMATCH class the 2026-07-18 scope call deferred on: with
+        a metric selected the record is single-scalar, so a revenue claim over a
+        price-metric data_ref is an honest MISMATCH of like-for-like figures --
+        and a revenue claim over a revenue-metric data_ref MATCHES. Neither is
+        the silent cross-field comparison the compound payload risked."""
+        _mock_wrds(monkeypatch, crsp={"date": "2023-12-29", "prc": 192.53}, compustat={"fyear": 2023, "revt": 383285.0})
+        claim_text = "Apple's FY2023 revenue was $383.285 billion."
+
+        revenue_ref = json.loads(tools_mod.wrds_query.func("AAPL", "2023", "revt"))["data_ref"]
+        assert compare_claim_to_data_ref(claim_text, revenue_ref) is Comparison.MATCH
+
+        price_ref = json.loads(tools_mod.wrds_query.func("AAPL", "2023", "price"))["data_ref"]
+        assert compare_claim_to_data_ref(claim_text, price_ref) is Comparison.MISMATCH
+
+    def test_wrds_metric_claim_reaches_matched_end_to_end_live(self, monkeypatch):
+        """Real tool -> real source hook -> real record_claim (snapshot
+        quote-match) -> real audit_provenance, with only the DB boundary
+        mocked. This is the outcome the 2026-07-18 scope call left open."""
+        _mock_wrds(monkeypatch, crsp={"date": "2023-12-29", "prc": 192.53}, compustat={"fyear": 2023, "revt": 383285.0})
+        tool_content = tools_mod.wrds_query.func("AAPL", "2023", "revt")
+        payload = json.loads(tool_content)
+
+        tool_call_id = "call_wrds_metric"
+        messages = [
+            AIMessage(content="", tool_calls=[{"name": "wrds_query", "args": {"ticker": "AAPL", "period": "2023", "metric": "revt"}, "id": tool_call_id, "type": "tool_call"}]),
+            ToolMessage(content=tool_content, tool_call_id=tool_call_id, name="wrds_query"),
+        ]
+        hook_out = DrLedgerMiddleware().before_model({"messages": messages, "dr_run": {}}, None)
+        dr_sources = merge_ledger(None, hook_out["dr_sources"])
+
+        record_out = record_claim.func(
+            text="Apple's FY2023 revenue was $383.285 billion per Compustat.",
+            source_id=payload["url_or_id"],
+            quote="revt 383285.0",
+            importance=5,
+            tool_call_id="tc1",
+            state={"dr_sources": dr_sources, "dr_claims": {}},
+            data_ref=payload["data_ref"],
+        )
+        dr_claims = merge_ledger(None, record_out.update["dr_claims"])
+        ((_, claim_payload),) = dr_claims.items()
+        claim = Claim(**claim_payload)
+        assert audit_provenance(claim) == DataProvenance.MATCHED
+
+    def test_a_wrong_figure_against_a_selected_metric_derives_mismatch_live(self, monkeypatch):
+        _mock_wrds(monkeypatch, crsp=None, compustat={"fyear": 2023, "revt": 383285.0})
+        payload = json.loads(tools_mod.wrds_query.func("AAPL", "2023", "revt"))
+        claim = Claim(
+            claim_id="c1",
+            text="Apple's FY2023 revenue was $500 billion.",
+            importance=5,
+            source_id=payload["url_or_id"],
+            data_ref=payload["data_ref"],
+        )
+        assert audit_provenance(claim) == DataProvenance.MISMATCH
+
+
+class TestFredSeriesUnitMetadata:
+    def test_scale_bearing_units_are_normalized_into_the_data_ref(self, monkeypatch):
+        result = {"series_id": "GDP", "start": "2023-01-01", "end": "2023-12-31", "observations": [{"date": "2023-10-01", "value": "27957.2"}]}
+        _mock_fred(monkeypatch, result=result)
+        _mock_fred_metadata(monkeypatch, metadata={"series_id": "GDP", "title": "Gross Domestic Product", "units": "Billions of Dollars", "units_short": "Bil. of $"})
+
+        out = json.loads(tools_mod.fred_series.func("GDP", "2023"))
+
+        assert out["units"] == "Billions of Dollars"
+        assert out["data_ref"] == {
+            "period": "2023-10-01",
+            "source_class": "official_stat",
+            "series_id": "GDP",
+            "value": 27957.2 * 1e9,
+            "unit": "USD",
+        }
+
+    def test_percent_units_ride_the_comparator_percent_path(self, monkeypatch):
+        result = {"series_id": "UNRATE", "start": "2023-01-01", "end": "2023-12-31", "observations": [{"date": "2023-12-01", "value": "3.7"}]}
+        _mock_fred(monkeypatch, result=result)
+        _mock_fred_metadata(monkeypatch, metadata={"series_id": "UNRATE", "title": "Unemployment Rate", "units": "Percent"})
+
+        out = json.loads(tools_mod.fred_series.func("UNRATE", "2023"))
+        assert out["data_ref"]["value"] == 3.7
+        assert out["data_ref"]["unit"] == "Percent"
+        assert compare_claim_to_data_ref("The unemployment rate was 3.7% in December 2023.", out["data_ref"]) is Comparison.MATCH
+
+    def test_unrecognized_unit_can_never_produce_a_mismatch_against_a_percent_claim(self, monkeypatch):
+        """The deliberate fail-safe: an unguessable scale is minted raw with
+        the unit verbatim, so a differently-shaped claim resolves INCONCLUSIVE
+        (-> UNAUDITED) rather than a fabricated contradiction."""
+        result = {"series_id": "A191RL1Q225SBEA", "start": "2023-01-01", "end": "2023-12-31", "observations": [{"date": "2023-10-01", "value": "3.4"}]}
+        _mock_fred(monkeypatch, result=result)
+        _mock_fred_metadata(monkeypatch, metadata={"series_id": "A191RL1Q225SBEA", "units": "Percent Change from Preceding Period"})
+
+        out = json.loads(tools_mod.fred_series.func("A191RL1Q225SBEA", "2023"))
+        assert out["data_ref"]["unit"] == "Percent Change from Preceding Period"
+        assert compare_claim_to_data_ref("Real GDP grew 3.4% in Q4 2023.", out["data_ref"]) is Comparison.INCONCLUSIVE
+
+        claim = Claim(claim_id="c2", text="Real GDP grew 3.4% in Q4 2023.", importance=5, source_id=out["url_or_id"], data_ref=out["data_ref"])
+        assert audit_provenance(claim) is None
+
+    def test_metadata_failure_falls_back_to_the_legacy_value_less_data_ref(self, monkeypatch):
+        result = {"series_id": "GDP", "start": "2023-01-01", "end": "2023-12-31", "observations": [{"date": "2023-10-01", "value": "27957.2"}]}
+        _mock_fred(monkeypatch, result=result)
+        _mock_fred_metadata(monkeypatch, unavailable=True)
+
+        out = json.loads(tools_mod.fred_series.func("GDP", "2023"))
+        assert out["ok"] is True
+        assert out["data_ref"] == {"period": "2023-10-01", "source_class": "official_stat", "series_id": "GDP"}
+
+    def test_fred_claim_reaches_matched_end_to_end_live(self, monkeypatch):
+        result = {"series_id": "GDP", "start": "2023-01-01", "end": "2023-12-31", "observations": [{"date": "2023-10-01", "value": "27957.2"}]}
+        _mock_fred(monkeypatch, result=result)
+        _mock_fred_metadata(monkeypatch, metadata={"series_id": "GDP", "units": "Billions of Dollars"})
+
+        tool_content = tools_mod.fred_series.func("GDP", "2023")
+        payload = json.loads(tool_content)
+        tool_call_id = "call_fred_units"
+        messages = [
+            AIMessage(content="", tool_calls=[{"name": "fred_series", "args": {"series_id": "GDP", "period": "2023"}, "id": tool_call_id, "type": "tool_call"}]),
+            ToolMessage(content=tool_content, tool_call_id=tool_call_id, name="fred_series"),
+        ]
+        hook_out = DrLedgerMiddleware().before_model({"messages": messages, "dr_run": {}}, None)
+        dr_sources = merge_ledger(None, hook_out["dr_sources"])
+
+        record_out = record_claim.func(
+            text="US GDP was $27.957 trillion in Q4 2023 per FRED.",
+            source_id=payload["url_or_id"],
+            quote="27957.2",
+            importance=5,
+            tool_call_id="tc1",
+            state={"dr_sources": dr_sources, "dr_claims": {}},
+            data_ref=payload["data_ref"],
+        )
+        dr_claims = merge_ledger(None, record_out.update["dr_claims"])
+        ((_, claim_payload),) = dr_claims.items()
+        claim = Claim(**claim_payload)
+        assert audit_provenance(claim) == DataProvenance.MATCHED

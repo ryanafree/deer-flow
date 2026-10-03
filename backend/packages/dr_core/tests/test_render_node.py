@@ -16,6 +16,7 @@ from dr_core.graph.render import render_node
 from dr_core.lint import report_lint
 from dr_core.models.enums import CitationStatus, GateFlag, StopReason, VerificationStatus
 from dr_core.models.ledger import Claim, SupportRecord, VerificationRecord
+from langchain_core.messages import AIMessage
 
 
 def _source(source_id: str, title: str, **overrides) -> dict:
@@ -298,7 +299,7 @@ class TestManifestAccounting:
         manifest = json.loads(Path(result["dr_run"]["run_dir"], "manifest.json").read_text())
 
         assert "accounting" in manifest
-        assert set(manifest["accounting"].keys()) == {"phases", "totals", "dollar_cost"}
+        assert set(manifest["accounting"].keys()) == {"phases", "totals", "dollar_cost", "pricing", "estimated"}
         assert set(manifest["accounting"]["phases"].keys()) == {"research", "verify", "plan"}
         assert manifest["depth"] == "quick"
         assert manifest["profile"] == "general"
@@ -326,7 +327,12 @@ class TestManifestAccounting:
         state["dr_run"]["profile"] = "not-a-real-profile"
         result = render_node(state)
         manifest = json.loads(Path(result["dr_run"]["run_dir"], "manifest.json").read_text())
-        assert manifest["accounting"]["dollar_cost"] is None
+        # No profile tiers and no configured research model: the research phase stays
+        # unpriced. The plan/verify tier models resolve independently of the profile, so
+        # their zero usage prices at $0 and the run total is 0.0 rather than unknown.
+        assert manifest["accounting"]["pricing"]["research"]["cost"] is None
+        assert manifest["accounting"]["estimated"] is True
+        assert manifest["accounting"]["dollar_cost"] == 0.0
 
     def test_manifest_persists_benchmark_instrumentation(self, tmp_path):
         state = _happy_path_state(str(tmp_path))
@@ -453,3 +459,60 @@ class TestOrdinalInvariant:
             paragraph = body[line_start:idx].lower()
             first_word = claim["text"].split()[0].lower()
             assert first_word in paragraph or "according to" in paragraph
+
+
+class TestModelIdentity:
+    """The manifest must record the research model that actually ran, not
+    write_run's hardcoded default -- otherwise a benchmark cell's run folder
+    cannot be attributed to a model at all."""
+
+    def test_manifest_records_configured_model_name(self, tmp_path):
+        state = _happy_path_state(str(tmp_path))
+        config = {"configurable": {"thread_id": "t1", "model_name": "or-mid"}}
+        result = render_node(state, config)
+        manifest = json.loads(Path(result["dr_run"]["run_dir"], "manifest.json").read_text())
+        assert manifest["model"] == "or-mid"
+
+    def test_appendix_records_configured_model_name(self, tmp_path):
+        state = _happy_path_state(str(tmp_path))
+        config = {"configurable": {"model_name": "claude-top"}}
+        result = render_node(state, config)
+        report_md = Path(result["dr_run"]["run_dir"], "report.md").read_text()
+        assert "model: claude-top" in report_md
+
+    def test_missing_config_keeps_the_write_run_default(self, tmp_path):
+        state = _happy_path_state(str(tmp_path))
+        result = render_node(state)
+        manifest = json.loads(Path(result["dr_run"]["run_dir"], "manifest.json").read_text())
+        assert manifest["model"] == "claude-sonnet-5"
+
+    def test_manifest_prices_the_research_phase_at_the_configured_model(self, tmp_path, monkeypatch):
+        """The recorded dollar figure must follow the model that ran, not the profile's
+        gruntwork tier -- the 2026-08-19 matrix priced every cell at or-cheap while
+        or-mid actually ran."""
+        monkeypatch.setenv("DR_PLAN_MODEL", "or-sonnet")
+        monkeypatch.setenv("DR_VERIFY_MODEL", "claude-verify")
+        state = _happy_path_state(str(tmp_path))
+        state["dr_run"]["profile"] = "financial"
+        state["messages"] = [AIMessage(content="x", usage_metadata={"input_tokens": 1_000_000, "output_tokens": 1_000_000, "total_tokens": 2_000_000})]
+
+        result = render_node(state, {"configurable": {"model_name": "or-mid"}})
+        accounting = json.loads(Path(result["dr_run"]["run_dir"], "manifest.json").read_text())["accounting"]
+
+        assert accounting["pricing"]["research"] == {"model": "or-mid", "cost": 0.75, "estimated": False}
+        assert accounting["pricing"]["plan"]["model"] == "or-sonnet"
+        assert accounting["pricing"]["verify"]["model"] == "claude-verify"
+        assert accounting["dollar_cost"] == 0.75
+        assert accounting["estimated"] is False
+
+    def test_unthreaded_research_model_falls_back_to_the_profile_tier_flagged_estimated(self, tmp_path):
+        state = _happy_path_state(str(tmp_path))
+        state["dr_run"]["profile"] = "financial"
+        state["messages"] = [AIMessage(content="x", usage_metadata={"input_tokens": 1_000_000, "output_tokens": 0, "total_tokens": 1_000_000})]
+
+        result = render_node(state)
+        accounting = json.loads(Path(result["dr_run"]["run_dir"], "manifest.json").read_text())["accounting"]
+
+        assert accounting["pricing"]["research"]["model"] == "or-cheap"
+        assert accounting["pricing"]["research"]["estimated"] is True
+        assert accounting["estimated"] is True
